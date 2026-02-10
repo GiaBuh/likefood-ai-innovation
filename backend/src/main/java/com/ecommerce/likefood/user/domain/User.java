@@ -1,6 +1,7 @@
 package com.ecommerce.likefood.user.domain;
 
 import com.ecommerce.likefood.common.enums.Gender;
+import com.ecommerce.likefood.common.utils.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,7 +12,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
