@@ -1,0 +1,23 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: likefood
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/likefood
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true #set page default = 1
+likefood:
+  jwt:
+    base64-secret: ${JWT_SECRET}
+    accessToken-validity-in-second: 7200 #2 hour
+    refreshToken-validity-in-second: 1296000 #15 day
