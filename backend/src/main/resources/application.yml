@@ -12,6 +12,10 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
   data:
     web:
       pageable:
@@ -21,3 +25,23 @@ likefood:
     base64-secret: ${JWT_SECRET}
     accessToken-validity-in-second: 7200 #2 hour
     refreshToken-validity-in-second: 1296000 #15 day
+  ai:
+    gemini:
+      enabled: ${GEMINI_ENABLED:true}
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-2.5-pro}
+      cooldown-ms: ${GEMINI_COOLDOWN_MS:180000}
+      retry:
+        max-attempts: ${GEMINI_RETRY_MAX_ATTEMPTS:3}
+        initial-backoff-ms: ${GEMINI_RETRY_INITIAL_BACKOFF_MS:700}
+      cache:
+        ttl-ms: ${GEMINI_CACHE_TTL_MS:45000}
+  storage:
+    max-image-size-bytes: ${MAX_UPLOAD_IMAGE_SIZE_BYTES:5242880}
+    s3:
+      enabled: ${S3_ENABLED:true}
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+      region: ${AWS_REGION:ap-southeast-1}
+      bucket: ${AWS_S3_BUCKET}
+      public-base-url: ${AWS_S3_PUBLIC_BASE_URL}

@@ -1,6 +1,7 @@
 package com.ecommerce.likefood.user.service;
 
 import com.ecommerce.likefood.common.response.PaginationResponse;
+import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserSpecRequest;
 import com.ecommerce.likefood.user.dto.req.UserUpdateRequest;
@@ -15,4 +16,6 @@ public interface UserService {
     PaginationResponse getAll(UserSpecRequest userSpecRequest, Pageable pageable);
 
     UserResponse update(String id, UserUpdateRequest request);
+
+    UserResponse updateMyProfile(ProfileUpdateRequest request);
 }

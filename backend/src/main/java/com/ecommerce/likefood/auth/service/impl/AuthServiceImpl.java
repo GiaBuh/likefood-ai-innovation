@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
         Role role = getRoleForUser();
         User user = this.userMapper.toUser(registerRequest);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setAvatarUrl("default-avatar.png");
+        user.setAvatarUrl("avatars/avatar-default.svg");
         user.setRole(role);
 
         return this.userMapper.toResponse(this.userRepository.save(user));

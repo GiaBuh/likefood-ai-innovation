@@ -30,7 +30,7 @@ public class DataInitializer implements CommandLineRunner {
                     .email("admin@gmail.com")
                     .username("Admin")
                     .password(passwordEncoder.encode("123456"))
-                    .avatarUrl("default-avatar.png")
+                    .avatarUrl("avatars/avatar-default.svg")
                     .gender(Gender.MALE)
                     .role(adminRole)
                     .build();

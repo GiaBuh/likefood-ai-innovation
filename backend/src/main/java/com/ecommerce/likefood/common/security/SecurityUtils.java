@@ -24,11 +24,16 @@ public class SecurityUtils {
     private static String extractPrincipal(Authentication authentication) {
         if (authentication == null) {
             return null;
+        } else if (!authentication.isAuthenticated()) {
+            return null;
         } else if (authentication.getPrincipal() instanceof UserDetails springSecurityUser) {
             return springSecurityUser.getUsername();
         } else if (authentication.getPrincipal() instanceof Jwt jwt) {
             return jwt.getSubject();
         } else if (authentication.getPrincipal() instanceof String s) {
+            if ("anonymousUser".equalsIgnoreCase(s)) {
+                return null;
+            }
             return s;
         }
         return null;

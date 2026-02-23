@@ -11,6 +11,9 @@ public class SpecificationBuilder {
     public static <T> Specification<T> build(Object filterDTO) {
 
         return (root, query, builder) -> {
+            if (query != null) {
+                query.distinct(true);
+            }
             List<Predicate> predicates = new ArrayList<>();
 
             for (Field field : filterDTO.getClass().getDeclaredFields()) {
@@ -47,8 +50,8 @@ public class SpecificationBuilder {
                             if (value instanceof Number number) {
                                 predicates.add(
                                     builder.greaterThanOrEqualTo(
-                                        path.as(Long.class),
-                                        number.longValue()
+                                        path.as(Double.class),
+                                        number.doubleValue()
                                     )
                                 );
                             }
@@ -58,8 +61,8 @@ public class SpecificationBuilder {
                             if (value instanceof Number number) {
                                 predicates.add(
                                     builder.lessThanOrEqualTo(
-                                        path.as(Long.class),
-                                        number.longValue()
+                                        path.as(Double.class),
+                                        number.doubleValue()
                                     )
                                 );
                             }

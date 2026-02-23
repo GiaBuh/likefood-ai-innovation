@@ -4,6 +4,7 @@ import com.ecommerce.likefood.common.response.PaginationResponse;
 import com.ecommerce.likefood.common.utils.ApiMessage;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserSpecRequest;
+import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
 import com.ecommerce.likefood.user.dto.req.UserUpdateRequest;
 import com.ecommerce.likefood.user.dto.res.UserResponse;
 import com.ecommerce.likefood.user.service.UserService;
@@ -48,5 +49,11 @@ public class UserController {
             @RequestBody @Valid UserUpdateRequest request) {
 
         return ResponseEntity.ok(this.userService.update(id, request));
+    }
+
+    @PutMapping("/users/me")
+    @ApiMessage("Update my profile")
+    public ResponseEntity<UserResponse> updateMyProfile(@RequestBody @Valid ProfileUpdateRequest request) {
+        return ResponseEntity.ok(this.userService.updateMyProfile(request));
     }
 }

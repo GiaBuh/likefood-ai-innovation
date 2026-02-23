@@ -4,6 +4,7 @@ import com.ecommerce.likefood.auth.dto.req.RegisterRequest;
 import com.ecommerce.likefood.auth.dto.res.LoginResponse;
 import com.ecommerce.likefood.common.security.UserDetailsCustom;
 import com.ecommerce.likefood.user.domain.User;
+import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserUpdateRequest;
 import com.ecommerce.likefood.user.dto.res.UserResponse;
@@ -17,6 +18,9 @@ public interface UserMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateUser(UserUpdateRequest req, @MappingTarget User user);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateProfile(ProfileUpdateRequest req, @MappingTarget User user);
 
     @Mapping(source = "displayName", target = "username")
     LoginResponse.UserLoginResponse toUserLoginResponse(UserDetailsCustom userDetailsCustom);

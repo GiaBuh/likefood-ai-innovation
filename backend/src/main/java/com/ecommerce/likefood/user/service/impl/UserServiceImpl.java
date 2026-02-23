@@ -5,6 +5,8 @@ import com.ecommerce.likefood.common.response.PaginationResponse;
 import com.ecommerce.likefood.common.specification.GenericSpecification;
 import com.ecommerce.likefood.user.domain.Role;
 import com.ecommerce.likefood.user.domain.User;
+import com.ecommerce.likefood.common.security.SecurityUtils;
+import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserSpecRequest;
 import com.ecommerce.likefood.user.dto.req.UserUpdateRequest;
@@ -98,5 +100,15 @@ public class UserServiceImpl implements UserService {
         userDB.setRole(role);
 
         return this.userMapper.toResponse(this.userRepository.save(userDB));
+    }
+
+    @Override
+    public UserResponse updateMyProfile(ProfileUpdateRequest request) {
+        String email = SecurityUtils.getCurrentUserLogin()
+                .orElseThrow(() -> new AppException("Unauthenticated"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException("User not found"));
+        userMapper.updateProfile(request, user);
+        return userMapper.toResponse(userRepository.save(user));
     }
 }
