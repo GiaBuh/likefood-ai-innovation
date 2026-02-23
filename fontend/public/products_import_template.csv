@@ -1,0 +1,2 @@
+name,description,categoryId,categoryName,status,slug,weightValue,weightUnit,sku,price,quantity,thumbnailUrl,imageUrls
+"Mango Dried 500g","Sweet dried mango from Vietnam",,,ACTIVE,,500,g,MANG-500,12.99,100,https://example.com/thumb.jpg,https://example.com/img1.jpg;https://example.com/img2.jpg
