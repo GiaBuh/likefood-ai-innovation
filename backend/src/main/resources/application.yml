@@ -8,19 +8,24 @@ spring:
       ddl-auto: update
     show-sql: false
   datasource:
-    url: jdbc:mysql://localhost:3306/likefood
-    username: root
-    password: 123456
+    url: ${DB_URL:jdbc:mysql://localhost:3306/likefood}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+    web:
+      pageable:
+        one-indexed-parameters: true #set page default = 1
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 25MB
-  data:
-    web:
-      pageable:
-        one-indexed-parameters: true #set page default = 1
 likefood:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   jwt:
     base64-secret: ${JWT_SECRET}
     accessToken-validity-in-second: 7200 #2 hour

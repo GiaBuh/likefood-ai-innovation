@@ -1,4 +1,7 @@
-const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || 'http://localhost:8080';
+const env = (import.meta as any).env;
+const API_BASE_URL =
+  (typeof env?.VITE_API_BASE_URL === 'string' && env.VITE_API_BASE_URL) ||
+  (env?.MODE === 'development' ? 'http://localhost:8080' : '');
 const ACCESS_TOKEN_KEY = 'likefood_access_token';
 const AUTH_USER_KEY = 'likefood_auth_user';
 
