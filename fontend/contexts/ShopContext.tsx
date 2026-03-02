@@ -1,5 +1,5 @@
 
-import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { Product, CartItem, Order, FulfillmentStatus, Category, PaginationMeta } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -82,6 +82,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     total: 0,
   });
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
+  const cartRevisionRef = useRef(0);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -206,12 +207,17 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCart([]);
       return;
     }
+    const revisionAtStart = cartRevisionRef.current;
     try {
       const backendCart = await getMyCart();
-      setCart(mapBackendCartToLocalItems(backendCart));
+      if (revisionAtStart === cartRevisionRef.current) {
+        setCart(mapBackendCartToLocalItems(backendCart));
+      }
     } catch (error) {
       console.error('Cannot load cart from backend.', error);
-      setCart([]);
+      if (revisionAtStart === cartRevisionRef.current) {
+        setCart([]);
+      }
     }
   }, [mapBackendCartToLocalItems]);
 
@@ -441,6 +447,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     setOrders((prev) => [created, ...prev]);
     clearCart();
+    cartRevisionRef.current += 1;
+    await loadCartForCurrentUser();
   };
 
   const updateOrderStatus = async (orderId: string, status: FulfillmentStatus) => {

@@ -20,8 +20,8 @@ interface HeaderProps {
   onSearchQueryChange: (value: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  onOpenMobileCart, 
+const Header: React.FC<HeaderProps> = ({
+  onOpenMobileCart,
   onCheckout,
   onOpenProfile,
   onViewOrders,
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({
 
   // Count unique items (length of array) instead of total quantity
   const totalItems = cart.length;
-  
+
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const recentItems = cart.slice().reverse().slice(0, 3); // Get last 3 added items
 
@@ -103,22 +103,22 @@ const Header: React.FC<HeaderProps> = ({
   }, [searchQuery]);
 
   return (
-    <header 
+    <header
       className="fixed top-0 left-0 right-0 z-40 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-green-100 dark:border-stone-800 shadow-sm transition-all duration-300"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Mobile Search Overlay Mode */}
         <div className={`h-20 items-center gap-2 ${isMobileSearchOpen ? 'flex md:hidden' : 'hidden'}`}>
           <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
               <span className="material-symbols-outlined">search</span>
             </div>
-            <input 
+            <input
               ref={searchInputRef}
-              className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-stone-100 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary transition-all" 
-              placeholder="Search for delicacies..." 
-              type="text" 
+              className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-stone-100 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary transition-all"
+              placeholder="Search for delicacies..."
+              type="text"
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
             />
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileSearchOpen(false)}
             className="p-2 text-stone-500 dark:text-stone-400 hover:text-slate-900 dark:hover:text-white font-medium whitespace-nowrap"
           >
@@ -172,22 +172,20 @@ const Header: React.FC<HeaderProps> = ({
         {/* Standard Header View */}
         <div className={`h-20 items-center justify-between gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
           <div className="flex items-center gap-2 md:gap-12">
-            <Link 
+            <Link
               to="/"
-              className="flex items-center gap-2 group hover:opacity-90 transition-opacity" 
+              className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
               aria-label="Go to Home"
             >
               {/* Logo PNG Image on the Left */}
-              <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-                 <span className="material-symbols-outlined">storefront</span>
-              </div>
+              <img src="/logo_likefood.png" alt="LikeFood Logo" className="h-12 w-12 rounded-full object-cover drop-shadow-sm" />
               {/* Brand Name on the Right */}
               <span className="font-display font-extrabold text-2xl tracking-tight text-primary">
                 LIKEFOOD
               </span>
             </Link>
           </div>
-          
+
           <div className="flex flex-1 justify-end gap-2 md:gap-4 items-center">
             {/* Desktop Search */}
             <div className="hidden sm:flex max-w-md flex-1">
@@ -195,10 +193,10 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                   <span className="material-symbols-outlined">search</span>
                 </div>
-                <input 
-                  className="block w-full pl-10 pr-3 py-2 border-none rounded-lg bg-green-50/50 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary/50 transition-all sm:text-sm" 
-                  placeholder="Search for delicacies..." 
-                  type="text" 
+                <input
+                  className="block w-full pl-10 pr-3 py-2 border-none rounded-lg bg-green-50/50 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary/50 transition-all sm:text-sm"
+                  placeholder="Search for delicacies..."
+                  type="text"
                   value={searchQuery}
                   onChange={(event) => onSearchQueryChange(event.target.value)}
                 />
@@ -241,26 +239,26 @@ const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
             </div>
-            
+
             {/* Action Area */}
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setIsMobileSearchOpen(true)}
                 className="p-2 rounded-lg text-slate-700 hover:bg-green-50 dark:text-stone-300 dark:hover:bg-stone-800 transition-colors sm:hidden"
               >
                 <span className="material-symbols-outlined">search</span>
               </button>
-              
+
               {!user ? (
                 // GUEST VIEW: Login & Register Buttons
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={onOpenLogin}
                     className="px-3 py-2 rounded-lg text-sm font-bold text-slate-700 dark:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors whitespace-nowrap"
                   >
                     Login
                   </button>
-                  <button 
+                  <button
                     onClick={onOpenRegister}
                     className="px-3 py-2 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm shadow-green-500/20 whitespace-nowrap"
                   >
@@ -272,7 +270,7 @@ const Header: React.FC<HeaderProps> = ({
                 <>
                   {/* Cart Button & Dropdown */}
                   <div className="relative group">
-                    <button 
+                    <button
                       onClick={onOpenMobileCart}
                       className="relative p-2 rounded-lg text-slate-700 hover:bg-green-50 dark:text-stone-300 dark:hover:bg-stone-800 transition-colors"
                     >
@@ -290,7 +288,7 @@ const Header: React.FC<HeaderProps> = ({
                         <div className="p-4 border-b border-stone-100 dark:border-stone-800">
                           <h3 className="font-bold text-slate-900 dark:text-white">Shopping Cart ({totalItems})</h3>
                         </div>
-                        
+
                         {cart.length === 0 ? (
                           <div className="p-8 text-center text-stone-500 dark:text-stone-400">
                             <span className="material-symbols-outlined !text-4xl mb-2 opacity-50">shopping_cart_off</span>
@@ -309,7 +307,7 @@ const Header: React.FC<HeaderProps> = ({
                                       className="h-full w-full object-cover object-center"
                                     />
                                   </div>
-                                  
+
                                   {/* Info Column */}
                                   <div className="flex flex-1 flex-col justify-center gap-1 py-1">
                                     <div>
@@ -317,7 +315,7 @@ const Header: React.FC<HeaderProps> = ({
                                       <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-1">{item.category}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                       <p className="text-xs text-stone-500 dark:text-stone-400">
+                                      <p className="text-xs text-stone-500 dark:text-stone-400">
                                         Weight: <span className="font-bold text-slate-700 dark:text-stone-300">{item.weight}</span>
                                       </p>
                                       <p className="text-xs text-stone-500 dark:text-stone-400">
@@ -329,7 +327,7 @@ const Header: React.FC<HeaderProps> = ({
                                   {/* Price & Action Column */}
                                   <div className="flex flex-col justify-between items-end py-1">
                                     <p className="text-sm font-bold text-primary">${(item.price * item.quantity).toFixed(2)}</p>
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         removeFromCart(item.backendCartItemId ?? item.cartId ?? item.id);
@@ -353,7 +351,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <p>Subtotal</p>
                                 <p>${totalPrice.toFixed(2)}</p>
                               </div>
-                              <button 
+                              <button
                                 onClick={onCheckout}
                                 className="w-full flex items-center justify-center rounded-lg border border-transparent bg-primary px-6 py-3 text-base font-bold text-white shadow-sm hover:bg-primary-dark transition-colors"
                               >
@@ -368,7 +366,7 @@ const Header: React.FC<HeaderProps> = ({
 
                   {/* User Account Dropdown */}
                   <div className="relative group">
-                    <button 
+                    <button
                       onClick={toggleUserMenu}
                       className="p-2 rounded-lg text-slate-700 hover:bg-green-50 dark:text-stone-300 dark:hover:bg-stone-800 transition-colors flex items-center gap-2"
                     >
@@ -388,10 +386,10 @@ const Header: React.FC<HeaderProps> = ({
                       <span className="material-symbols-outlined sm:hidden">account_circle</span>
                     </button>
 
-                    <div 
+                    <div
                       className={`absolute right-0 top-full pt-2 w-56 transition-all duration-200 transform z-50 origin-top-right
-                        ${isUserMenuOpen 
-                          ? 'opacity-100 visible translate-y-0 lg:opacity-0 lg:invisible lg:translate-y-2' 
+                        ${isUserMenuOpen
+                          ? 'opacity-100 visible translate-y-0 lg:opacity-0 lg:invisible lg:translate-y-2'
                           : 'opacity-0 invisible translate-y-2'}
                         lg:group-hover:opacity-100 lg:group-hover:visible lg:group-hover:translate-y-0
                       `}
@@ -401,27 +399,27 @@ const Header: React.FC<HeaderProps> = ({
                           <p className="text-sm font-bold text-slate-900 dark:text-white">{user.name}</p>
                           <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{user.email}</p>
                           {user.role === 'admin' && (
-                             <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase">Admin</span>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 uppercase">Admin</span>
                           )}
                         </div>
-                        
+
                         {user.role === 'admin' && onGoToAdmin && (
-                           <>
-                            <button 
-                                onClick={() => {
+                          <>
+                            <button
+                              onClick={() => {
                                 closeUserMenu();
                                 onGoToAdmin();
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-bold transition-colors flex items-center gap-2"
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-bold transition-colors flex items-center gap-2"
                             >
-                                <span className="material-symbols-outlined !text-lg">dashboard</span>
-                                Admin Dashboard
+                              <span className="material-symbols-outlined !text-lg">dashboard</span>
+                              Admin Dashboard
                             </button>
                             <div className="my-1 border-t border-stone-100 dark:border-stone-800"></div>
-                           </>
+                          </>
                         )}
-                        
-                        <button 
+
+                        <button
                           onClick={() => {
                             closeUserMenu();
                             onOpenProfile();
@@ -431,8 +429,8 @@ const Header: React.FC<HeaderProps> = ({
                           <span className="material-symbols-outlined !text-lg">person</span>
                           Personal Info
                         </button>
-                        
-                        <button 
+
+                        <button
                           onClick={() => {
                             closeUserMenu();
                             onViewOrders();
@@ -442,10 +440,10 @@ const Header: React.FC<HeaderProps> = ({
                           <span className="material-symbols-outlined !text-lg">receipt_long</span>
                           Order History
                         </button>
-                        
+
                         <div className="my-1 border-t border-stone-100 dark:border-stone-800"></div>
-                        
-                        <button 
+
+                        <button
                           onClick={() => {
                             closeUserMenu();
                             void logout();

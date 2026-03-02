@@ -182,7 +182,7 @@ const MainContent: React.FC = () => {
       onGoToCheckout={handleCheckoutStart}
       onOpenProduct={handleOpenProductFromChat}
       onOpenProfile={() => setIsProfileModalOpen(true)}
-      onViewOrders={() => navigate('/orders')}
+      onViewOrders={() => navigate('/myorders')}
       onOpenLogin={handleOpenLogin}
       onOpenRegister={handleOpenRegister}
       onGoHome={handleBackToShop}
@@ -213,7 +213,7 @@ const MainContent: React.FC = () => {
               <Checkout
                 onBackToHome={handleBackToShop}
                 onPlaceOrder={handlePlaceOrder}
-                onViewOrders={() => navigate('/orders')}
+                onViewOrders={() => navigate('/myorders')}
               />
             ) : (
               <HomePage onProductClick={handleProductClick} searchQuery={searchQuery} />
@@ -221,7 +221,7 @@ const MainContent: React.FC = () => {
           }
         />
         <Route
-          path="/orders"
+          path="/myorders"
           element={
             <OrderHistory
               orders={orders.filter((o) => o.customer.email === user?.email)}

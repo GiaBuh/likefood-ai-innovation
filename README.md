@@ -4,6 +4,98 @@ E-commerce platform for Vietnamese specialty foods. The project consists of a **
 
 ---
 
+## Quick Start with Docker
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
+
+### Step 1: Clone & configure environment
+
+```bash
+git clone <repository-url>
+cd likefood
+cp .env.production .env
+```
+
+Edit `.env` and fill in the values. **Required** for basic setup:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DB_PASSWORD` | MySQL root password | `MyStr0ngP@ssw0rd` |
+| `JWT_SECRET` | JWT secret (base64, ≥64 chars) | `bGlrZWZvb2Qtc2VjcmV0LWtleS1hdC1sZWFzdC02NC1jaGFycy1sb25n` |
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins | `http://localhost,http://localhost:80` |
+
+**Optional** – can use defaults or disable:
+
+| Variable | Description | Notes |
+|----------|-------------|-------|
+| `S3_ENABLED` | Enable/disable S3 image upload | `false` if no S3 yet |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | AWS credentials | Required if `S3_ENABLED=true` |
+| `AWS_S3_BUCKET` / `AWS_S3_PUBLIC_BASE_URL` / `AWS_REGION` | S3 config | |
+| `GEMINI_ENABLED` | Enable/disable AI Chatbot | `false` to disable |
+| `GEMINI_API_KEY` | Gemini API key | Get from [Google AI Studio](https://makersuite.google.com/app/apikey) |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP for invoice emails | Omit if not needed |
+
+> **Quick tip**: Generate a base64 JWT_SECRET:  
+> `echo -n "your-secret-string-at-least-64-chars-long-here" | base64`
+
+### Step 2: Run with Docker Compose
+
+```bash
+docker compose up -d
+```
+
+First build may take 3–5 minutes (backend + frontend).
+
+### Step 3: Access the application
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| **Frontend + API** | http://localhost | Main UI, API proxied via Nginx |
+| Backend direct | http://localhost:8080 | For debugging only |
+| MySQL | localhost:3306 | `root` / `DB_PASSWORD` from `.env` |
+| Redis | localhost:6379 | No auth by default |
+
+### Common commands
+
+```bash
+# View logs
+docker compose logs -f
+
+# Stop all
+docker compose down
+
+# Stop and remove volumes (DB, Redis)
+docker compose down -v
+
+# Rebuild after code changes
+docker compose up -d --build
+```
+
+### Minimal mode (no S3, no AI)
+
+Set in `.env`:
+
+```env
+S3_ENABLED=false
+GEMINI_ENABLED=false
+```
+
+Leave `AWS_*` and `GEMINI_API_KEY` empty or default. App runs normally, just without image upload and chatbot.
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `env_file .env not found` | Run `cp .env.production .env` before `docker compose up` |
+| Backend cannot connect to MySQL | Wait a few seconds for MySQL to start (healthcheck), then `docker compose restart backend` |
+| `JWT_SECRET` error | Ensure JWT_SECRET is at least 64 characters, preferably base64 |
+| Port 80/8080/3306 in use | Change ports in `docker-compose.yml` (e.g. `"3000:80"` for frontend) |
+
+---
+
 ## AI ChatBot Support (main focus)
 
 AI chat assistant that helps customers discover dishes, get product recommendations, and add items to cart directly from the conversation.
@@ -56,7 +148,9 @@ likefood:
 
 ---
 
-## Running the project
+## Running the project (local development)
 
-- **Backend**: `./gradlew bootRun` (requires MySQL, Redis, S3 config, Gemini API key in `.env` or `application.yml`)
-- **Frontend**: `cd fontend && npm install && npm run dev`
+Besides Docker, you can run backend and frontend separately for development:
+
+- **Backend**: `cd backend && ./gradlew bootRun` — requires MySQL, Redis, and config in `.env` or `application.yml`
+- **Frontend**: `cd fontend && npm install && npm run dev` — runs at http://localhost:5173

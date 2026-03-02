@@ -1,2 +1,4 @@
 # Environment (contains secrets - do NOT commit)
 .env
+backend/.env
+fontend/.env

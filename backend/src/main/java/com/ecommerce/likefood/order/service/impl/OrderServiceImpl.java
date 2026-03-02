@@ -1,7 +1,6 @@
 package com.ecommerce.likefood.order.service.impl;
 
 import com.ecommerce.likefood.cart.domain.Cart;
-import com.ecommerce.likefood.cart.repository.CartItemRepository;
 import com.ecommerce.likefood.cart.repository.CartRepository;
 import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.common.response.PaginationResponse;
@@ -16,6 +15,7 @@ import com.ecommerce.likefood.order.dto.req.OrderSpecRequest;
 import com.ecommerce.likefood.order.dto.res.OrderResponse;
 import com.ecommerce.likefood.order.mapper.OrderMapper;
 import com.ecommerce.likefood.order.repository.OrderRepository;
+import com.ecommerce.likefood.order.service.OrderInvoiceEmailService;
 import com.ecommerce.likefood.order.service.OrderService;
 import com.ecommerce.likefood.user.domain.User;
 import com.ecommerce.likefood.user.repository.UserRepository;
@@ -34,9 +34,9 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
+    private final OrderInvoiceEmailService orderInvoiceEmailService;
 
     @Override
     @Transactional
@@ -83,7 +83,8 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
-        cartItemRepository.deleteAllByCart_Id(cart.getId());
+        cart.getItems().clear();
+        cartRepository.saveAndFlush(cart);
 
         return orderMapper.toResponse(savedOrder);
     }
@@ -135,7 +136,11 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(status);
-        return orderMapper.toResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        if (status == OrderStatus.COMPLETED) {
+            orderInvoiceEmailService.sendInvoiceEmail(savedOrder);
+        }
+        return orderMapper.toResponse(savedOrder);
     }
 
     @Override
