@@ -14,7 +14,7 @@ E-commerce platform for Vietnamese specialty foods. The project consists of a **
 ### Step 1: Clone & configure environment
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/GiaBuh/likefood-ai-innovation.git
 cd likefood
 cp .env.production .env
 ```
@@ -39,7 +39,7 @@ Edit `.env` and fill in the values. **Required** for basic setup:
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP for invoice emails | Omit if not needed |
 
 > **Quick tip**: Generate a base64 JWT_SECRET:  
-> `echo -n "your-secret-string-at-least-64-chars-long-here" | base64`
+> `Open git bash here -> openssl rand -base64 32`
 
 ### Step 2: Run with Docker Compose
 
