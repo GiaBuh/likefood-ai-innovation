@@ -1,2 +1,52 @@
-# Environment (contains secrets - do NOT commit)
+# ==========================================
+# CẤU HÌNH THEO YÊU CẦU RIÊNG
+# ==========================================
 .env
+docker-compose.yml
+.gitignore
+
+# ==========================================
+# FILE HỆ ĐIỀU HÀNH & HỆ THỐNG
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# FILE TẠM & LOGS
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs/
+*.swp
+*.swo
+
+# ==========================================
+# THƯ VIỆN & PHỤ THUỘC (DEPENDENCIES)
+# ==========================================
+node_modules/
+jspm_packages/
+bower_components/
+venv/
+.venv/
+env/
+bin/
+obj/
+__pycache__/
+
+# ==========================================
+# CẤU HÌNH CỦA IDE (VS CODE, WEBSTORM,...)
+# ==========================================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
