@@ -36,7 +36,7 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-                                           JwtAuthenticationConverter jwtAuthenticationConverter) {
+                                           JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -45,6 +45,10 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
+                                
+                                // 👇 DÒNG MỚI ĐƯỢC CHÈN: Cho phép truy cập công khai API AI Trend
+                                .requestMatchers("/ai/**").permitAll() 
+                                
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/storage/public-url").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-avatar").authenticated()
                                 .requestMatchers(HttpMethod.POST, "/products", "/products/import", "/categories", "/storage/upload-image").hasRole("ADMIN")

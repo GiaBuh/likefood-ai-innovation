@@ -6,6 +6,7 @@ import ProductCardSkeleton from "../product/ProductCardSkeleton";
 import ProductFilterBar from "../product/ProductFilterBar";
 import SocialMediaSection from "./SocialMediaSection";
 import MobileFilterModal from "./MobileFilterModal";
+import TrendSection from "./TrendSection";
 import { Product, SortOption } from "../../types";
 import { useShop } from "../../contexts/ShopContext";
 import { fetchProductsWithQuery } from "../../services/shopApi";
@@ -188,6 +189,7 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
     return (
         <>
             <Hero />
+            <TrendSection />
             <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
                     <Sidebar
