@@ -5,11 +5,11 @@ const Footer: React.FC = () => {
     <footer className="bg-background-dark text-stone-300 py-12 border-t border-stone-800 mt-auto">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-6 md:gap-10">
-          
+
           {/* Logo & Description - Full width on mobile, 1 col on desktop */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4 text-white">
-              <span className="material-symbols-outlined text-3xl text-primary">storefront</span>
+              <img src="/logo_likefood.png" alt="LikeFood Logo" className="h-12 w-12 rounded-full object-cover drop-shadow-sm" />
               <span className="text-xl font-bold">LIKEFOOD</span>
             </div>
             <p className="text-sm leading-relaxed mb-6 text-stone-400">
@@ -42,10 +42,10 @@ const Footer: React.FC = () => {
             <h3 className="text-white font-semibold mb-4">Newsletter</h3>
             <p className="text-xs text-stone-400 mb-3">Subscribe to get special offers and once-in-a-lifetime deals.</p>
             <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
-              <input 
-                className="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-sm text-white placeholder-stone-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" 
-                placeholder="Enter your email" 
-                type="email" 
+              <input
+                className="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-sm text-white placeholder-stone-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                placeholder="Enter your email"
+                type="email"
               />
               <button className="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
                 Join
