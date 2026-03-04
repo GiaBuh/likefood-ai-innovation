@@ -41,7 +41,7 @@ public class FormatRestResponse implements ResponseBodyAdvice {
             return body;
         } else {
             ApiMessage message = returnType.getMethodAnnotation(ApiMessage.class);
-            res.setMessage(message.value());
+            res.setMessage(message != null ? message.value() : "No message available");
             res.setData(body);
         }
         return res;

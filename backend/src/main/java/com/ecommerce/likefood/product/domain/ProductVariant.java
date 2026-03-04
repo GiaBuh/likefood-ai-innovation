@@ -20,7 +20,7 @@ public class ProductVariant extends BaseEntity {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal weightValue;
-
+    
     @Column(nullable = false)
     private String weightUnit;
 

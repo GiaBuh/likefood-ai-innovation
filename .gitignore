@@ -1,4 +1,8 @@
-# Environment (contains secrets - do NOT commit)
+# ==========================================
+# CẤU HÌNH THEO YÊU CẦU RIÊNG
+# ==========================================
 .env
 backend/.env
 fontend/.env
+docker-compose.yml
+
