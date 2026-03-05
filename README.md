@@ -42,7 +42,7 @@ Edit `.env` and fill in the values. **Required** for basic setup:
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP for invoice emails | Omit if not needed |
 
 > **Quick tip**: Generate a base64 JWT_SECRET:  
-> `Open git bash here -> openssl rand -base64 32`
+> `Open git bash here -> openssl rand -base64 64`
 
 ### Step 2: Run with Docker Compose
 
