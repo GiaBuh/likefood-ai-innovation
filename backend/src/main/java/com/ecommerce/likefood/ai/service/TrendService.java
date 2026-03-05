@@ -1,6 +1,8 @@
 package com.ecommerce.likefood.ai.service;
 
+import com.ecommerce.likefood.ai.domain.TrendHistory;
 import com.ecommerce.likefood.ai.dto.TikTokTrendDto;
+import com.ecommerce.likefood.ai.repository.TrendHistoryRepository;
 import com.ecommerce.likefood.product.domain.Product;
 import com.ecommerce.likefood.product.domain.ProductVariant;
 import com.ecommerce.likefood.product.repository.ProductRepository;
@@ -9,7 +11,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value; 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -30,7 +34,12 @@ public class TrendService {
 
     private final ObjectMapper objectMapper;
     private final ProductRepository productRepository;
+    private final TrendHistoryRepository trendHistoryRepository;
+    private final CacheManager cacheManager;
     private final RestTemplate restTemplate = new RestTemplate();
+
+    // Cờ theo dõi dữ liệu TikTok thật hay mock
+    private volatile boolean lastTrendSourceIsReal = false;
 
     // --- CẤU HÌNH TIKTOK ---
     @Value("${TIKTOK_API_URL:https://tiktok-creative-center-api.p.rapidapi.com/api/trending/hashtag?page=1&limit=20&period=120&country=US&sort_by=popular}")
@@ -45,41 +54,82 @@ public class TrendService {
     @Value("${GEMINI_API_KEY}")
     private String GEMINI_API_KEY;
 
-    private final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=";
+    @Value("${likefood.ai.gemini.model:gemini-2.0-flash}")
+    private String GEMINI_MODEL;
 
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+    @Value("${likefood.storage.s3.public-base-url:}")
+    private String s3PublicBaseUrl;
+
+    /**
+     * Lấy xu hướng TikTok — CHỈ cache khi gọi API thật thành công.
+     * Nếu API thật fail (429 Too Many Requests, timeout, etc.) → trả mock data KHÔNG cache
+     * → lần sau vẫn thử lại API thật.
+     */
     public List<TikTokTrendDto> getCurrentTrends() {
+        // 1. Kiểm tra cache trước
+        Cache cache = cacheManager.getCache("tiktokTrends");
+        if (cache != null) {
+            Cache.ValueWrapper cached = cache.get("daily");
+            if (cached != null) {
+                log.info("✅ Returning TikTok trends from REDIS CACHE (24h)");
+                lastTrendSourceIsReal = true; // Cache chỉ chứa data thật
+                @SuppressWarnings("unchecked")
+                List<TikTokTrendDto> cachedTrends = (List<TikTokTrendDto>) cached.get();
+                return cachedTrends;
+            }
+        }
+
+        // 2. Gọi API thật
         try {
-            log.info("Connecting to TikTok API: {}", RAPID_API_URL);
-            return fetchFromRapidApi();
+            log.info("🔗 Connecting to TikTok API: {}", RAPID_API_URL);
+            List<TikTokTrendDto> realTrends = fetchFromRapidApi();
+            log.info("✅ TikTok API SUCCESS! Got {} real trends. Caching for 24h.", realTrends.size());
+
+            lastTrendSourceIsReal = true;
+            if (cache != null) {
+                cache.put("daily", realTrends);
+            }
+            return realTrends;
+
         } catch (Exception e) {
-            log.error("RapidAPI Error: {}. Activating Fallback.", e.getMessage());
+            log.warn("⚠️ TikTok API FAILED: {}. Using mock data (NOT cached).", e.getMessage());
+            lastTrendSourceIsReal = false;
             return fetchFromMockData();
         }
+    }
+
+    /**
+     * Frontend dùng field này để hiển thị "LIVE" hay "DEMO MODE".
+     */
+    public boolean isLastTrendSourceReal() {
+        return lastTrendSourceIsReal;
     }
 
     private List<TikTokTrendDto> fetchFromRapidApi() throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-rapidapi-key", RAPID_API_KEY);
         headers.set("x-rapidapi-host", RAPID_API_HOST);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON)); 
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         HttpEntity<String> entity = new HttpEntity<>(headers);
         ResponseEntity<String> response = restTemplate.exchange(RAPID_API_URL, HttpMethod.GET, entity, String.class);
-        
+
         JsonNode root = objectMapper.readTree(response.getBody());
         JsonNode dataList = root.path("data").path("list");
-        
+
         List<TikTokTrendDto> trends = new ArrayList<>();
         if (dataList.isArray()) {
             for (JsonNode node : dataList) {
                 String name = node.path("hashtag_name").asText("unknown");
                 log.info(">>> HASHTAG REALTIME: #{}", name);
-                
+
                 trends.add(TikTokTrendDto.builder()
-                        .desc("#" + name) 
-                        .music("Rank: " + node.path("rank").asInt(0))   
+                        .desc("#" + name)
+                        .music("Rank: " + node.path("rank").asInt(0))
                         .author("TikTok Trending")
-                        .views(formatNumber(node.path("publish_video_cnt").asLong(0)) + " videos") 
+                        .views(formatNumber(node.path("publish_video_cnt").asLong(0)) + " videos")
                         .build());
             }
         }
@@ -89,7 +139,7 @@ public class TrendService {
 
     /**
      * Phân tích xu hướng kết hợp sản phẩm hiện có với Gemini AI.
-     * Trả về Map chứa: analysis (String) + recommendedProducts (List)
+     * CHỈ cache khi Gemini trả về thành công — fallback KHÔNG cache.
      */
     public Map<String, Object> analyzeTrendWithProducts(List<TikTokTrendDto> trends) {
         Map<String, Object> result = new HashMap<>();
@@ -100,7 +150,18 @@ public class TrendService {
             return result;
         }
 
-        // Lấy danh sách sản phẩm đang active
+        // 1. Kiểm tra cache
+        Cache cache = cacheManager.getCache("aiAnalysis");
+        if (cache != null) {
+            Cache.ValueWrapper cached = cache.get("latest");
+            if (cached != null) {
+                log.info("✅ Returning AI analysis from REDIS CACHE (24h)");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> cachedResult = (Map<String, Object>) cached.get();
+                return cachedResult;
+            }
+        }
+
         List<Product> activeProducts = productRepository.findActiveProducts(50);
         String productCatalog = buildProductCatalog(activeProducts);
 
@@ -111,9 +172,9 @@ public class TrendService {
                 .orElse("");
 
         try {
+            log.info("🤖 Calling Gemini AI for trend analysis...");
             String prompt = buildAnalysisPrompt(hashtagList, productCatalog);
 
-            // Gọi Gemini API
             Map<String, Object> requestBody = new HashMap<>();
             Map<String, Object> generationConfig = new HashMap<>();
             generationConfig.put("responseMimeType", "application/json");
@@ -130,8 +191,8 @@ public class TrendService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    GEMINI_API_URL + GEMINI_API_KEY, entity, String.class);
+            String geminiUrl = GEMINI_BASE_URL + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+            ResponseEntity<String> response = restTemplate.postForEntity(geminiUrl, entity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
             JsonNode candidates = root.path("candidates");
@@ -144,21 +205,99 @@ public class TrendService {
             }
 
             String jsonText = parts.get(0).path("text").asText("").trim();
-            log.info("Gemini raw response: {}", jsonText);
+            log.info("✅ Gemini AI SUCCESS!");
 
-            // Parse JSON response từ Gemini
             Map<String, Object> aiResult = objectMapper.readValue(jsonText, new TypeReference<>() {});
-            
-            result.put("analysis", aiResult.getOrDefault("analysis", "Không có phân tích."));
-            result.put("recommendedProducts", aiResult.getOrDefault("recommendedProducts", List.of()));
+
+            String analysis = (String) aiResult.getOrDefault("analysis", "Không có phân tích.");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> recommended = enrichRecommendedProducts(
+                    (List<Map<String, Object>>) aiResult.getOrDefault("recommendedProducts", List.of()),
+                    activeProducts
+            );
+
+            result.put("analysis", analysis);
+            result.put("recommendedProducts", recommended);
+
+            // CHỈ cache khi Gemini thành công
+            if (cache != null) {
+                cache.put("latest", result);
+            }
+
+            // Lưu lịch sử vào MySQL
+            saveTrendHistory(hashtagList, analysis, recommended, "TikTok US + Gemini AI");
+
             return result;
 
         } catch (Exception e) {
-            log.error("Gemini Error: {}. Dùng câu trả lời dự phòng.", e.getMessage());
-            result.put("analysis", "AI Analysis: Xu hướng " + trends.get(0).getDesc() 
-                    + " đang rất hot! Shop nên đẩy mạnh các sản phẩm liên quan để tăng doanh thu.");
-            result.put("recommendedProducts", buildFallbackRecommendations(activeProducts, trends));
+            log.warn("⚠️ Gemini AI FAILED: {}. Using fallback (NOT cached).", e.getMessage());
+
+            // Trích hashtag đẹp hơn cho fallback analysis
+            List<String> hashtags = extractHashtags(trends);
+            String hashtagText = hashtags.isEmpty()
+                    ? trends.get(0).getDesc()
+                    : String.join(", ", hashtags.subList(0, Math.min(5, hashtags.size())));
+
+            String fallbackAnalysis = "Xu hướng " + hashtagText
+                    + " đang rất hot trên TikTok! Shop nên đẩy mạnh các sản phẩm liên quan để tăng doanh thu.";
+
+            List<Map<String, Object>> fallbackProducts = buildFallbackRecommendations(activeProducts, trends);
+
+            result.put("analysis", fallbackAnalysis);
+            result.put("recommendedProducts", fallbackProducts);
+
+            saveTrendHistory(hashtagList, fallbackAnalysis, fallbackProducts, "Fallback");
+
             return result;
+        }
+    }
+
+    /**
+     * Làm giàu dữ liệu sản phẩm gợi ý: thêm imageUrl, productSlug để Frontend hiển thị.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> enrichRecommendedProducts(
+            List<Map<String, Object>> recommendations, List<Product> products) {
+
+        Map<String, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, p -> p, (a, b) -> a));
+
+        List<Map<String, Object>> enriched = new ArrayList<>();
+        for (Map<String, Object> rec : recommendations) {
+            Map<String, Object> enrichedRec = new HashMap<>(rec);
+            String productId = String.valueOf(rec.getOrDefault("productId", ""));
+
+            Product product = productMap.get(productId);
+            if (product != null) {
+                if (product.getThumbnailKey() != null && !product.getThumbnailKey().isEmpty()) {
+                    enrichedRec.put("imageUrl", s3PublicBaseUrl + "/" + product.getThumbnailKey());
+                }
+                if (product.getSlug() != null) {
+                    enrichedRec.put("productSlug", product.getSlug());
+                }
+            }
+            enriched.add(enrichedRec);
+        }
+        return enriched;
+    }
+
+    /**
+     * Lưu kết quả phân tích vào bảng trend_history.
+     */
+    private void saveTrendHistory(String hashtags, String analysis,
+                                  List<Map<String, Object>> recommended, String source) {
+        try {
+            String recommendedJson = objectMapper.writeValueAsString(recommended);
+            TrendHistory history = TrendHistory.builder()
+                    .topHashtags(hashtags)
+                    .aiAnalysis(analysis)
+                    .recommendedProductsJson(recommendedJson)
+                    .source(source)
+                    .build();
+            trendHistoryRepository.save(history);
+            log.info("✅ Saved TrendHistory: {}", hashtags);
+        } catch (Exception e) {
+            log.warn("⚠️ Could not save TrendHistory: {}", e.getMessage());
         }
     }
 
@@ -210,25 +349,61 @@ public class TrendService {
                 """.formatted(hashtagList, productCatalog);
     }
 
-    /**
-     * Fallback khi Gemini lỗi: tự động match sản phẩm dựa trên keyword
-     */
     private List<Map<String, Object>> buildFallbackRecommendations(List<Product> products, List<TikTokTrendDto> trends) {
         List<Map<String, Object>> recommendations = new ArrayList<>();
         if (products.isEmpty() || trends.isEmpty()) return recommendations;
 
-        String firstTrend = trends.get(0).getDesc();
-        // Lấy tối đa 4 sản phẩm đầu tiên làm fallback
-        for (int i = 0; i < Math.min(4, products.size()); i++) {
+        // Trích xuất hashtag từ desc (ví dụ: "Thử thách #spicy #food" → "#spicy #food")
+        List<String> hashtags = extractHashtags(trends);
+
+        for (int i = 0; i < Math.min(2, products.size()); i++) {
             Product p = products.get(i);
+            // Xoay vòng trend cho mỗi sản phẩm
+            String trend = hashtags.isEmpty()
+                    ? trends.get(i % trends.size()).getDesc()
+                    : hashtags.get(i % hashtags.size());
+
+            String category = p.getCategory() != null ? p.getCategory().getName() : "đồ ăn vặt";
+            String reason = "Sản phẩm " + category + " phù hợp với xu hướng " + trend + " trên TikTok.";
+
             Map<String, Object> rec = new HashMap<>();
             rec.put("productId", p.getId());
             rec.put("productName", p.getName());
-            rec.put("matchedTrend", firstTrend);
-            rec.put("reason", "Sản phẩm phù hợp với xu hướng ăn vặt hiện tại trên TikTok.");
+            rec.put("matchedTrend", trend);
+            rec.put("reason", reason);
+            // Enrichment
+            if (p.getThumbnailKey() != null && !p.getThumbnailKey().isEmpty()) {
+                rec.put("imageUrl", s3PublicBaseUrl + "/" + p.getThumbnailKey());
+            }
+            if (p.getSlug() != null) {
+                rec.put("productSlug", p.getSlug());
+            }
             recommendations.add(rec);
         }
         return recommendations;
+    }
+
+    /**
+     * Trích xuất hashtag từ danh sách trend.
+     * VD: "Thử thách làm món cực đã #spicy #food #vietnamese" → ["#spicy", "#food", "#vietnamese"]
+     */
+    private List<String> extractHashtags(List<TikTokTrendDto> trends) {
+        List<String> hashtags = new ArrayList<>();
+        for (TikTokTrendDto t : trends) {
+            String desc = t.getDesc();
+            if (desc == null) continue;
+            // Nếu desc BẮT ĐẦU bằng # → đã là hashtag rồi (data từ API thật)
+            if (desc.startsWith("#")) {
+                hashtags.add(desc);
+            } else {
+                // Trích hashtag từ câu dài (mock data)
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("#\\w+").matcher(desc);
+                while (m.find()) {
+                    hashtags.add(m.group());
+                }
+            }
+        }
+        return hashtags;
     }
 
     private String formatNumber(long count) {

@@ -56,7 +56,7 @@ const SOCIAL_LINKS: SocialLink[] = [
 
 const SocialMediaSection: React.FC = () => {
     return (
-        <section className="py-12 bg-white dark:bg-stone-900 border-t border-slate-100 dark:border-stone-800">
+        <section className="py-12  dark:bg-stone-900 border-t border-slate-100 dark:border-stone-800">
             <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header: Gọn gàng, nằm trên 1 dòng nếu màn hình lớn */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
