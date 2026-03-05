@@ -164,4 +164,4 @@ likefood:
 Besides Docker, you can run backend and frontend separately for development:
 
 - **Backend**: `cd backend && ./gradlew bootRun` — requires MySQL, Redis, and config in `.env` or `application.yml`
-- **Frontend**: `cd fontend && npm install && npm run dev` — runs at http://localhost:5173
+- **Frontend**: `cd frontend && npm install && npm run dev` — runs at http://localhost:3000
