@@ -9,7 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value; 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable; // QUAN TRỌNG: Thêm dòng import này
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class TrendService {
 
     private final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=";
 
+    @Cacheable(value = "tiktokTrends", key = "'daily'")
     public List<TikTokTrendDto> getCurrentTrends() {
         try {
             log.info("Connecting to TikTok API: {}", RAPID_API_URL);
@@ -58,6 +60,7 @@ public class TrendService {
     }
 
     private List<TikTokTrendDto> fetchFromRapidApi() throws Exception {
+        // ... (Nội dung hàm giữ nguyên như code của bạn)
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-rapidapi-key", RAPID_API_KEY);
         headers.set("x-rapidapi-host", RAPID_API_HOST);
@@ -91,6 +94,8 @@ public class TrendService {
      * Phân tích xu hướng kết hợp sản phẩm hiện có với Gemini AI.
      * Trả về Map chứa: analysis (String) + recommendedProducts (List)
      */
+    // ĐẶT @Cacheable Ở ĐÂY LÀ ĐÚNG CHUẨN:
+    @Cacheable(value = "aiAnalysis", key = "#trends.get(0).desc")
     public Map<String, Object> analyzeTrendWithProducts(List<TikTokTrendDto> trends) {
         Map<String, Object> result = new HashMap<>();
 
@@ -100,7 +105,7 @@ public class TrendService {
             return result;
         }
 
-        // Lấy danh sách sản phẩm đang active
+        // ... (Toàn bộ logic hàm giữ nguyên như code của bạn)
         List<Product> activeProducts = productRepository.findActiveProducts(50);
         String productCatalog = buildProductCatalog(activeProducts);
 
@@ -113,7 +118,6 @@ public class TrendService {
         try {
             String prompt = buildAnalysisPrompt(hashtagList, productCatalog);
 
-            // Gọi Gemini API
             Map<String, Object> requestBody = new HashMap<>();
             Map<String, Object> generationConfig = new HashMap<>();
             generationConfig.put("responseMimeType", "application/json");
@@ -146,7 +150,6 @@ public class TrendService {
             String jsonText = parts.get(0).path("text").asText("").trim();
             log.info("Gemini raw response: {}", jsonText);
 
-            // Parse JSON response từ Gemini
             Map<String, Object> aiResult = objectMapper.readValue(jsonText, new TypeReference<>() {});
             
             result.put("analysis", aiResult.getOrDefault("analysis", "Không có phân tích."));
@@ -162,6 +165,7 @@ public class TrendService {
         }
     }
 
+    // ... (Các hàm buildProductCatalog, buildAnalysisPrompt, buildFallbackRecommendations, formatNumber, fetchFromMockData giữ nguyên)
     private String buildProductCatalog(List<Product> products) {
         if (products.isEmpty()) return "Không có sản phẩm nào.";
 
@@ -210,15 +214,11 @@ public class TrendService {
                 """.formatted(hashtagList, productCatalog);
     }
 
-    /**
-     * Fallback khi Gemini lỗi: tự động match sản phẩm dựa trên keyword
-     */
     private List<Map<String, Object>> buildFallbackRecommendations(List<Product> products, List<TikTokTrendDto> trends) {
         List<Map<String, Object>> recommendations = new ArrayList<>();
         if (products.isEmpty() || trends.isEmpty()) return recommendations;
 
         String firstTrend = trends.get(0).getDesc();
-        // Lấy tối đa 4 sản phẩm đầu tiên làm fallback
         for (int i = 0; i < Math.min(4, products.size()); i++) {
             Product p = products.get(i);
             Map<String, Object> rec = new HashMap<>();
