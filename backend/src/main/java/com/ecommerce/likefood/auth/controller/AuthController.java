@@ -1,10 +1,13 @@
 package com.ecommerce.likefood.auth.controller;
 
+import com.ecommerce.likefood.auth.dto.req.GoogleAuthCallbackRequest;
 import com.ecommerce.likefood.auth.dto.req.LoginRequest;
 import com.ecommerce.likefood.auth.dto.req.RegisterRequest;
+import com.ecommerce.likefood.auth.dto.res.GoogleAuthUrlResponse;
 import com.ecommerce.likefood.auth.dto.res.LoginResponse;
 import com.ecommerce.likefood.auth.dto.res.RefreshResponse;
 import com.ecommerce.likefood.auth.service.AuthService;
+import com.ecommerce.likefood.auth.service.GoogleAuthService;
 import com.ecommerce.likefood.common.utils.ApiMessage;
 import com.ecommerce.likefood.user.dto.res.UserResponse;
 import jakarta.validation.Valid;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +30,7 @@ public class AuthController {
     private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
 
     private final AuthService authService;
+    private final GoogleAuthService googleAuthService;
 
     @Value("${likefood.jwt.refreshToken-validity-in-second}")
     private long refreshTokenCookieMaxAge;
@@ -51,6 +56,29 @@ public class AuthController {
                 .maxAge(0)
                 .sameSite("Strict")
                 .build();
+    }
+
+    @GetMapping("/auth/google/url")
+    @ApiMessage("Get Google login URL")
+    public ResponseEntity<GoogleAuthUrlResponse> getGoogleLoginUrl() {
+        String url = this.googleAuthService.buildAuthorizationUrl();
+        return ResponseEntity.ok(GoogleAuthUrlResponse.builder().url(url).build());
+    }
+
+    @PostMapping("/auth/google/exchange")
+    @ApiMessage("Google login - exchange code for tokens")
+    public ResponseEntity<LoginResponse> googleLoginCallback(@RequestBody @Valid GoogleAuthCallbackRequest request) {
+        LoginResponse loginResponse = this.authService.loginWithGoogle(request.getCode());
+        ResponseCookie refreshCookie = buildRefreshTokenCookie(loginResponse.getRefreshToken());
+
+        LoginResponse responseBody = LoginResponse.builder()
+                .user(loginResponse.getUser())
+                .accessToken(loginResponse.getAccessToken())
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(responseBody);
     }
 
     @PostMapping("/auth/login")

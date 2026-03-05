@@ -10,6 +10,7 @@ import Checkout from './components/checkout/Checkout';
 import OrderHistory from './components/orders/OrderHistory';
 import UserProfileModal from './components/auth/UserProfileModal';
 import AuthModal from './components/auth/AuthModal';
+import GoogleAuthCallbackPage from './components/auth/GoogleAuthCallbackPage';
 import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
 import { Product, Order } from './types';
@@ -19,7 +20,7 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 const MainContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login, register, updateUser, isAuthenticated } = useAuth();
+  const { user, login, loginWithGoogle, getGoogleLoginUrl, register, updateUser, isAuthenticated } = useAuth();
   const { showError } = useToast();
   const {
     products,
@@ -221,6 +222,15 @@ const MainContent: React.FC = () => {
           }
         />
         <Route
+          path="/auth/google/callback"
+          element={
+            <GoogleAuthCallbackPage
+              onSuccess={() => {}}
+              onError={(msg) => showError(msg)}
+            />
+          }
+        />
+        <Route
           path="/myorders"
           element={
             <OrderHistory
@@ -256,6 +266,7 @@ const MainContent: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authMode}
         onLogin={login}
+        onGoogleLoginUrl={getGoogleLoginUrl}
         onRegister={register}
       />
     </Layout>

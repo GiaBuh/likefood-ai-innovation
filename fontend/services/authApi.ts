@@ -92,6 +92,46 @@ function toStoredAuthUser(payload: LoginResponse): StoredAuthUser {
   };
 }
 
+export async function getGoogleLoginUrl(): Promise<string> {
+  const response = await apiFetch('/auth/google/url', { method: 'GET' });
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, 'Cannot get Google login URL'));
+  }
+  const payload = unwrap<{ url?: string }>((await response.json()) as any);
+  const url = payload?.url;
+  if (!url) {
+    throw new Error('Invalid response from server');
+  }
+  return url;
+}
+
+export async function loginWithGoogleCallback(code: string): Promise<User> {
+  const response = await apiFetch('/auth/google/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, 'Google login failed'));
+  }
+
+  const raw = (await response.json()) as any;
+  const payload = unwrap<LoginResponse>(raw) ?? raw;
+  const accessToken = payload?.accessToken ?? (raw as any)?.accessToken;
+  const userData = payload?.user ?? (raw as any)?.data?.user;
+
+  if (!accessToken) {
+    throw new Error('Cannot receive access token from backend');
+  }
+
+  const authUser = toStoredAuthUser({ user: userData, accessToken });
+  setAccessToken(accessToken);
+  setStoredAuthUser(authUser);
+  // Redirect ngay về trang chủ sau khi lưu token
+  window.location.replace('/');
+  return toUser(authUser);
+}
+
 export async function loginWithBackend(email: string, password: string): Promise<User> {
   const body: LoginRequest = {
     username: email.trim(),

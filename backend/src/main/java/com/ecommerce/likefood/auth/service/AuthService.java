@@ -10,6 +10,8 @@ import com.ecommerce.likefood.user.dto.res.UserResponse;
 public interface AuthService {
     LoginResponse login(LoginRequest loginRequest);
 
+    LoginResponse loginWithGoogle(String code);
+
     void logout(String refreshToken);
 
     RefreshResponse refresh(String refreshToken);
