@@ -42,10 +42,10 @@ public class TrendService {
     private volatile boolean lastTrendSourceIsReal = false;
 
     // --- CẤU HÌNH TIKTOK ---
-    @Value("${TIKTOK_API_URL:https://tiktok-creative-center-api.p.rapidapi.com/api/trending/hashtag?page=1&limit=20&period=120&country=US&sort_by=popular}")
+    @Value("${TIKTOK_API_URL:https://tiktok-creative-center-api.p.rapidapi.com/api/trending/hashtag?page=1&limit=20&period=7&country=US&sort_by=popular}")
     private String RAPID_API_URL;
 
-    @Value("${TIKTOK_API_KEY:313a752e08mshf5457758ba88776p1ec28djsn8b052aae046b}")
+    @Value("${TIKTOK_API_KEY:3b6ab36f1dmshdbbdeebdf43620ep138a02jsnf05db9f19257}")
     private String RAPID_API_KEY;
 
     private final String RAPID_API_HOST = "tiktok-creative-center-api.p.rapidapi.com";
