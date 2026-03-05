@@ -120,6 +120,8 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
       ...rest,
       headers: retryHeaders,
       credentials: 'include',
+      // Tránh browser cache API response - sản phẩm mới sẽ hiện ngay
+      cache: 'no-store',
     });
 
   let response = await doRequest(requestHeaders);
