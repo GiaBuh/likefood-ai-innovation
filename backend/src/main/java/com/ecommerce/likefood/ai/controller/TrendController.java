@@ -1,6 +1,8 @@
 package com.ecommerce.likefood.ai.controller;
 
+import com.ecommerce.likefood.ai.domain.TrendHistory;
 import com.ecommerce.likefood.ai.dto.TikTokTrendDto;
+import com.ecommerce.likefood.ai.repository.TrendHistoryRepository;
 import com.ecommerce.likefood.ai.service.TrendService;
 import com.ecommerce.likefood.common.utils.ApiMessage;
 import lombok.RequiredArgsConstructor;
@@ -23,26 +25,39 @@ import java.util.Map;
 public class TrendController {
 
     private final TrendService trendService;
+    private final TrendHistoryRepository trendHistoryRepository;
 
     @GetMapping("/analyze")
     @ApiMessage("Analyze AI trends")
     public ResponseEntity<Map<String, Object>> analyzeTrends() {
         log.info("Received request for AI Trend Analysis");
-        
-        // 1. Lấy danh sách xu hướng TikTok
+
+        // 1. Lấy danh sách xu hướng TikTok (cached 24h)
         List<TikTokTrendDto> trends = trendService.getCurrentTrends();
 
-        // 2. Phân tích xu hướng + phân loại sản phẩm bằng Gemini AI
+        // 2. Phân tích xu hướng + sản phẩm bằng Gemini AI (cached 24h)
         Map<String, Object> aiResult = trendService.analyzeTrendWithProducts(trends);
 
-        // 3. Đóng gói trả về (PHẢI KHỚP VỚI FRONTEND)
+        // 3. Đóng gói trả về
         Map<String, Object> response = new HashMap<>();
         response.put("trends", trends);
         response.put("analysis", aiResult.get("analysis"));
         response.put("recommendedProducts", aiResult.get("recommendedProducts"));
         response.put("source", "TikTok US Real-time");
+        response.put("cached", true); // Frontend biết data từ cache hay mới
 
         log.info("Returning successful AI analysis with {} trends", trends.size());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * API cho Admin xem lịch sử phân tích xu hướng.
+     */
+    @GetMapping("/history")
+    @ApiMessage("Get trend analysis history")
+    public ResponseEntity<List<TrendHistory>> getTrendHistory() {
+        log.info("Fetching trend analysis history");
+        List<TrendHistory> history = trendHistoryRepository.findTop30ByOrderByCreatedAtDesc();
+        return ResponseEntity.ok(history);
     }
 }
