@@ -5,6 +5,8 @@ import com.ecommerce.likefood.auth.dto.req.RegisterRequest;
 import com.ecommerce.likefood.auth.dto.res.LoginResponse;
 import com.ecommerce.likefood.auth.dto.res.RefreshResponse;
 import com.ecommerce.likefood.auth.service.AuthService;
+import com.ecommerce.likefood.auth.service.GoogleAuthService;
+import com.ecommerce.likefood.auth.service.GoogleUserInfo;
 import com.ecommerce.likefood.auth.service.TokenService;
 import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.common.redis.RedisService;
@@ -21,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -28,6 +31,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GoogleAuthService googleAuthService;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -64,6 +70,57 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Override
+    public LoginResponse loginWithGoogle(String code) {
+        GoogleUserInfo googleUser = this.googleAuthService.getUserInfoFromCode(code);
+
+        User user = this.userRepository.findByEmail(googleUser.getEmail())
+                .orElseGet(() -> createUserFromGoogle(googleUser));
+
+        UserDetailsCustom userDetailsCustom = new UserDetailsCustom(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword() != null ? user.getPassword() : "",
+                user.getEmail(),
+                user.getPhoneNumber(),
+                user.getAddress(),
+                user.getAvatarUrl(),
+                user.getRole().getName(),
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()))
+        );
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetailsCustom.getUsername(),
+                null,
+                userDetailsCustom.getAuthorities()
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        LoginResponse.UserLoginResponse loginResponse = this.userMapper.toUserLoginResponse(userDetailsCustom);
+        String accessToken = this.tokenService.createAccessToken(authentication);
+        String refreshToken = this.tokenService.createRefreshToken(authentication);
+
+        return LoginResponse.builder()
+                .user(loginResponse)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private User createUserFromGoogle(GoogleUserInfo googleUser) {
+        Role role = getRoleForUser();
+        User user = User.builder()
+                .email(googleUser.getEmail())
+                .username(googleUser.getName() != null && !googleUser.getName().isBlank()
+                        ? googleUser.getName()
+                        : googleUser.getEmail().split("@")[0])
+                .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                .avatarUrl("avatars/avatar-default.svg")
+                .role(role)
+                .build();
+        return this.userRepository.save(user);
     }
 
     @Override

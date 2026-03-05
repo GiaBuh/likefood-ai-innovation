@@ -8,6 +8,7 @@ interface AuthModalProps {
   onClose: () => void;
   initialMode: 'login' | 'register';
   onLogin: (email: string, password: string) => Promise<void>;
+  onGoogleLoginUrl?: () => Promise<string>;
   onRegister: (payload: {
     username: string;
     email: string;
@@ -19,7 +20,7 @@ interface AuthModalProps {
   }) => Promise<void>;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onLogin, onRegister }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onLogin, onGoogleLoginUrl, onRegister }) => {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const { showError, showSuccess } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -76,8 +77,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
     }
   };
 
-  const handleGoogleLogin = () => {
-    showError('Google login is not connected yet.');
+  const handleGoogleLogin = async () => {
+    if (!onGoogleLoginUrl) {
+      showError('Google login is not available.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const url = await onGoogleLoginUrl();
+      window.location.href = url; // redirect to Google
+    } catch (err: any) {
+      showError(err?.message || 'Cannot get Google login URL.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

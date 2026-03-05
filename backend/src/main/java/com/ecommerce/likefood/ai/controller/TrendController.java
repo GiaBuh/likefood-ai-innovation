@@ -27,22 +27,23 @@ public class TrendController {
     @GetMapping("/analyze")
     @ApiMessage("Analyze AI trends")
     public ResponseEntity<Map<String, Object>> analyzeTrends() {
-        log.info("Received request for AI Trend Analysis");
+        // log.info("Received request for AI Trend Analysis");
         
-        // 1. Lấy danh sách xu hướng TikTok
-        List<TikTokTrendDto> trends = trendService.getCurrentTrends();
+        // // 1. Lấy danh sách xu hướng TikTok
+        // List<TikTokTrendDto> trends = trendService.getCurrentTrends();
 
-        // 2. Phân tích xu hướng + phân loại sản phẩm bằng Gemini AI
-        Map<String, Object> aiResult = trendService.analyzeTrendWithProducts(trends);
+        // // 2. Phân tích xu hướng + phân loại sản phẩm bằng Gemini AI
+        // Map<String, Object> aiResult = trendService.analyzeTrendWithProducts(trends);
 
-        // 3. Đóng gói trả về (PHẢI KHỚP VỚI FRONTEND)
-        Map<String, Object> response = new HashMap<>();
-        response.put("trends", trends);
-        response.put("analysis", aiResult.get("analysis"));
-        response.put("recommendedProducts", aiResult.get("recommendedProducts"));
-        response.put("source", "TikTok US Real-time");
+        // // 3. Đóng gói trả về (PHẢI KHỚP VỚI FRONTEND)
+        // Map<String, Object> response = new HashMap<>();
+        // response.put("trends", trends);
+        // response.put("analysis", aiResult.get("analysis"));
+        // response.put("recommendedProducts", aiResult.get("recommendedProducts"));
+        // response.put("source", "TikTok US Real-time");
 
-        log.info("Returning successful AI analysis with {} trends", trends.size());
-        return ResponseEntity.ok(response);
+        // log.info("Returning successful AI analysis with {} trends", trends.size());
+        // return ResponseEntity.ok(response);
+        return ResponseEntity.ok(null);
     }
 }
