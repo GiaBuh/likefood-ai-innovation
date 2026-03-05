@@ -12,7 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class TrendService {
     private final ObjectMapper objectMapper;
     private final ProductRepository productRepository;
     private final TrendHistoryRepository trendHistoryRepository;
+    private final CacheManager cacheManager;
     private final RestTemplate restTemplate = new RestTemplate();
 
     // --- CẤU HÌNH TIKTOK ---
@@ -49,7 +51,7 @@ public class TrendService {
     @Value("${GEMINI_API_KEY}")
     private String GEMINI_API_KEY;
 
-    @Value("${likefood.ai.gemini.model:gemini-2.5-pro}")
+    @Value("${likefood.ai.gemini.model:gemini-2.0-flash}")
     private String GEMINI_MODEL;
 
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
@@ -58,16 +60,38 @@ public class TrendService {
     private String s3PublicBaseUrl;
 
     /**
-     * Lấy xu hướng TikTok — cache 24h trong Redis.
+     * Lấy xu hướng TikTok — CHỈ cache khi gọi API thật thành công.
+     * Nếu API thật fail (429 Too Many Requests, timeout, etc.) → trả mock data KHÔNG cache
+     * → lần sau vẫn thử lại API thật.
      */
-    @Cacheable(value = "tiktokTrends", key = "'daily'")
     public List<TikTokTrendDto> getCurrentTrends() {
+        // 1. Kiểm tra cache trước
+        Cache cache = cacheManager.getCache("tiktokTrends");
+        if (cache != null) {
+            Cache.ValueWrapper cached = cache.get("daily");
+            if (cached != null) {
+                log.info("✅ Returning TikTok trends from REDIS CACHE (24h)");
+                @SuppressWarnings("unchecked")
+                List<TikTokTrendDto> cachedTrends = (List<TikTokTrendDto>) cached.get();
+                return cachedTrends;
+            }
+        }
+
+        // 2. Gọi API thật
         try {
-            log.info("Connecting to TikTok API: {}", RAPID_API_URL);
-            return fetchFromRapidApi();
+            log.info("🔗 Connecting to TikTok API: {}", RAPID_API_URL);
+            List<TikTokTrendDto> realTrends = fetchFromRapidApi();
+            log.info("✅ TikTok API SUCCESS! Got {} real trends. Caching for 24h.", realTrends.size());
+
+            // CHỈ cache khi API thật thành công
+            if (cache != null) {
+                cache.put("daily", realTrends);
+            }
+            return realTrends;
+
         } catch (Exception e) {
-            log.error("RapidAPI Error: {}. Activating Fallback.", e.getMessage());
-            return fetchFromMockData();
+            log.warn("⚠️ TikTok API FAILED: {}. Using mock data (NOT cached — will retry next request).", e.getMessage());
+            return fetchFromMockData();  // KHÔNG cache → lần sau sẽ thử lại API thật
         }
     }
 
@@ -102,10 +126,9 @@ public class TrendService {
     }
 
     /**
-     * Phân tích xu hướng kết hợp sản phẩm hiện có với Gemini AI — cache 24h.
-     * Đồng thời lưu lịch sử vào MySQL.
+     * Phân tích xu hướng kết hợp sản phẩm hiện có với Gemini AI.
+     * CHỈ cache khi Gemini trả về thành công — fallback KHÔNG cache.
      */
-    @Cacheable(value = "aiAnalysis", key = "'latest'")
     public Map<String, Object> analyzeTrendWithProducts(List<TikTokTrendDto> trends) {
         Map<String, Object> result = new HashMap<>();
 
@@ -113,6 +136,18 @@ public class TrendService {
             result.put("analysis", "AI đang tải dữ liệu...");
             result.put("recommendedProducts", List.of());
             return result;
+        }
+
+        // 1. Kiểm tra cache
+        Cache cache = cacheManager.getCache("aiAnalysis");
+        if (cache != null) {
+            Cache.ValueWrapper cached = cache.get("latest");
+            if (cached != null) {
+                log.info("✅ Returning AI analysis from REDIS CACHE (24h)");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> cachedResult = (Map<String, Object>) cached.get();
+                return cachedResult;
+            }
         }
 
         List<Product> activeProducts = productRepository.findActiveProducts(50);
@@ -125,6 +160,7 @@ public class TrendService {
                 .orElse("");
 
         try {
+            log.info("🤖 Calling Gemini AI for trend analysis...");
             String prompt = buildAnalysisPrompt(hashtagList, productCatalog);
 
             Map<String, Object> requestBody = new HashMap<>();
@@ -157,11 +193,12 @@ public class TrendService {
             }
 
             String jsonText = parts.get(0).path("text").asText("").trim();
-            log.info("Gemini raw response: {}", jsonText);
+            log.info("✅ Gemini AI SUCCESS!");
 
             Map<String, Object> aiResult = objectMapper.readValue(jsonText, new TypeReference<>() {});
 
             String analysis = (String) aiResult.getOrDefault("analysis", "Không có phân tích.");
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> recommended = enrichRecommendedProducts(
                     (List<Map<String, Object>>) aiResult.getOrDefault("recommendedProducts", List.of()),
                     activeProducts
@@ -170,13 +207,18 @@ public class TrendService {
             result.put("analysis", analysis);
             result.put("recommendedProducts", recommended);
 
-            // ===== LƯU LỊCH SỬ VÀO MYSQL =====
+            // CHỈ cache khi Gemini thành công
+            if (cache != null) {
+                cache.put("latest", result);
+            }
+
+            // Lưu lịch sử vào MySQL
             saveTrendHistory(hashtagList, analysis, recommended, "TikTok US + Gemini AI");
 
             return result;
 
         } catch (Exception e) {
-            log.error("Gemini Error: {}. Dùng câu trả lời dự phòng.", e.getMessage());
+            log.warn("⚠️ Gemini AI FAILED: {}. Using fallback (NOT cached).", e.getMessage());
             List<Map<String, Object>> fallback = buildFallbackRecommendations(activeProducts, trends);
 
             String fallbackAnalysis = "AI Analysis: Xu hướng " + trends.get(0).getDesc()
@@ -185,7 +227,7 @@ public class TrendService {
             result.put("analysis", fallbackAnalysis);
             result.put("recommendedProducts", fallback);
 
-            // Lưu cả fallback vào lịch sử
+            // Lưu fallback vào lịch sử nhưng KHÔNG cache
             saveTrendHistory(hashtagList, fallbackAnalysis, fallback, "Fallback");
 
             return result;

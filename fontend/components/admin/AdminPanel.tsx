@@ -10,6 +10,7 @@ import Dashboard from './Dashboard';
 import OrderDetailsModal from './OrderDetailsModal';
 import { CategoryManagementModal, ProductFormModal } from './ProductModals';
 import AdminChatView, { ChatConversation, ChatMessage } from './AdminChatView';
+import TrendHistoryView from './TrendHistoryView';
 import { Product, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta } from '../../types';
 import {
   getAdminConversations,
@@ -19,7 +20,7 @@ import {
   ChatMessageRes,
 } from '../../services/shopApi';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -358,6 +359,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         return { title: 'Customer Base', subtitle: 'View and manage your registered customers and VIPs', btnText: 'Add Customer' };
       case 'chatting':
         return { title: 'Chatting', subtitle: 'Chat with customers in real-time', btnText: '' };
+      case 'trends':
+        return { title: 'AI Trend History', subtitle: 'Lịch sử phân tích xu hướng TikTok bằng AI', btnText: '' };
     }
   };
 
@@ -430,7 +433,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <p className="text-sm text-subtext-light dark:text-subtext-dark">{headerInfo.subtitle}</p>
           </div>
           <div className="flex items-center gap-4">
-            {currentView !== 'dashboard' && currentView !== 'chatting' && (
+            {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
                 <button className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-sm font-bold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                   <span className="material-symbols-outlined text-[20px]">file_download</span>
                   Export
@@ -471,7 +474,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       Add Product
                   </button>
               </>
-            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && (
+            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
                 <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}
@@ -506,8 +509,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               />
           )}
 
+          {/* Trend History View */}
+          {currentView === 'trends' && (
+              <TrendHistoryView />
+          )}
+
           {/* List Views */}
-          {currentView !== 'dashboard' && currentView !== 'chatting' && (
+          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
              <div className="flex flex-col gap-6">
                 <KPICards data={getKPIs()} isLoading={isLoading} />
 
