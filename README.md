@@ -31,6 +31,9 @@ Edit `.env` and fill in the values. **Required** for basic setup:
 
 | Variable | Description | Notes |
 |----------|-------------|-------|
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | For "Login with Google" – get from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Required with `GOOGLE_CLIENT_ID` |
+| `GOOGLE_REDIRECT_URI` | OAuth redirect URI | Default: `http://localhost:3000/auth/google/callback` (match frontend) |
 | `S3_ENABLED` | Enable/disable S3 image upload | `false` if no S3 yet |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | AWS credentials | Required if `S3_ENABLED=true` |
 | `AWS_S3_BUCKET` / `AWS_S3_PUBLIC_BASE_URL` / `AWS_REGION` | S3 config | |
@@ -39,7 +42,7 @@ Edit `.env` and fill in the values. **Required** for basic setup:
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP for invoice emails | Omit if not needed |
 
 > **Quick tip**: Generate a base64 JWT_SECRET:  
-> `Open git bash here -> openssl rand -base64 32`
+> `Open git bash here -> openssl rand -base64 64`
 
 ### Step 2: Run with Docker Compose
 
@@ -94,6 +97,14 @@ Leave `AWS_*` and `GEMINI_API_KEY` empty or default. App runs normally, just wit
 | `JWT_SECRET` error | Ensure JWT_SECRET is at least 64 characters, preferably base64 |
 | Port 80/8080/3306 in use | Change ports in `docker-compose.yml` (e.g. `"3000:80"` for frontend) |
 
+### Google Login (optional)
+
+1. Create OAuth 2.0 credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Add authorized redirect URI: `http://localhost:3000/auth/google/callback` (or your frontend URL)
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
+
+Flow: Frontend gets login URL from `GET /auth/google/url` → user logs in at Google → redirects to `/auth/google/callback?code=...` → frontend sends code to `POST /auth/google/callback` → backend creates/retrieves user and returns access token.
+
 ---
 
 ## AI ChatBot Support (main focus)
@@ -142,7 +153,7 @@ likefood:
 | **Product** | Products, Categories, ProductVariants (SKU per variant), slug auto-generated from name (Vietnamese-aware), S3 image upload |
 | **Cart** | User cart, `CartItem` linked to `ProductVariant` |
 | **Order** | Orders, payment, order status, order history |
-| **Auth** | Login / register JWT, OAuth2, user profile + avatar |
+| **Auth** | Login / register JWT, OAuth2, Google login, user profile + avatar |
 | **Storage** | S3 image upload (products, avatar) |
 | **Admin** | Dashboard, product/category management, orders, customers, CSV product import |
 

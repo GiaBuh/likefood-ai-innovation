@@ -1,13 +1,15 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from '../types';
-import { getCurrentUserFromStorage, loginWithBackend, logoutFromBackend, registerWithBackend, updateProfileApi } from '../services/authApi';
+import { getCurrentUserFromStorage, getGoogleLoginUrl as fetchGoogleLoginUrl, loginWithBackend, loginWithGoogleCallback, logoutFromBackend, registerWithBackend, updateProfileApi } from '../services/authApi';
 import { getStoredAuthUser, setStoredAuthUser } from '../services/apiClient';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (code: string) => Promise<void>;
+  getGoogleLoginUrl: () => Promise<string>;
   register: (payload: {
     username: string;
     email: string;
@@ -34,6 +36,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userData = await loginWithBackend(email, password);
     setUser(userData);
   };
+
+  const loginWithGoogle = async (code: string) => {
+    const userData = await loginWithGoogleCallback(code);
+    setUser(userData);
+  };
+
+  const getGoogleLoginUrl = () => fetchGoogleLoginUrl();
 
   const register = async (payload: {
     username: string;
@@ -68,6 +77,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user, 
       isAuthenticated: !!user, 
       login, 
+      loginWithGoogle,
+      getGoogleLoginUrl,
       register,
       logout, 
       updateUser 

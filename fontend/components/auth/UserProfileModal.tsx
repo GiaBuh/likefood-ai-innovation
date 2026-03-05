@@ -15,6 +15,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showError, showSuccess } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: user.name || '',
     phone: user.phone || '',
@@ -35,8 +37,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
 
   if (!isOpen) return null;
 
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
