@@ -1,7 +1,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { Product, CartItem, Order, FulfillmentStatus, Category, PaginationMeta } from '../types';
-import { useToast } from '../contexts/ToastContext';
+import { useToast } from './ToastContext';
 import {
   addItemToMyCart,
   cancelMyOrder as cancelMyOrderApi,

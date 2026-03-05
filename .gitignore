@@ -3,6 +3,6 @@
 # ==========================================
 .env
 backend/.env
-fontend/.env
+frontend/.env
 docker-compose.yml
 
