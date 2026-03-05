@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 interface TrendData {
     desc: string;
@@ -114,10 +114,11 @@ const LoadingSkeleton: React.FC = () => (
 
 const TrendSection: React.FC = () => {
     const [data, setData] = useState<TrendResponse | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [isUsingFallback, setIsUsingFallback] = useState(false);
 
-    useEffect(() => {
+    const fetchTrends = () => {
+        setLoading(true);
         const API_URL = "/ai/trends/analyze";
 
         fetch(API_URL)
@@ -135,7 +136,6 @@ const TrendSection: React.FC = () => {
                         source: payload.source,
                         isRealData: payload.isRealData,
                     });
-                    // Dùng isRealData từ backend để xác định LIVE vs DEMO
                     setIsUsingFallback(payload.isRealData === false);
                 } else {
                     throw new Error("Invalid Structure");
@@ -172,8 +172,64 @@ const TrendSection: React.FC = () => {
                 });
             })
             .finally(() => setLoading(false));
-    }, []);
+    };
 
+    /* ── IDLE STATE: chưa phân tích ── */
+    if (!data && !loading) {
+        return (
+            <section className="py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
+                <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl shadow-lg bg-gradient-to-r from-red-500 to-pink-500 shadow-red-500/20">
+                                <span className="material-symbols-outlined text-white">trending_up</span>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                                    AI Trend Spotter
+                                </h2>
+                                <p className="text-xs font-bold flex items-center gap-1 mt-1 text-stone-400">
+                                    Chưa phân tích
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CTA Card */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-3 relative overflow-hidden rounded-[32px] bg-white dark:bg-stone-800 shadow-xl border border-indigo-50 dark:border-stone-700 p-10 flex flex-col items-center justify-center text-center">
+                            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[240px]">psychology</span>
+                            </div>
+                            <div className="relative z-10 flex flex-col items-center gap-5">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                                    <span className="material-symbols-outlined text-white !text-3xl">auto_awesome</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-stone-100 mb-2">
+                                        Analyzing TikTok trends using AI.
+                                    </h3>
+                                    <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md">
+                                        Press the button below to have Gemini AI analyze current trends on TikTok and suggest suitable products for your store.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={fetchTrends}
+                                    className="mt-2 inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all hover:scale-[1.03] active:scale-[0.98]"
+                                >
+                                    <span className="material-symbols-outlined !text-lg">rocket_launch</span>
+                                    Analyze trends
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    /* ── LOADING STATE ── */
     if (loading) {
         return <LoadingSkeleton />;
     }
