@@ -21,7 +21,7 @@ interface TrendResponse {
     analysis: string;
     recommendedProducts: RecommendedProduct[];
     source?: string;
-    cached?: boolean;
+    isRealData?: boolean;
 }
 
 /* ───────────────────── SKELETON COMPONENTS ───────────────────── */
@@ -133,9 +133,10 @@ const TrendSection: React.FC = () => {
                         analysis: payload.analysis || "",
                         recommendedProducts: payload.recommendedProducts || [],
                         source: payload.source,
-                        cached: payload.cached,
+                        isRealData: payload.isRealData,
                     });
-                    setIsUsingFallback(false);
+                    // Dùng isRealData từ backend để xác định LIVE vs DEMO
+                    setIsUsingFallback(payload.isRealData === false);
                 } else {
                     throw new Error("Invalid Structure");
                 }
@@ -184,7 +185,7 @@ const TrendSection: React.FC = () => {
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <div
-                            className={`p-2.5 rounded-xl shadow-lg transition-colors ${isUsingFallback ? "bg-stone-400" : "bg-gradient-to-r from-red-500 to-pink-500 shadow-red-500/20"}`}
+                            className="p-2.5 rounded-xl shadow-lg bg-gradient-to-r from-red-500 to-pink-500 shadow-red-500/20"
                         >
                             <span className="material-symbols-outlined text-white">
                                 trending_up
@@ -193,26 +194,19 @@ const TrendSection: React.FC = () => {
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
                                 AI Trend Spotter
-                                {isUsingFallback && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] bg-stone-200 text-stone-600 font-bold border border-stone-300">
-                                        DEMO MODE
-                                    </span>
-                                )}
                             </h2>
                             <p
-                                className={`text-xs font-bold flex items-center gap-1 mt-1 ${isUsingFallback ? "text-stone-400" : "text-red-500"}`}
+                                className="text-xs font-bold flex items-center gap-1 mt-1 text-red-500"
                             >
                                 <span className="relative flex h-2 w-2">
                                     <span
-                                        className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${isUsingFallback ? "bg-stone-300" : "animate-ping bg-red-400"}`}
+                                        className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-red-400"
                                     ></span>
                                     <span
-                                        className={`relative inline-flex rounded-full h-2 w-2 ${isUsingFallback ? "bg-stone-400" : "bg-red-500"}`}
+                                        className="relative inline-flex rounded-full h-2 w-2 bg-red-500"
                                     ></span>
                                 </span>
-                                {isUsingFallback
-                                    ? "OFFLINE DATA"
-                                    : "LIVE ANALYSIS • TIKTOK US"}
+                                LIVE ANALYSIS • TIKTOK US
                             </p>
                         </div>
                     </div>

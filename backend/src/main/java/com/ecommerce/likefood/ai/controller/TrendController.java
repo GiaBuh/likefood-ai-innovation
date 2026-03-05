@@ -39,14 +39,16 @@ public class TrendController {
         Map<String, Object> aiResult = trendService.analyzeTrendWithProducts(trends);
 
         // 3. Đóng gói trả về
+        boolean isReal = trendService.isLastTrendSourceReal();
+
         Map<String, Object> response = new HashMap<>();
         response.put("trends", trends);
         response.put("analysis", aiResult.get("analysis"));
         response.put("recommendedProducts", aiResult.get("recommendedProducts"));
-        response.put("source", "TikTok US Real-time");
-        response.put("cached", true); // Frontend biết data từ cache hay mới
+        response.put("source", isReal ? "TikTok US Real-time" : "Mock Data (API unavailable)");
+        response.put("isRealData", isReal);
 
-        log.info("Returning successful AI analysis with {} trends", trends.size());
+        log.info("Returning AI analysis with {} trends (isReal={})", trends.size(), isReal);
         return ResponseEntity.ok(response);
     }
 

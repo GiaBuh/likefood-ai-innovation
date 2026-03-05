@@ -38,6 +38,9 @@ public class TrendService {
     private final CacheManager cacheManager;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    // Cờ theo dõi dữ liệu TikTok thật hay mock
+    private volatile boolean lastTrendSourceIsReal = false;
+
     // --- CẤU HÌNH TIKTOK ---
     @Value("${TIKTOK_API_URL:https://tiktok-creative-center-api.p.rapidapi.com/api/trending/hashtag?page=1&limit=20&period=120&country=US&sort_by=popular}")
     private String RAPID_API_URL;
@@ -71,6 +74,7 @@ public class TrendService {
             Cache.ValueWrapper cached = cache.get("daily");
             if (cached != null) {
                 log.info("✅ Returning TikTok trends from REDIS CACHE (24h)");
+                lastTrendSourceIsReal = true; // Cache chỉ chứa data thật
                 @SuppressWarnings("unchecked")
                 List<TikTokTrendDto> cachedTrends = (List<TikTokTrendDto>) cached.get();
                 return cachedTrends;
@@ -83,16 +87,24 @@ public class TrendService {
             List<TikTokTrendDto> realTrends = fetchFromRapidApi();
             log.info("✅ TikTok API SUCCESS! Got {} real trends. Caching for 24h.", realTrends.size());
 
-            // CHỈ cache khi API thật thành công
+            lastTrendSourceIsReal = true;
             if (cache != null) {
                 cache.put("daily", realTrends);
             }
             return realTrends;
 
         } catch (Exception e) {
-            log.warn("⚠️ TikTok API FAILED: {}. Using mock data (NOT cached — will retry next request).", e.getMessage());
-            return fetchFromMockData();  // KHÔNG cache → lần sau sẽ thử lại API thật
+            log.warn("⚠️ TikTok API FAILED: {}. Using mock data (NOT cached).", e.getMessage());
+            lastTrendSourceIsReal = false;
+            return fetchFromMockData();
         }
+    }
+
+    /**
+     * Frontend dùng field này để hiển thị "LIVE" hay "DEMO MODE".
+     */
+    public boolean isLastTrendSourceReal() {
+        return lastTrendSourceIsReal;
     }
 
     private List<TikTokTrendDto> fetchFromRapidApi() throws Exception {
@@ -219,16 +231,22 @@ public class TrendService {
 
         } catch (Exception e) {
             log.warn("⚠️ Gemini AI FAILED: {}. Using fallback (NOT cached).", e.getMessage());
-            List<Map<String, Object>> fallback = buildFallbackRecommendations(activeProducts, trends);
 
-            String fallbackAnalysis = "AI Analysis: Xu hướng " + trends.get(0).getDesc()
-                    + " đang rất hot! Shop nên đẩy mạnh các sản phẩm liên quan để tăng doanh thu.";
+            // Trích hashtag đẹp hơn cho fallback analysis
+            List<String> hashtags = extractHashtags(trends);
+            String hashtagText = hashtags.isEmpty()
+                    ? trends.get(0).getDesc()
+                    : String.join(", ", hashtags.subList(0, Math.min(5, hashtags.size())));
+
+            String fallbackAnalysis = "Xu hướng " + hashtagText
+                    + " đang rất hot trên TikTok! Shop nên đẩy mạnh các sản phẩm liên quan để tăng doanh thu.";
+
+            List<Map<String, Object>> fallbackProducts = buildFallbackRecommendations(activeProducts, trends);
 
             result.put("analysis", fallbackAnalysis);
-            result.put("recommendedProducts", fallback);
+            result.put("recommendedProducts", fallbackProducts);
 
-            // Lưu fallback vào lịch sử nhưng KHÔNG cache
-            saveTrendHistory(hashtagList, fallbackAnalysis, fallback, "Fallback");
+            saveTrendHistory(hashtagList, fallbackAnalysis, fallbackProducts, "Fallback");
 
             return result;
         }
@@ -335,14 +353,24 @@ public class TrendService {
         List<Map<String, Object>> recommendations = new ArrayList<>();
         if (products.isEmpty() || trends.isEmpty()) return recommendations;
 
-        String firstTrend = trends.get(0).getDesc();
-        for (int i = 0; i < Math.min(4, products.size()); i++) {
+        // Trích xuất hashtag từ desc (ví dụ: "Thử thách #spicy #food" → "#spicy #food")
+        List<String> hashtags = extractHashtags(trends);
+
+        for (int i = 0; i < Math.min(2, products.size()); i++) {
             Product p = products.get(i);
+            // Xoay vòng trend cho mỗi sản phẩm
+            String trend = hashtags.isEmpty()
+                    ? trends.get(i % trends.size()).getDesc()
+                    : hashtags.get(i % hashtags.size());
+
+            String category = p.getCategory() != null ? p.getCategory().getName() : "đồ ăn vặt";
+            String reason = "Sản phẩm " + category + " phù hợp với xu hướng " + trend + " trên TikTok.";
+
             Map<String, Object> rec = new HashMap<>();
             rec.put("productId", p.getId());
             rec.put("productName", p.getName());
-            rec.put("matchedTrend", firstTrend);
-            rec.put("reason", "Sản phẩm phù hợp với xu hướng ăn vặt hiện tại trên TikTok.");
+            rec.put("matchedTrend", trend);
+            rec.put("reason", reason);
             // Enrichment
             if (p.getThumbnailKey() != null && !p.getThumbnailKey().isEmpty()) {
                 rec.put("imageUrl", s3PublicBaseUrl + "/" + p.getThumbnailKey());
@@ -353,6 +381,29 @@ public class TrendService {
             recommendations.add(rec);
         }
         return recommendations;
+    }
+
+    /**
+     * Trích xuất hashtag từ danh sách trend.
+     * VD: "Thử thách làm món cực đã #spicy #food #vietnamese" → ["#spicy", "#food", "#vietnamese"]
+     */
+    private List<String> extractHashtags(List<TikTokTrendDto> trends) {
+        List<String> hashtags = new ArrayList<>();
+        for (TikTokTrendDto t : trends) {
+            String desc = t.getDesc();
+            if (desc == null) continue;
+            // Nếu desc BẮT ĐẦU bằng # → đã là hashtag rồi (data từ API thật)
+            if (desc.startsWith("#")) {
+                hashtags.add(desc);
+            } else {
+                // Trích hashtag từ câu dài (mock data)
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("#\\w+").matcher(desc);
+                while (m.find()) {
+                    hashtags.add(m.group());
+                }
+            }
+        }
+        return hashtags;
     }
 
     private String formatNumber(long count) {
