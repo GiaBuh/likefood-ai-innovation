@@ -51,10 +51,10 @@ public class TrendService {
     private final String RAPID_API_HOST = "tiktok-creative-center-api.p.rapidapi.com";
 
     // --- CẤU HÌNH GEMINI AI ---
-    @Value("${GEMINI_API_KEY}")
+    @Value("${likefood.ai.gemini.api-key}")
     private String GEMINI_API_KEY;
 
-    @Value("${likefood.ai.gemini.model:gemini-2.0-flash}")
+    @Value("${likefood.ai.gemini.model:gemini-2.5-flash}")
     private String GEMINI_MODEL;
 
     private static final String GEMINI_BASE_URL = "https://newapi.ccfilm.online/v1/chat/completions";
@@ -328,25 +328,33 @@ public class TrendService {
                 ## Danh sách sản phẩm hiện có của shop:
                 %s
                 
-                ## Nhiệm vụ:
-                1. Phân tích xu hướng TikTok trên và đưa ra nhận định về thị trường đồ ăn vặt (2-3 câu).
-                2. Phân loại và gợi ý sản phẩm từ danh sách trên phù hợp với từng xu hướng.
-                3. Đưa ra lý do tại sao sản phẩm đó phù hợp với xu hướng.
+                ## Quy trình Tư duy & Nhiệm vụ của bạn:
+                1. Bước 1: Phân tích Ngữ nghĩa và "Vibe" (Semantic Analysis)
+                   - Hiểu hashtag đó nói về chủ đề gì (vd: game, thể thao, học tập, giải trí...).
+                   - Xác định đối tượng khách hàng mục tiêu và nhu cầu ăn vặt của họ (vd: game thủ cần đồ ăn nhanh gọn không bẩn tay, người tập gym cần protein...).
+                
+                2. Bước 2: "Khớp lệnh" với Danh mục sản phẩm (Mapping)
+                   - Từ phân tích trên, chọn ra các sản phẩm LikeFood phù hợp nhất với "Vibe" của xu hướng.
+                   - Ví dụ: Trend Game -> Chọn Khô gà lá chanh, Bánh tráng trộn (không dính tay). Trend Thể thao -> Chọn Hạt điều, Granola (tốt cho sức khỏe).
+                
+                3. Bước 3: Đưa ra Nhận định và Gợi ý
+                   - Viết một nhận định tổng quan về xu hướng và tại sao nó tạo ra cơ hội bán hàng.
+                   - Gợi ý tối đa 6 sản phẩm phù hợp nhất, kèm theo lý do thuyết phục dựa trên phân tích ở Bước 1 & 2.
                 
                 ## Trả về JSON theo đúng format sau (KHÔNG markdown, CHỈ JSON thuần):
                 {
-                  "analysis": "Nhận định tổng quan về xu hướng và chiến lược marketing (2-3 câu tiếng Việt)",
+                  "analysis": "Nhận định tổng quan về xu hướng này và nhu cầu của khách hàng (2-3 câu tiếng Việt)",
                   "recommendedProducts": [
                     {
                       "productId": "ID sản phẩm từ danh sách trên",
                       "productName": "Tên sản phẩm",
                       "matchedTrend": "#hashtag phù hợp",
-                      "reason": "Lý do ngắn gọn tại sao sản phẩm phù hợp xu hướng này (1 câu tiếng Việt)"
+                      "reason": "Lý do thuyết phục tại sao món ăn này phù hợp với nhu cầu của tập khách hàng trong xu hướng này (1-2 câu tiếng Việt)"
                     }
                   ]
                 }
                 
-                Lưu ý: Chọn tối đa 6 sản phẩm phù hợp nhất. Trả lời bằng tiếng Việt.
+                Lưu ý: Bạn phải áp dụng quy trình tư duy trên nhưng chỉ trả về kết quả cuối cùng theo định dạng JSON được yêu cầu. Trả lời hoàn toàn bằng tiếng Việt.
                 """.formatted(hashtagList, productCatalog);
     }
 
