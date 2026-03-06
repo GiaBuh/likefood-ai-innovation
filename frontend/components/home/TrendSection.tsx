@@ -27,7 +27,7 @@ interface TrendResponse {
 /* ───────────────────── SKELETON COMPONENTS ───────────────────── */
 
 const SkeletonPulse: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={`animate-pulse bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 dark:from-stone-800 dark:via-stone-700 dark:to-stone-800 bg-[length:200%_100%] rounded ${className ?? ""}`} 
+    <div className={`animate-pulse bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 dark:from-stone-800 dark:via-stone-700 dark:to-stone-800 bg-[length:200%_100%] rounded ${className ?? ""}`}
          style={{ animation: "shimmer 1.5s ease-in-out infinite" }} />
 );
 
@@ -286,7 +286,7 @@ const TrendSection: React.FC = () => {
                             </span>
 
                             <h3 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-stone-100 mb-6 leading-relaxed italic">
-                                "{data?.analysis}"
+                                &quot;{data?.analysis}&quot;
                             </h3>
                         </div>
 
