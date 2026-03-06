@@ -57,7 +57,7 @@ public class TrendService {
     @Value("${likefood.ai.gemini.model:gemini-2.0-flash}")
     private String GEMINI_MODEL;
 
-    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
+    private static final String GEMINI_BASE_URL = "https://newapi.ccfilm.online/v1/chat/completions";
 
     @Value("${likefood.storage.s3.public-base-url:}")
     private String s3PublicBaseUrl;
@@ -172,40 +172,41 @@ public class TrendService {
                 .orElse("");
 
         try {
-            log.info("🤖 Calling Gemini AI for trend analysis...");
+            log.info("🤖 Calling Proxy AI for trend analysis...");
             String prompt = buildAnalysisPrompt(hashtagList, productCatalog);
 
             Map<String, Object> requestBody = new HashMap<>();
-            Map<String, Object> generationConfig = new HashMap<>();
-            generationConfig.put("responseMimeType", "application/json");
-            generationConfig.put("temperature", 0.7);
-            requestBody.put("generationConfig", generationConfig);
+            requestBody.put("model", GEMINI_MODEL);
+            requestBody.put("temperature", 0.7);
 
-            Map<String, Object> content = new HashMap<>();
-            Map<String, Object> part = new HashMap<>();
-            part.put("text", prompt);
-            content.put("parts", List.of(part));
-            requestBody.put("contents", List.of(content));
+            Map<String, Object> responseFormat = new HashMap<>();
+            responseFormat.put("type", "json_object");
+            requestBody.put("response_format", responseFormat);
+
+            Map<String, Object> message = new HashMap<>();
+            message.put("role", "user");
+            message.put("content", prompt);
+            requestBody.put("messages", List.of(message));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + GEMINI_API_KEY);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            String geminiUrl = GEMINI_BASE_URL + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
-            ResponseEntity<String> response = restTemplate.postForEntity(geminiUrl, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(GEMINI_BASE_URL, entity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode candidates = root.path("candidates");
-            if (candidates.isMissingNode() || !candidates.isArray() || candidates.isEmpty()) {
-                throw new RuntimeException("Gemini trả về không có candidates");
+            JsonNode choices = root.path("choices");
+            if (choices.isMissingNode() || !choices.isArray() || choices.isEmpty()) {
+                throw new RuntimeException("AI trả về không có choices");
             }
-            JsonNode parts = candidates.get(0).path("content").path("parts");
-            if (parts.isMissingNode() || !parts.isArray() || parts.isEmpty()) {
-                throw new RuntimeException("Gemini trả về không có parts");
+            JsonNode messageNode = choices.get(0).path("message");
+            if (messageNode.isMissingNode()) {
+                throw new RuntimeException("AI trả về không có message");
             }
 
-            String jsonText = parts.get(0).path("text").asText("").trim();
-            log.info("✅ Gemini AI SUCCESS!");
+            String jsonText = messageNode.path("content").asText("").trim();
+            log.info("✅ Proxy AI SUCCESS!");
 
             Map<String, Object> aiResult = objectMapper.readValue(jsonText, new TypeReference<>() {});
 
@@ -225,12 +226,12 @@ public class TrendService {
             }
 
             // Lưu lịch sử vào MySQL
-            saveTrendHistory(hashtagList, analysis, recommended, "TikTok US + Gemini AI");
+            saveTrendHistory(hashtagList, analysis, recommended, "TikTok US + Proxy AI");
 
             return result;
 
         } catch (Exception e) {
-            log.warn("⚠️ Gemini AI FAILED: {}. Using fallback (NOT cached).", e.getMessage());
+            log.warn("⚠️ Proxy AI FAILED: {}. Using fallback (NOT cached).", e.getMessage());
 
             // Trích hashtag đẹp hơn cho fallback analysis
             List<String> hashtags = extractHashtags(trends);
