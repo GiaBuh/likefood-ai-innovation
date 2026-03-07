@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 final class AiChatProductSupport {
@@ -17,6 +19,7 @@ final class AiChatProductSupport {
             "xin", "chao", "hello", "hi", "ban", "toi", "anh", "chi", "em", "cho", "co", "the",
             "duoc", "khong", "gi", "nao", "mot", "vai", "di", "nhe", "a", "ha", "va", "voi", "hay",
             "goi", "y", "tu", "van", "mon", "hom", "nay", "menu", "danh", "sach", "an", "uong",
+            "mua", "dat", "them", "gio", "hang",
             "please", "can", "you", "i", "me", "my", "some", "any", "the", "a", "an", "what", "which",
             "show", "suggest", "recommend");
     private static final Map<String, String> EN_TO_VI_HINTS = Map.ofEntries(
@@ -33,7 +36,52 @@ final class AiChatProductSupport {
             Map.entry("tamarind", "me"),
             Map.entry("spicy", "cay"),
             Map.entry("seaweed", "rong bien"),
-            Map.entry("dried", "kho"));
+            Map.entry("dried", "kho"),
+            Map.entry("nuts", "hat"));
+    /** Map query terms to catalog category names for category-based search. */
+    private static final Map<String, String> CATEGORY_QUERY_MAP = Map.ofEntries(
+            Map.entry("hat", "Hạt"),
+            Map.entry("banh", "Bánh"),
+            Map.entry("muc", "Mực"),
+            Map.entry("mut", "Mứt"),
+            Map.entry("kho", "Khô"));
+
+    /** Phát hiện category từ message (VD: "dạng hạt", "loại hạt" -> "Hạt"). Dùng pattern cụ thể để tránh match sai (vd: "kho" trong "khoai"). */
+    static String parseCategoryHintFromMessage(String message) {
+        if (!StringUtils.hasText(message)) return "";
+        String n = AiChatTextSupport.normalize(message);
+        if (n.contains("dang hat") || n.contains("loai hat") || n.contains("thuoc dang hat") || n.contains("thuoc loai hat") || n.contains("mon hat") || n.contains("nuts")) return "Hạt";
+        if (n.contains("dang banh") || n.contains("loai banh") || n.contains("thuoc dang banh") || n.contains("mon banh")) return "Bánh";
+        if (n.contains("dang muc") || n.contains("loai muc") || n.contains("thuoc dang muc") || n.contains("mon muc")) return "Mực";
+        if (n.contains("dang mut") || n.contains("loai mut") || n.contains("thuoc dang mut") || n.contains("mon mut")) return "Mứt";
+        if (n.contains("dang kho") || n.contains("loai kho") || n.contains("thuoc dang kho") || n.contains("mon kho")) return "Khô";
+        return "";
+    }
+
+    private static final Pattern BUDGET_K = Pattern.compile("(\\d+)\\s*k\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BUDGET_DO = Pattern.compile("(\\d+)\\s*(đô|do|usd|dollar)\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BUDGET_NGHIN = Pattern.compile("(\\d+)\\s*(nghin|ngan|nghìn|ngàn|trăm|tram)\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BUDGET_SO = Pattern.compile("(\\d{1,3}(?:[.,]\\d{3})*)\\s*(?:đ|vnd|dong)?", Pattern.CASE_INSENSITIVE);
+
+    /** Phát hiện ngân sách VND từ message (VD: "50k"->50000, "100 nghìn"->100000, "50 đô"->1250000). */
+    static int parseBudgetVndFromMessage(String message) {
+        if (!StringUtils.hasText(message)) return 0;
+        String s = message.replaceAll("[\\s,]", " ");
+        Matcher m = BUDGET_K.matcher(s);
+        if (m.find()) return Integer.parseInt(m.group(1)) * 1000;
+        m = BUDGET_DO.matcher(s);
+        if (m.find()) return Integer.parseInt(m.group(1)) * 25000;
+        m = BUDGET_NGHIN.matcher(s);
+        if (m.find()) {
+            int n = Integer.parseInt(m.group(1));
+            String u = m.group(2).toLowerCase();
+            if (u.contains("trăm") || u.contains("tram")) return n * 100;
+            return n * 1000;
+        }
+        m = BUDGET_SO.matcher(s);
+        if (m.find()) return Integer.parseInt(m.group(1).replaceAll("[.,]", ""));
+        return 0;
+    }
 
     private AiChatProductSupport() {
     }
@@ -62,8 +110,10 @@ final class AiChatProductSupport {
                 .toList();
     }
 
-    private static final int STRICT_SCORE_THRESHOLD = 3;
-    private static final int LOOSE_SCORE_THRESHOLD = 2;
+    private static final int STRICT_SCORE_THRESHOLD = 4;
+    private static final int LOOSE_SCORE_THRESHOLD = 3;
+    /** Độ dài tối thiểu của token để chấm điểm - tránh "mu" match cả "muc" và "mut". */
+    private static final int MIN_TOKEN_LENGTH = 3;
 
     static List<String> findRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit) {
         return findRelatedProductIds(message, productCatalog, limit, STRICT_SCORE_THRESHOLD);
@@ -72,6 +122,57 @@ final class AiChatProductSupport {
     /** Tìm món liên quan với ngưỡng thấp - khi không có món khớp chính xác. VD: "khô gà lá chanh" -> Khô bò, Khô mực. */
     static List<String> findLooselyRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit) {
         return findRelatedProductIds(message, productCatalog, limit, LOOSE_SCORE_THRESHOLD);
+    }
+
+    /** Tìm sản phẩm với lọc category và budget. categoryHint: tên category (Hạt, Bánh, Mực...) - chỉ lấy sản phẩm trong category. maxBudgetVnd: ngân sách VND - chỉ lấy sản phẩm có giá <= budget (1 USD ~ 25000 VND). */
+    static List<String> findRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit,
+            String categoryHint, int maxBudgetVnd) {
+        List<String> base = findRelatedProductIds(message, productCatalog, limit * 2, STRICT_SCORE_THRESHOLD);
+        if (base.isEmpty() && StringUtils.hasText(categoryHint)) {
+            String normCat = AiChatTextSupport.normalize(categoryHint);
+            base = productCatalog.stream()
+                    .filter(item -> {
+                        String cat = AiChatTextSupport.normalize(String.valueOf(item.getOrDefault("category", "")));
+                        return cat.contains(normCat) || normCat.contains(cat);
+                    })
+                    .map(item -> String.valueOf(item.get("id")))
+                    .toList();
+        }
+        return filterByCategoryAndBudget(base, productCatalog, categoryHint, maxBudgetVnd, limit);
+    }
+
+    static List<String> filterByCategoryAndBudget(List<String> productIds, List<Map<String, Object>> productCatalog,
+            String categoryHint, int maxBudgetVnd, int limit) {
+        if (productIds.isEmpty()) return List.of();
+        Map<String, Map<String, Object>> catalogById = productCatalog.stream()
+                .collect(Collectors.toMap(item -> String.valueOf(item.get("id")), item -> item));
+        double maxPriceUsd = maxBudgetVnd > 0 ? maxBudgetVnd / 25000.0 : Double.MAX_VALUE;
+        String normalizedCategory = StringUtils.hasText(categoryHint) ? AiChatTextSupport.normalize(categoryHint) : "";
+
+        return productIds.stream()
+                .map(id -> catalogById.get(id))
+                .filter(item -> item != null)
+                .filter(item -> {
+                    if (StringUtils.hasText(normalizedCategory)) {
+                        String cat = AiChatTextSupport.normalize(String.valueOf(item.getOrDefault("category", "")));
+                        if (!cat.contains(normalizedCategory) && !normalizedCategory.contains(cat)) return false;
+                    }
+                    if (maxBudgetVnd > 0) {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> variants = (List<Map<String, Object>>) item.get("variants");
+                        if (variants == null || variants.isEmpty()) return false;
+                        double minPrice = variants.stream()
+                                .map(v -> v.get("price"))
+                                .filter(p -> p != null)
+                                .mapToDouble(p -> ((Number) p).doubleValue())
+                                .min().orElse(Double.MAX_VALUE);
+                        if (minPrice > maxPriceUsd) return false;
+                    }
+                    return true;
+                })
+                .map(item -> String.valueOf(item.get("id")))
+                .limit(limit)
+                .toList();
     }
 
     static List<Product> pickFeaturedProducts(List<Product> products, int limit) {
@@ -195,23 +296,35 @@ final class AiChatProductSupport {
                     String description = AiChatTextSupport
                             .normalize(String.valueOf(item.getOrDefault("description", "")));
                     int score = 0;
+                    int nameScore = 0;
                     if (name.contains(normalizedMessage) || normalizedMessage.contains(name)) {
                         score += 8;
+                        nameScore += 8;
                     }
                     for (String token : tokens) {
-                        if (containsWord(name, token))
+                        if (containsWord(name, token)) {
                             score += 3;
-                        else if (name.contains(token))
+                            nameScore += 3;
+                        } else if (name.contains(token)) {
                             score += 1;
+                            nameScore += 1;
+                        }
                         if (category.contains(token))
                             score += 1;
                         if (description.contains(token))
                             score += 1;
                     }
-                    return Map.entry(id, score);
+                    return Map.entry(id, new int[]{ score, nameScore });
                 })
-                .filter(entry -> entry.getValue() >= minScore)
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .filter(entry -> {
+                    int score = entry.getValue()[0];
+                    int nameScore = entry.getValue()[1];
+                    if (score < minScore) return false;
+                    // Khi user hỏi sản phẩm cụ thể (2+ token), bắt buộc phải có match trong TÊN sản phẩm
+                    if (tokens.size() >= 2 && nameScore <= 0) return false;
+                    return true;
+                })
+                .sorted((a, b) -> Integer.compare(b.getValue()[0], a.getValue()[0]))
                 .map(Map.Entry::getKey)
                 .distinct()
                 .limit(limit)

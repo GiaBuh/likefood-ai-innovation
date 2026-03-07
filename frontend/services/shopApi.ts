@@ -814,6 +814,40 @@ export async function removeMyCartItem(itemId: string): Promise<BackendCart> {
   return unwrapRestResponse(payload);
 }
 
+export type CartRecommendationItem = {
+  productId: string;
+  variantId: string;
+  productName: string;
+  category: string;
+  variant: string;
+  price: number;
+  reason: string;
+  imageUrl?: string;
+};
+
+export type CartRecommendationResponse = {
+  recommendations: CartRecommendationItem[];
+};
+
+type BackendCartRecommendationItem = CartRecommendationItem & { imageKey?: string };
+
+export async function getCartRecommendations(): Promise<CartRecommendationResponse> {
+  const response = await apiFetch('/carts/me/recommendations', {
+    method: 'GET',
+    requireAuth: true,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get recommendations (${response.status})`);
+  }
+  const payload = (await response.json()) as RestResponse<{ recommendations: BackendCartRecommendationItem[] }> | { recommendations: BackendCartRecommendationItem[] };
+  const data = unwrapRestResponse(payload) as { recommendations: BackendCartRecommendationItem[] };
+  const items = (data?.recommendations || []).map((r) => ({
+    ...r,
+    imageUrl: resolveImageUrl(r.imageKey || ''),
+  }));
+  return { recommendations: items };
+}
+
 export async function createOrderFromMyCart(payload: CreateOrderPayload): Promise<Order> {
   const response = await apiFetch('/orders/me', {
     method: 'POST',

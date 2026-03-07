@@ -1,7 +1,9 @@
 package com.ecommerce.likefood.cart.controller;
 
 import com.ecommerce.likefood.cart.dto.req.CartItemUpsertRequest;
+import com.ecommerce.likefood.cart.dto.res.CartRecommendationResponse;
 import com.ecommerce.likefood.cart.dto.res.CartResponse;
+import com.ecommerce.likefood.cart.service.CartRecommendationService;
 import com.ecommerce.likefood.cart.service.CartService;
 import com.ecommerce.likefood.common.utils.ApiMessage;
 import jakarta.validation.Valid;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class CartController {
 
     private final CartService cartService;
+    private final CartRecommendationService cartRecommendationService;
 
     @GetMapping("/carts/me")
     @ApiMessage("Get my cart")
@@ -40,5 +43,11 @@ public class CartController {
     @ApiMessage("Remove item from my cart")
     public ResponseEntity<CartResponse> removeItem(@PathVariable("itemId") String itemId) {
         return ResponseEntity.ok(cartService.removeItem(itemId));
+    }
+
+    @GetMapping("/carts/me/recommendations")
+    @ApiMessage("Get checkout recommendations")
+    public ResponseEntity<CartRecommendationResponse> getRecommendations() {
+        return ResponseEntity.ok(cartRecommendationService.getRecommendations());
     }
 }
