@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CartItem } from '../../types';
+import { getCartRecommendations } from '../../services/shopApi';
+import { useToast } from '../../contexts/ToastContext';
+import RecommendationModal from './RecommendationModal';
 
 interface CartReviewProps {
   cart: CartItem[];
@@ -7,6 +10,7 @@ interface CartReviewProps {
   onRemoveItem: (id: number | string) => void;
   onBackToHome: () => void;
   onNext: () => void;
+  onAddToCartByVariantId?: (variantId: string, quantity: number) => Promise<void>;
 }
 
 const CartReview: React.FC<CartReviewProps> = ({ 
@@ -14,8 +18,40 @@ const CartReview: React.FC<CartReviewProps> = ({
   onUpdateQuantity, 
   onRemoveItem, 
   onBackToHome,
-  onNext
+  onNext,
+  onAddToCartByVariantId
 }) => {
+  const { showError } = useToast();
+  const [showRecModal, setShowRecModal] = useState(false);
+  const [recommendations, setRecommendations] = useState<Array<{
+    productId: string;
+    variantId: string;
+    productName: string;
+    category: string;
+    variant: string;
+    price: number;
+    reason: string;
+  }>>([]);
+  const [loadingRec, setLoadingRec] = useState(false);
+
+  const handleCheckoutClick = async () => {
+    setShowRecModal(true);
+    setLoadingRec(true);
+    try {
+      const res = await getCartRecommendations();
+      setRecommendations(res.recommendations ?? []);
+    } catch (e) {
+      setRecommendations([]);
+      showError(e instanceof Error ? e.message : 'Không thể tải gợi ý. Bạn có thể tiếp tục thanh toán.');
+    } finally {
+      setLoadingRec(false);
+    }
+  };
+
+  const handleContinue = () => {
+    setShowRecModal(false);
+    onNext();
+  };
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 50 ? 0 : 5;
   const total = subtotal + shipping;
@@ -93,7 +129,7 @@ const CartReview: React.FC<CartReviewProps> = ({
 
           <div className="flex gap-4 ml-auto w-full sm:w-auto">
             <button 
-              onClick={onNext}
+              onClick={handleCheckoutClick}
               className="flex-1 sm:flex-none px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
             >
               Checkout
@@ -102,6 +138,15 @@ const CartReview: React.FC<CartReviewProps> = ({
           </div>
         </div>
       )}
+
+      <RecommendationModal
+        isOpen={showRecModal}
+        onClose={() => setShowRecModal(false)}
+        recommendations={recommendations}
+        onAddItem={onAddToCartByVariantId ?? (async () => {})}
+        onContinue={handleContinue}
+        isLoading={loadingRec}
+      />
     </div>
   );
 };

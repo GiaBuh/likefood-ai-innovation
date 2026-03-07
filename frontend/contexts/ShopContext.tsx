@@ -47,6 +47,7 @@ interface ShopContextType {
   
   // Cart Actions
   addToCart: (product: Product, quantity: number) => void;
+  addToCartByVariantId: (variantId: string, quantity: number) => Promise<void>;
   removeFromCart: (id: number | string) => void;
   updateCartQuantity: (id: number | string, delta: number) => void;
   clearCart: () => void;
@@ -272,6 +273,15 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     }
   };
+
+  const addToCartByVariantId = useCallback(
+    async (variantId: string, quantity: number) => {
+      if (!getAccessToken()) return;
+      await addItemToMyCart(variantId, quantity);
+      await loadCartForCurrentUser();
+    },
+    [loadCartForCurrentUser]
+  );
 
   const removeFromCart = useCallback((id: number | string) => {
     const idStr = id != null ? String(id).trim() : '';
@@ -511,6 +521,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateProduct: updateProductAction,
       deleteProduct: deleteProductAction,
       addToCart,
+      addToCartByVariantId,
       removeFromCart,
       updateCartQuantity,
       clearCart,

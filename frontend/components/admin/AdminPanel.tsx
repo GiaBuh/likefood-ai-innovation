@@ -267,11 +267,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsImporting(true);
     try {
       const result = await onImportProductsFromCsv(file);
-      const msg = result.successCount > 0
-        ? `Imported ${result.successCount} product(s)${result.failCount > 0 ? `. ${result.failCount} failed.` : ''}`
-        : result.failCount > 0
-          ? `Import failed: ${result.errors?.join('; ') || 'Unknown error'}`
-          : 'No products to import.';
+      if (result.failCount > 0) {
+        console.error('Import failures:', result.errors);
+      }
+      let msg: string;
+      if (result.successCount > 0) {
+        msg = `Imported ${result.successCount} product(s)`;
+        if (result.failCount > 0) {
+          msg += `. ${result.failCount} failed.`;
+          if (result.errors?.length) {
+            msg += `\n\nChi tiết:\n${result.errors.join('\n')}`;
+          } else {
+            msg += '\n\n(Mở DevTools > Console để xem chi tiết)';
+          }
+        }
+      } else if (result.failCount > 0) {
+        msg = `Import failed: ${result.errors?.join('; ') || 'Unknown error'}`;
+      } else {
+        msg = 'No products to import.';
+      }
+      if (result.failCount > 0) {
+        console.error('[Import CSV] Failures:', result);
+      }
       window.alert(msg);
     } catch (err) {
       window.alert(err instanceof Error ? err.message : 'Import failed');
@@ -433,13 +450,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <p className="text-sm text-subtext-light dark:text-subtext-dark">{headerInfo.subtitle}</p>
           </div>
           <div className="flex items-center gap-4">
-            {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
-                <button className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-sm font-bold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
-                  <span className="material-symbols-outlined text-[20px]">file_download</span>
-                  Export
-                </button>
-            )}
-            
             {currentView === 'products' ? (
               <>
                   <input
@@ -474,7 +484,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       Add Product
                   </button>
               </>
-            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
+            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'customers' && (
                 <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}

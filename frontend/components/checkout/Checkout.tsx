@@ -21,7 +21,7 @@ const Checkout: React.FC<CheckoutProps> = ({
   onViewOrders
 }) => {
   const { user } = useAuth();
-  const { cart, updateCartQuantity, removeFromCart } = useShop();
+  const { cart, updateCartQuantity, removeFromCart, addToCartByVariantId } = useShop();
   const { showError } = useToast();
 
   const [step, setStep] = useState(1);
@@ -100,6 +100,7 @@ const Checkout: React.FC<CheckoutProps> = ({
             onRemoveItem={removeFromCart}
             onBackToHome={onBackToHome}
             onNext={handleNextStep}
+            onAddToCartByVariantId={addToCartByVariantId}
           />
         )}
         

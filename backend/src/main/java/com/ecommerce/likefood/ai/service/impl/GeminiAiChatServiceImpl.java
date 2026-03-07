@@ -330,7 +330,9 @@ public class GeminiAiChatServiceImpl implements AiChatService {
             }
             Integer quantity = parseQuantityFromPlan(map.get("quantity"));
             String variantHint = String.valueOf(map.getOrDefault("variantHint", "")).trim();
-            return new GeminiKeywordPlan(reply, refusal, intents, keywords, quantity, variantHint, outputLanguage);
+            String categoryHint = String.valueOf(map.getOrDefault("categoryHint", "")).trim();
+            int maxBudgetVnd = parseMaxBudgetVnd(map.get("maxBudgetVnd"));
+            return new GeminiKeywordPlan(reply, refusal, intents, keywords, quantity, variantHint, categoryHint, maxBudgetVnd, outputLanguage);
         } catch (IOException e) {
             throw new AppException("Gemini keyword JSON parse failed.");
         }
@@ -350,6 +352,20 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
     }
 
+    private int parseMaxBudgetVnd(Object raw) {
+        if (raw == null) return 0;
+        if (raw instanceof Number n) {
+            int v = n.intValue();
+            return v > 0 ? v : 0;
+        }
+        try {
+            int v = Integer.parseInt(String.valueOf(raw).trim().replaceAll("[^0-9]", ""));
+            return v > 0 ? v : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     private List<String> toStringList(Object rawValue) {
         return AiChatPromptSupport.toStringList(rawValue);
     }
@@ -360,6 +376,11 @@ public class GeminiAiChatServiceImpl implements AiChatService {
 
     private List<String> findRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit) {
         return AiChatProductSupport.findRelatedProductIds(message, productCatalog, limit);
+    }
+
+    private List<String> findRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit,
+            String categoryHint, int maxBudgetVnd) {
+        return AiChatProductSupport.findRelatedProductIds(message, productCatalog, limit, categoryHint, maxBudgetVnd);
     }
 
     private List<String> findLooselyRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit) {
@@ -923,7 +944,11 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                     .actions(buildProductListActions(featured, language, false)).build();
         }
 
-        List<String> matchedIds = findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
+        String categoryHint = AiChatProductSupport.parseCategoryHintFromMessage(message);
+        int maxBudgetVnd = AiChatProductSupport.parseBudgetVndFromMessage(message);
+        List<String> matchedIds = (StringUtils.hasText(categoryHint) || maxBudgetVnd > 0)
+                ? findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT, categoryHint, maxBudgetVnd)
+                : findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
         if (matchedIds.isEmpty()) {
             List<String> looselyRelatedIds = findLooselyRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
             List<Product> relatedProducts = looselyRelatedIds.stream()
@@ -1048,7 +1073,9 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
 
         String lookup = plan.keywords.isEmpty() ? message : (message + " " + String.join(" ", plan.keywords));
-        List<String> matchedIds = findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT);
+        List<String> matchedIds = (StringUtils.hasText(plan.categoryHint) || plan.maxBudgetVnd > 0)
+                ? findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT, plan.categoryHint, plan.maxBudgetVnd)
+                : findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT);
         List<Product> matchedProducts = matchedIds.stream()
                 .map(productById::get).filter(item -> item != null).toList();
 
@@ -1299,6 +1326,8 @@ public class GeminiAiChatServiceImpl implements AiChatService {
             List<String> keywords,
             Integer quantity,
             String variantHint,
+            String categoryHint,
+            int maxBudgetVnd,
             String language) {
     }
 
