@@ -19,6 +19,7 @@ import {
   ChatConversationRes,
   ChatMessageRes,
 } from '../../services/shopApi';
+import { useAdminChatWebSocket } from '../../hooks/useAdminChatWebSocket';
 
 type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends';
 
@@ -139,6 +140,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     const interval = setInterval(loadChatConversations, 5000);
     return () => clearInterval(interval);
   }, [currentView]);
+
+  // Collect all conversation user IDs for multi-topic WebSocket subscription
+  const chatUserIds = useMemo(
+    () => chatConversations.map((c) => c.userId),
+    [chatConversations]
+  );
+
+  const handleChatWebSocketMessage = useCallback((userId: string, msg: ChatMessageRes) => {
+    setChatMessagesByUser((prev) => {
+      const list = prev[userId] || [];
+      if (list.some((m) => m.id === msg.id)) return prev;
+      return {
+        ...prev,
+        [userId]: [...list, { id: msg.id, content: msg.content, sender: msg.sender as 'user' | 'admin', createdAt: msg.createdAt }],
+      };
+    });
+    // Also update the conversation list's last message
+    setChatConversations((prev) =>
+      prev.map((c) =>
+        c.userId === userId
+          ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+          : c
+      )
+    );
+  }, []);
+
+  // Subscribe to ALL user topics at the AdminPanel level
+  useAdminChatWebSocket(chatUserIds, handleChatWebSocketMessage);
 
   useEffect(() => {
     const customerMap = new Map<string, CustomerProfile>();
@@ -310,16 +339,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     });
   };
 
-  const handleChatWebSocketMessage = useCallback((userId: string, msg: ChatMessageRes) => {
-    setChatMessagesByUser((prev) => {
-      const list = prev[userId] || [];
-      if (list.some((m) => m.id === msg.id)) return prev;
-      return {
-        ...prev,
-        [userId]: [...list, { id: msg.id, content: msg.content, sender: msg.sender as 'user' | 'admin', createdAt: msg.createdAt }],
-      };
-    });
-  }, []);
+
 
   const getKPIs = () => {
     const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
@@ -504,7 +524,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               onSendMessage={handleSendChatMessage}
               onLoadMessages={handleLoadChatMessages}
               onRefresh={loadChatConversations}
-              onWebSocketMessage={handleChatWebSocketMessage}
             />
           )}
 

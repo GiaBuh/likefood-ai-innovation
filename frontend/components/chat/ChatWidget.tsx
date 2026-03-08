@@ -173,7 +173,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       ];
     });
   }, []);
-  useChatWebSocket(activeView === 'admin' && isOpen && user ? user.id : null, handleWsMessage);
+  useChatWebSocket(user ? user.id : null, handleWsMessage);
 
   useEffect(() => {
     if (!user || !hasHydratedChatRef.current) return;

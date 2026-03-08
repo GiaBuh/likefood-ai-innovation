@@ -38,6 +38,19 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Seeded default admin account: admin@gmail.com");
         }
 
+        if (!userRepository.existsByEmail("user@gmail.com")) {
+            User user = User.builder()
+                    .email("user@gmail.com")
+                    .username("User")
+                    .password(passwordEncoder.encode("123456"))
+                    .avatarUrl("avatars/avatar-default.svg")
+                    .gender(Gender.MALE)
+                    .role(userRole)
+                    .build();
+            userRepository.save(user);
+            log.info("Seeded default user account: user@gmail.com");
+        }
+
         log.info("Seeded roles: {}, {}", userRole.getName(), adminRole.getName());
     }
 

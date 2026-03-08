@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CustomerProfile } from '../../types';
-import { useChatWebSocket } from '../../hooks/useChatWebSocket';
-import type { ChatMessageRes } from '../../services/shopApi';
 
 export type ChatMessage = {
   id: string;
@@ -30,7 +28,6 @@ interface AdminChatViewProps {
   onSendMessage: (userId: string, content: string) => Promise<void>;
   onLoadMessages?: (userId: string) => Promise<void>;
   onRefresh?: () => void;
-  onWebSocketMessage?: (userId: string, msg: ChatMessageRes) => void;
 }
 
 const AdminChatView: React.FC<AdminChatViewProps> = ({
@@ -40,7 +37,6 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
   onSendMessage,
   onLoadMessages,
   onRefresh,
-  onWebSocketMessage,
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
@@ -58,11 +54,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
     }
   }, [selectedUserId, onLoadMessages]);
 
-  // WebSocket: real-time messages (replaces polling)
-  useChatWebSocket(
-    selectedUserId,
-    onWebSocketMessage ? (msg) => selectedUserId && onWebSocketMessage(selectedUserId, msg) : () => {}
-  );
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
