@@ -50,6 +50,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
     private static final int HISTORY_LIMIT = 10;
     private static final int RELATED_PRODUCTS_LIMIT = 4;
     private static final String AWAITING_NONE = "NONE";
+    private static final String AWAITING_PRODUCT_CONFIRMATION = "AWAITING_PRODUCT_CONFIRMATION";
     private static final String AWAITING_VARIANT_OR_QUANTITY = "AWAITING_VARIANT_OR_QUANTITY";
     private static final String AWAITING_CHECKOUT = "AWAITING_CHECKOUT";
     private static final Pattern GEMINI_HTTP_STATUS_PATTERN = Pattern.compile("GEMINI_HTTP_(\\d{3})");
@@ -400,6 +401,8 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .selectedProductId(context.getSelectedProductId())
                 .selectedVariantId(context.getSelectedVariantId())
                 .awaiting(awaiting)
+                .pendingQuantity(context.getPendingQuantity())
+                .pendingVariantHint(context.getPendingVariantHint())
                 .build();
     }
 
@@ -411,6 +414,10 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         ParsedCommand command = parseCommand(message);
         if ("open-product".equals(command.name)) {
             return null;
+        }
+
+        if (AWAITING_PRODUCT_CONFIRMATION.equals(context.getAwaiting())) {
+            return handleProductConfirmationState(message, command, context, productById, language);
         }
 
         if (AWAITING_VARIANT_OR_QUANTITY.equals(context.getAwaiting())) {
@@ -432,10 +439,112 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                         .actions(List.of())
                         .build();
             }
-            return buildAskVariantOrQuantityResponse(product, language);
+            return buildProductConfirmationResponse(product, language, null, null);
         }
 
         return null;
+    }
+
+    private AiChatResponse handleProductConfirmationState(
+            String message,
+            ParsedCommand command,
+            AiChatContext context,
+            Map<String, Product> productById,
+            String language) {
+        Product selectedProduct = productById.get(context.getSelectedProductId());
+        if (selectedProduct == null) {
+            return AiChatResponse.builder()
+                    .reply(t(language, "Mình bị mất ngữ cảnh món đã chọn. Bạn chọn lại sản phẩm giúp mình nhé.",
+                            "I lost the selected product context. Please choose a product again."))
+                    .language(language)
+                    .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
+                    .actions(List.of())
+                    .build();
+        }
+
+        if ("confirm-product".equals(command.name)) {
+            return buildAskVariantOrQuantityResponse(selectedProduct, language, context.getPendingQuantity());
+        }
+        if ("reject-product".equals(command.name)) {
+            return AiChatResponse.builder()
+                    .reply(t(language, "Không sao nhé. Bạn có thể hỏi món khác, mình sẽ gợi ý tiếp.",
+                            "No worries. Ask another product and I will suggest from our catalog."))
+                    .language(language)
+                    .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
+                    .actions(List.of())
+                    .build();
+        }
+
+        if (shouldInterruptProductConfirmationFlow(message, command)) {
+            return null;
+        }
+
+        String normalized = normalize(message);
+        // User muốn xem chi tiết / giải thích thêm về sản phẩm
+        if (isViewDetailIntent(message)) {
+            String detail = AiChatProductSupport.buildProductDetailText(selectedProduct, language);
+            String detailReply = t(language,
+                    "Dạ đây là thông tin chi tiết về %s ạ:\n%s\n\nAnh/chị có muốn mua món này không ạ?"
+                            .formatted(selectedProduct.getName(), detail),
+                    "Here are the details for %s:\n%s\n\nWould you like to buy this product?"
+                            .formatted(selectedProduct.getName(), detail));
+            return AiChatResponse.builder()
+                    .reply(detailReply)
+                    .language(language)
+                    .nextContext(context)
+                    .matchedProductIds(List.of(selectedProduct.getId()))
+                    .actions(List.of(
+                            AiChatAction.builder()
+                                    .type("confirm-product")
+                                    .label(t(language, "Có, mình muốn mua", "Yes, I want to buy"))
+                                    .command("/confirm-product:" + selectedProduct.getId())
+                                    .productId(selectedProduct.getId())
+                                    .build(),
+                            AiChatAction.builder()
+                                    .type("reject-product")
+                                    .label(t(language, "Không, để mình xem tiếp", "No, let me browse more"))
+                                    .command("/reject-product:" + selectedProduct.getId())
+                                    .productId(selectedProduct.getId())
+                                    .build()))
+                    .build();
+        }
+        // User gõ "mua" hoặc xác nhận mua
+        if (isAffirmative(normalized) || isBuyConfirmation(normalized)) {
+            Integer pendingQty = context.getPendingQuantity();
+            String variantHint = context.getPendingVariantHint();
+            if (StringUtils.hasText(variantHint)) {
+                Optional<ProductVariant> hintVariant = findVariantByHint(selectedProduct, variantHint);
+                if (hintVariant.isPresent() && pendingQty != null) {
+                    return buildAddToCartResponse(selectedProduct, hintVariant.get(), pendingQty, language);
+                }
+                if (hintVariant.isPresent()) {
+                    return askQuantityOnly(selectedProduct, hintVariant.get(), language);
+                }
+            }
+            return buildAskVariantOrQuantityResponse(selectedProduct, language, pendingQty);
+        }
+        if (isNegative(normalized)) {
+            return AiChatResponse.builder()
+                    .reply(t(language, "Không sao nhé. Bạn có thể hỏi món khác, mình sẽ gợi ý tiếp.",
+                            "No worries. Ask another product and I will suggest from our catalog."))
+                    .language(language)
+                    .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
+                    .actions(List.of())
+                    .build();
+        }
+
+        return buildProductConfirmationResponse(selectedProduct, language, context.getPendingQuantity(), context.getPendingVariantHint());
+    }
+
+    private boolean shouldInterruptProductConfirmationFlow(String message, ParsedCommand command) {
+        if (StringUtils.hasText(command.name)) return false;
+        String normalized = normalize(message);
+        if (!StringUtils.hasText(normalized)) return false;
+        if (isAffirmative(normalized) || isNegative(normalized)) return false;
+        if (isBuyConfirmation(normalized)) return false;
+        if (isViewDetailIntent(message)) return false;
+        if (isPotentialNewProductQuery(normalized)) return true;
+        return normalized.length() >= 6 && normalized.split(" ").length > 3;
     }
 
     private AiChatResponse handleVariantQuantityState(
@@ -472,13 +581,35 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         } else if (!StringUtils.hasText(command.name)) {
             quantity = parseQuantity(message);
         }
+        if (quantity == null && context.getPendingQuantity() != null && context.getPendingQuantity() > 0) {
+            quantity = context.getPendingQuantity();
+        }
+
+        // Detect "view details" intent and return open-product response
+        if (!StringUtils.hasText(variantId) && quantity == null && isViewDetailIntent(message)) {
+            return AiChatResponse.builder()
+                    .reply(t(language,
+                            "Đang mở chi tiết sản phẩm \"%s\" cho bạn xem.".formatted(selectedProduct.getName()),
+                            "Opening product details for \"%s\".".formatted(selectedProduct.getName())))
+                    .language(language)
+                    .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
+                    .actions(List.of(
+                            AiChatAction.builder()
+                                    .type("open-product")
+                                    .label(t(language, "Xem chi tiet", "View details"))
+                                    .command("/open-product:" + selectedProduct.getId())
+                                    .productId(selectedProduct.getId())
+                                    .build()))
+                    .matchedProductIds(List.of(selectedProduct.getId()))
+                    .build();
+        }
 
         if (shouldInterruptVariantQuantityFlow(message, command, selectedProduct, variantId, quantity)) {
             return null;
         }
 
         if (!StringUtils.hasText(variantId)) {
-            return askVariantOnly(selectedProduct, language);
+            return askVariantOnly(selectedProduct, language, quantity);
         }
         final String finalVariantId = variantId;
         ProductVariant variant = selectedProduct.getVariants().stream()
@@ -486,7 +617,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .findFirst()
                 .orElse(null);
         if (variant == null) {
-            return askVariantOnly(selectedProduct, language);
+            return askVariantOnly(selectedProduct, language, quantity);
         }
 
         if (quantity == null) {
@@ -637,29 +768,95 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         return buildBuyIntentResponse(product, message, language, null);
     }
 
+    /**
+     * Khi exact match 1 sản phẩm: hỏi xác nhận trước khi vào flow mua hàng.
+     */
+    private AiChatResponse buildSingleProductResponse(Product product, String language) {
+        return buildProductConfirmationResponse(product, language, null, null);
+    }
+
+    private AiChatResponse buildProductConfirmationResponse(Product product, String language,
+            Integer pendingQuantity, String pendingVariantHint) {
+        String variantInfo = "";
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            String variantLabels = product.getVariants().stream()
+                    .map(v -> formatWeight(v.getWeightValue(), v.getWeightUnit()))
+                    .collect(Collectors.joining(", "));
+            variantInfo = t(language,
+                    " (có các quy cách: %s)".formatted(variantLabels),
+                    " (available variants: %s)".formatted(variantLabels));
+        }
+        String quantityInfo = "";
+        if (pendingQuantity != null) {
+            quantityInfo = t(language,
+                    ", số lượng %d".formatted(pendingQuantity),
+                    ", quantity %d".formatted(pendingQuantity));
+        }
+        String variantHintInfo = "";
+        if (StringUtils.hasText(pendingVariantHint)) {
+            variantHintInfo = t(language,
+                    ", loại %s".formatted(pendingVariantHint),
+                    ", variant %s".formatted(pendingVariantHint));
+        }
+
+        String fallbackReply = t(
+                language,
+                "Dạ hiện tại bên em có món %s%s ạ. Anh/chị có muốn mua không ạ?"
+                        .formatted(product.getName(), variantInfo),
+                "We have %s%s available. Would you like to buy it?"
+                        .formatted(product.getName(), variantInfo));
+        String aiReply = generateConversationalReply(
+                language,
+                "Inform customer that we have product '%s'%s in stock. Ask if they want to buy. Use polite Vietnamese style (dạ, ạ). Keep it short and natural. Do NOT include (Xác nhận/Hủy) text."
+                        .formatted(product.getName(), variantInfo),
+                fallbackReply);
+
+        List<AiChatAction> actions = new ArrayList<>();
+        actions.add(AiChatAction.builder()
+                .type("confirm-product")
+                .label(t(language, "Có, mình muốn mua", "Yes, I want to buy"))
+                .command("/confirm-product:" + product.getId())
+                .productId(product.getId())
+                .build());
+        actions.add(AiChatAction.builder()
+                .type("reject-product")
+                .label(t(language, "Không, để mình xem tiếp", "No, let me browse more"))
+                .command("/reject-product:" + product.getId())
+                .productId(product.getId())
+                .build());
+        actions.add(AiChatAction.builder()
+                .type("open-product")
+                .label(t(language, "Xem chi tiết", "View details"))
+                .command("/open-product:" + product.getId())
+                .productId(product.getId())
+                .build());
+
+        return AiChatResponse.builder()
+                .reply(aiReply)
+                .language(language)
+                .nextContext(AiChatContext.builder()
+                        .selectedProductId(product.getId())
+                        .awaiting(AWAITING_PRODUCT_CONFIRMATION)
+                        .pendingQuantity(pendingQuantity)
+                        .pendingVariantHint(pendingVariantHint)
+                        .build())
+                .matchedProductIds(List.of(product.getId()))
+                .actions(actions)
+                .build();
+    }
+
     private AiChatResponse buildBuyIntentResponse(Product product, String message, String language,
             GeminiKeywordPlan plan) {
-        if (product.getVariants() == null || product.getVariants().isEmpty()) {
-            return buildAskVariantOrQuantityResponse(product, language);
-        }
         Integer quantity = plan != null ? plan.quantity() : null;
         if (quantity == null) quantity = parseQuantity(message);
         String variantHint = plan != null && StringUtils.hasText(plan.variantHint()) ? plan.variantHint() : null;
-        Optional<ProductVariant> parsedVariant = variantHint != null
-                ? findVariantByHint(product, variantHint)
-                : parseVariantFromMessage(message, product);
-
-        if (parsedVariant.isPresent() && quantity != null) {
-            return buildAddToCartResponse(product, parsedVariant.get(), quantity, language);
+        if (variantHint == null) {
+            Optional<ProductVariant> parsedVariant = parseVariantFromMessage(message, product);
+            if (parsedVariant.isPresent()) {
+                variantHint = formatWeight(parsedVariant.get().getWeightValue(), parsedVariant.get().getWeightUnit());
+            }
         }
-        if (parsedVariant.isPresent()) {
-            return askQuantityOnly(product, parsedVariant.get(), language);
-        }
-        if (quantity != null && product.getVariants().size() == 1) {
-            ProductVariant singleVariant = product.getVariants().getFirst();
-            return buildAddToCartResponse(product, singleVariant, quantity, language);
-        }
-        return buildAskVariantOrQuantityResponse(product, language);
+        return buildProductConfirmationResponse(product, language, quantity, variantHint);
     }
 
     private Optional<ProductVariant> findVariantByHint(Product product, String hint) {
@@ -710,6 +907,10 @@ public class GeminiAiChatServiceImpl implements AiChatService {
     }
 
     private AiChatResponse buildAskVariantOrQuantityResponse(Product product, String language) {
+        return buildAskVariantOrQuantityResponse(product, language, null);
+    }
+
+    private AiChatResponse buildAskVariantOrQuantityResponse(Product product, String language, Integer pendingQuantity) {
         if (product.getVariants() == null || product.getVariants().isEmpty()) {
             return AiChatResponse.builder()
                     .reply(t(language, "San pham nay chua co quy cach hop le.",
@@ -720,6 +921,15 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                     .build();
         }
 
+        // Single variant: auto-select and ask for quantity or add directly
+        if (product.getVariants().size() == 1) {
+            ProductVariant singleVariant = product.getVariants().getFirst();
+            if (pendingQuantity != null) {
+                return buildAddToCartResponse(product, singleVariant, pendingQuantity, language);
+            }
+            return askQuantityOnly(product, singleVariant, language);
+        }
+
         List<AiChatAction> variantActions = product.getVariants().stream()
                 .limit(6)
                 .map(variant -> AiChatAction.builder()
@@ -728,6 +938,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                         .command("/choose-variant:" + variant.getId())
                         .productId(product.getId())
                         .variantId(variant.getId())
+                        .quantity(pendingQuantity)
                         .build())
                 .toList();
 
@@ -761,6 +972,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .nextContext(AiChatContext.builder()
                         .selectedProductId(product.getId())
                         .awaiting(AWAITING_VARIANT_OR_QUANTITY)
+                        .pendingQuantity(pendingQuantity)
                         .build())
                 .matchedProductIds(List.of(product.getId()))
                 .actions(allActions)
@@ -768,6 +980,10 @@ public class GeminiAiChatServiceImpl implements AiChatService {
     }
 
     private AiChatResponse askVariantOnly(Product product, String language) {
+        return askVariantOnly(product, language, null);
+    }
+
+    private AiChatResponse askVariantOnly(Product product, String language, Integer pendingQuantity) {
         List<AiChatAction> actions = product.getVariants().stream()
                 .limit(6)
                 .map(variant -> AiChatAction.builder()
@@ -776,6 +992,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                         .command("/choose-variant:" + variant.getId())
                         .productId(product.getId())
                         .variantId(variant.getId())
+                        .quantity(pendingQuantity)
                         .build())
                 .toList();
 
@@ -797,6 +1014,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .nextContext(AiChatContext.builder()
                         .selectedProductId(product.getId())
                         .awaiting(AWAITING_VARIANT_OR_QUANTITY)
+                        .pendingQuantity(pendingQuantity)
                         .build())
                 .actions(actions)
                 .build();
@@ -946,6 +1164,19 @@ public class GeminiAiChatServiceImpl implements AiChatService {
 
         String categoryHint = AiChatProductSupport.parseCategoryHintFromMessage(message);
         int maxBudgetVnd = AiChatProductSupport.parseBudgetVndFromMessage(message);
+
+        // Ưu tiên exact match: nếu tìm thấy sản phẩm khớp chính xác tên, chỉ trả về món đó
+        Optional<String> exactMatchId = AiChatProductSupport.findExactMatchProductId(message, productCatalog);
+        if (exactMatchId.isPresent()) {
+            Product exactProduct = productById.get(exactMatchId.get());
+            if (exactProduct != null) {
+                if (isBuyIntent(normalized)) {
+                    return buildBuyIntentResponse(exactProduct, message, language);
+                }
+                return buildSingleProductResponse(exactProduct, language);
+            }
+        }
+
         List<String> matchedIds = (StringUtils.hasText(categoryHint) || maxBudgetVnd > 0)
                 ? findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT, categoryHint, maxBudgetVnd)
                 : findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
@@ -1073,6 +1304,38 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
 
         String lookup = plan.keywords.isEmpty() ? message : (message + " " + String.join(" ", plan.keywords));
+
+        // Ưu tiên exact match: nếu tìm thấy sản phẩm khớp chính xác tên, chỉ trả về món đó
+        Optional<String> exactMatchId = AiChatProductSupport.findExactMatchProductId(lookup, productCatalog);
+        if (exactMatchId.isPresent()) {
+            Product exactProduct = productById.get(exactMatchId.get());
+            if (exactProduct != null) {
+                if (productDetail) {
+                    String detailText = AiChatProductSupport.buildProductDetailText(exactProduct, language);
+                    String detailReply = StringUtils.hasText(plan.reply)
+                            ? plan.reply + "\n\n" + detailText
+                            : t(language,
+                                    "Thông tin chi tiết sản phẩm:\n" + detailText,
+                                    "Product details:\n" + detailText);
+                    List<AiChatAction> detailActions = new ArrayList<>();
+                    detailActions.add(AiChatAction.builder().type("buy-product")
+                            .label(t(language, "Mua " + exactProduct.getName(), "Buy " + exactProduct.getName()))
+                            .command("/buy-product:" + exactProduct.getId()).productId(exactProduct.getId()).build());
+                    detailActions.add(AiChatAction.builder().type("open-product")
+                            .label(t(language, "Xem chi tiết", "View details"))
+                            .command("/open-product:" + exactProduct.getId()).productId(exactProduct.getId()).build());
+                    return AiChatResponse.builder()
+                            .reply(detailReply).refusal(false).shouldOfferAddToCart(false).language(language)
+                            .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
+                            .matchedProductIds(List.of(exactProduct.getId())).actions(detailActions).build();
+                }
+                if (buy) {
+                    return buildBuyIntentResponse(exactProduct, message, language, plan);
+                }
+                return buildSingleProductResponse(exactProduct, language);
+            }
+        }
+
         List<String> matchedIds = (StringUtils.hasText(plan.categoryHint) || plan.maxBudgetVnd > 0)
                 ? findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT, plan.categoryHint, plan.maxBudgetVnd)
                 : findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT);
@@ -1214,6 +1477,14 @@ public class GeminiAiChatServiceImpl implements AiChatService {
 
     private boolean isNegative(String normalized) {
         return AiChatTextSupport.isNegative(normalized);
+    }
+
+    private boolean isViewDetailIntent(String message) {
+        return AiChatTextSupport.isViewDetailIntent(message);
+    }
+
+    private boolean isBuyConfirmation(String normalized) {
+        return AiChatTextSupport.isBuyConfirmation(normalized);
     }
 
     private Optional<ProductVariant> parseVariantFromMessage(String message, Product product) {

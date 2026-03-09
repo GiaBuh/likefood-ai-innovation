@@ -103,6 +103,37 @@ export function isNegative(input: string): boolean {
   return text.includes('khong') || text.includes('no') || text.includes('thoi') || text.includes('chua');
 }
 
+export function isViewDetailIntent(input: string): boolean {
+  const text = normalize(input);
+  return (
+    text.includes('xem chi tiet') ||
+    text.includes('chi tiet') ||
+    text.includes('view detail') ||
+    text.includes('details') ||
+    text === 'xem' ||
+    text.includes('mo san pham') ||
+    text.includes('xem san pham') ||
+    text.includes('xem mon') ||
+    text.includes('thong tin') ||
+    text.includes('more info')
+  );
+}
+
+export function isCancelIntent(input: string): boolean {
+  const text = normalize(input);
+  return (
+    text === 'huy' ||
+    text === 'cancel' ||
+    text.includes('bo qua') ||
+    text.includes('thoi khong') ||
+    text.includes('khong can') ||
+    text.includes('de sau') ||
+    text.includes('later') ||
+    text.includes('skip') ||
+    text.includes('khong mua')
+  );
+}
+
 /** Nhận diện ý đồ thanh toán: thanh toán ngay, thanh toán, pay now, checkout, ... */
 export function isPaymentIntent(input: string): boolean {
   const text = normalize(input);

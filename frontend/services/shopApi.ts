@@ -144,6 +144,8 @@ export type AiChatContext = {
   selectedProductId?: string;
   selectedVariantId?: string;
   awaiting?: string;
+  pendingQuantity?: number;
+  pendingVariantHint?: string;
 };
 
 export type AiChatAction = {

@@ -16,6 +16,8 @@ import {
   isAffirmative,
   isNegative,
   isPaymentIntent,
+  isViewDetailIntent,
+  isCancelIntent,
   detectLanguage,
 } from './chatUtils';
 import type { ChatAction, Message } from './chatTypes';
@@ -393,6 +395,16 @@ export function useChatAi(params: UseChatAiParams) {
       }
 
       if (aiStage === 'awaiting_add_confirmation' && pendingProduct) {
+        if (isViewDetailIntent(trimmed)) {
+          onOpenProduct(String(pendingProduct.id));
+          pushAiMessage(
+            t(
+              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
+              `Opening product details for "${pendingProduct.name}".`
+            )
+          );
+          return;
+        }
         if (isAffirmative(trimmed)) {
           askForVariantOrQuantity(pendingProduct);
           return;
@@ -417,6 +429,26 @@ export function useChatAi(params: UseChatAiParams) {
       }
 
       if (aiStage === 'awaiting_variant' && pendingProduct) {
+        if (isViewDetailIntent(trimmed)) {
+          onOpenProduct(String(pendingProduct.id));
+          pushAiMessage(
+            t(
+              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
+              `Opening product details for "${pendingProduct.name}".`
+            )
+          );
+          return;
+        }
+        if (isCancelIntent(trimmed)) {
+          pushAiMessage(
+            t(
+              'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.',
+              'Cancelled. You can ask about another product or browse other items.'
+            )
+          );
+          resetPendingSelection();
+          return;
+        }
         const variant = parseVariant(trimmed, pendingProduct);
         const quantityFromMessage = parseQuantity(trimmed);
         const qtyToUse = quantityFromMessage ?? pendingQuantity;
@@ -436,25 +468,40 @@ export function useChatAi(params: UseChatAiParams) {
               ]
             );
           }
-        } else {
-          pushAiMessage(
-            t(
-              'Tôi chưa hiểu quy cách bạn chọn. Bạn thử nhập lại đúng dạng như "500g" hoặc bấm nút bên dưới.',
-              'I could not parse the variant. Please type like "500g" or tap one of the options.'
-            )
-          );
+          return;
         }
-        return;
+        // Not a variant, not a known local intent — fall through to backend AI
+        resetPendingSelection();
       }
 
       if (aiStage === 'awaiting_quantity') {
-        const quantity = parseQuantity(trimmed);
-        if (!quantity) {
-          pushAiMessage(t('Bạn nhập giúp số lượng hợp lệ (ví dụ: 1, 2, 3...).', 'Please enter a valid quantity (e.g. 1, 2, 3...).'));
+        if (isViewDetailIntent(trimmed) && pendingProduct) {
+          onOpenProduct(String(pendingProduct.id));
+          pushAiMessage(
+            t(
+              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
+              `Opening product details for "${pendingProduct.name}".`
+            )
+          );
           return;
         }
-        addPendingItemToCart(quantity);
-        return;
+        if (isCancelIntent(trimmed)) {
+          pushAiMessage(
+            t(
+              'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.',
+              'Cancelled. You can ask about another product or browse other items.'
+            )
+          );
+          resetPendingSelection();
+          return;
+        }
+        const quantity = parseQuantity(trimmed);
+        if (quantity) {
+          addPendingItemToCart(quantity);
+          return;
+        }
+        // Not a quantity, not a known local intent — fall through to backend AI
+        resetPendingSelection();
       }
 
       if (aiStage === 'awaiting_checkout_confirmation') {
@@ -478,7 +525,7 @@ export function useChatAi(params: UseChatAiParams) {
         return;
       }
 
-      const useLocalOnly = true;
+      const useLocalOnly = false;
       if (useLocalOnly) {
         fallbackLocalAiResponse(trimmed);
         return;
@@ -489,12 +536,22 @@ export function useChatAi(params: UseChatAiParams) {
         if (aiResponse.language) setChatLanguage(aiResponse.language);
         if (aiResponse.nextContext) {
           setAiContext(aiResponse.nextContext);
+          if (aiResponse.nextContext.awaiting === 'AWAITING_PRODUCT_CONFIRMATION' && aiResponse.nextContext.selectedProductId) {
+            const p = products.find((item) => String(item.id) === String(aiResponse.nextContext!.selectedProductId));
+            if (p) {
+              setPendingProduct(p);
+              setAiStage('awaiting_add_confirmation');
+              const ctxQty = aiResponse.nextContext.pendingQuantity ?? aiResponse.cartInstruction?.quantity;
+              if (ctxQty) setPendingQuantity(ctxQty);
+            }
+          }
           if (aiResponse.nextContext.awaiting === 'AWAITING_VARIANT_OR_QUANTITY' && aiResponse.nextContext.selectedProductId) {
             const p = products.find((item) => String(item.id) === String(aiResponse.nextContext!.selectedProductId));
             if (p) {
               setPendingProduct(p);
               setAiStage('awaiting_variant');
-              if (aiResponse.cartInstruction?.quantity) setPendingQuantity(aiResponse.cartInstruction.quantity);
+              const ctxQty = aiResponse.nextContext.pendingQuantity ?? aiResponse.cartInstruction?.quantity;
+              if (ctxQty) setPendingQuantity(ctxQty);
             }
           }
           if (aiResponse.nextContext.awaiting === 'AWAITING_CHECKOUT') setAiStage('awaiting_checkout_confirmation');
@@ -542,6 +599,7 @@ export function useChatAi(params: UseChatAiParams) {
       setAiContext,
       setChatLanguage,
       onGoToCheckout,
+      onOpenProduct,
       t,
     ]
   );
@@ -571,6 +629,19 @@ export function useChatAi(params: UseChatAiParams) {
       }
       if ((action.type === 'open-product' || action.type === 'open_product') && action.productId) {
         onOpenProduct(action.productId);
+        return;
+      }
+
+      if ((action.type === 'confirm-product' || action.type === 'reject-product') && action.command) {
+        const userActionMessage: Message = {
+          id: `${Date.now()}-action`,
+          text: action.label,
+          sender: 'user',
+          timestamp: new Date(),
+        };
+        setAiMessages((prev) => [...prev, userActionMessage]);
+        setIsTyping(true);
+        sendAiMessage(action.command, [...aiMessages, userActionMessage], activeLang);
         return;
       }
 

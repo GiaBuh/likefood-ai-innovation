@@ -35,8 +35,8 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-                                           JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+            CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
+            JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -45,15 +45,18 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
-                                
-                                // 👇 DÒNG MỚI ĐƯỢC CHÈN: Cho phép truy cập công khai API AI Trend
-                                .requestMatchers("/ai/**").permitAll() 
-                                
-                                .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/storage/public-url").permitAll()
+                                .requestMatchers("/ai/**", "/ai-chat/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
+                                        "/storage/public-url")
+                                .permitAll()
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-avatar").authenticated()
-                                .requestMatchers(HttpMethod.POST, "/products", "/products/import", "/categories", "/storage/upload-image").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/products", "/products/import", "/categories",
+                                        "/storage/upload-image")
+                                .hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/products/**", "/categories/**").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.DELETE, "/products/**", "/categories/**", "/storage/delete-image").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/products/**", "/categories/**",
+                                        "/storage/delete-image")
+                                .hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/orders").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/users/me").authenticated()

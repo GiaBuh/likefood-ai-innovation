@@ -34,7 +34,7 @@ export type PersistedChatState = {
   adminMessages: PersistedMessage[];
   aiMessages: PersistedMessage[];
   chatLanguage: AiChatLanguage | null;
-  aiContext: { awaiting?: string; selectedProductId?: string; selectedVariantId?: string };
+  aiContext: { awaiting?: string; selectedProductId?: string; selectedVariantId?: string; pendingQuantity?: number; pendingVariantHint?: string };
 };
 
 export const CHAT_STORAGE_PREFIX = 'likefood_chat_state';
