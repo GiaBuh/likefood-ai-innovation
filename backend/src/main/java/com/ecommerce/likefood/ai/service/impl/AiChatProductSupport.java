@@ -20,7 +20,7 @@ final class AiChatProductSupport {
             "duoc", "khong", "gi", "nao", "mot", "vai", "di", "nhe", "a", "ha", "va", "voi", "hay",
             "goi", "y", "tu", "van", "mon", "hom", "nay", "menu", "danh", "sach", "an", "uong",
             "mua", "dat", "them", "gio", "hang",
-            "please", "can", "you", "i", "me", "my", "some", "any", "the", "a", "an", "what", "which",
+            "please", "can", "you", "i", "me", "my", "some", "any", "what", "which",
             "show", "suggest", "recommend");
     private static final Map<String, String> EN_TO_VI_HINTS = Map.ofEntries(
             Map.entry("dried beef", "kho bo"),
@@ -114,6 +114,46 @@ final class AiChatProductSupport {
     private static final int LOOSE_SCORE_THRESHOLD = 3;
     /** Độ dài tối thiểu của token để chấm điểm - tránh "mu" match cả "muc" và "mut". */
     private static final int MIN_TOKEN_LENGTH = 3;
+    /** Ngưỡng điểm để xác định exact match (tên sản phẩm chứa hoàn toàn trong message hoặc ngược lại). */
+    private static final int EXACT_MATCH_SCORE = 8;
+
+    /**
+     * Tìm sản phẩm khớp chính xác với message (tên sản phẩm chứa hoàn toàn trong message hoặc ngược lại).
+     * Trả về Optional chứa ID của sản phẩm khớp nhất, hoặc empty nếu không có exact match.
+     * VD: "khô gà lá chanh" -> chỉ trả về "Khô gà lá chanh" (nếu có), không gợi ý thêm món khác.
+     */
+    static Optional<String> findExactMatchProductId(String message, List<Map<String, Object>> productCatalog) {
+        String normalizedMessage = AiChatTextSupport.normalize(expandSearchQuery(message));
+        if (!StringUtils.hasText(normalizedMessage)) return Optional.empty();
+
+        // Strip stop words from message to get core query terms (e.g. "co ca kho khong em" -> "ca kho")
+        String strippedMessage = List.of(normalizedMessage.split(" ")).stream()
+                .filter(token -> token.length() >= 2)
+                .filter(token -> !SEARCH_STOP_WORDS.contains(token))
+                .collect(Collectors.joining(" "));
+
+        return productCatalog.stream()
+                .map(item -> {
+                    String id = String.valueOf(item.get("id"));
+                    String name = AiChatTextSupport.normalize(String.valueOf(item.getOrDefault("name", "")));
+                    int score = 0;
+                    // Full string match (original behavior)
+                    if (name.contains(normalizedMessage) || normalizedMessage.contains(name)) {
+                        score = EXACT_MATCH_SCORE;
+                    }
+                    // Match with stop words removed: all core terms must be in the product name
+                    if (score < EXACT_MATCH_SCORE && StringUtils.hasText(strippedMessage)) {
+                        List<String> coreTokens = List.of(strippedMessage.split(" "));
+                        if (!coreTokens.isEmpty() && coreTokens.stream().allMatch(token -> containsWord(name, token))) {
+                            score = EXACT_MATCH_SCORE;
+                        }
+                    }
+                    return Map.entry(id, score);
+                })
+                .filter(entry -> entry.getValue() >= EXACT_MATCH_SCORE)
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
+    }
 
     static List<String> findRelatedProductIds(String message, List<Map<String, Object>> productCatalog, int limit) {
         return findRelatedProductIds(message, productCatalog, limit, STRICT_SCORE_THRESHOLD);

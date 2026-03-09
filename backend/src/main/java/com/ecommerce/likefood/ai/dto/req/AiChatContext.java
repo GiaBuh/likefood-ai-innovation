@@ -14,6 +14,8 @@ import lombok.Setter;
 public class AiChatContext {
     private String selectedProductId;
     private String selectedVariantId;
-    // NONE | AWAITING_VARIANT_OR_QUANTITY | AWAITING_CHECKOUT
+    // NONE | AWAITING_PRODUCT_CONFIRMATION | AWAITING_VARIANT_OR_QUANTITY | AWAITING_CHECKOUT
     private String awaiting;
+    private Integer pendingQuantity;
+    private String pendingVariantHint;
 }

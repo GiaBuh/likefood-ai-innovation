@@ -109,6 +109,41 @@ final class AiChatTextSupport {
                 || normalized.startsWith("no ");
     }
 
+    static boolean isViewDetailIntent(String message) {
+        String normalized = normalize(message);
+        return normalized.contains("xem chi tiet")
+                || normalized.contains("chi tiet")
+                || normalized.contains("view detail")
+                || normalized.contains("details")
+                || normalized.equals("xem")
+                || normalized.contains("mo san pham")
+                || normalized.contains("xem san pham")
+                || normalized.contains("xem mon")
+                || normalized.contains("thong tin")
+                || normalized.contains("more info")
+                || normalized.contains("giai thich")
+                || normalized.contains("mo ta")
+                || normalized.contains("mon nay la gi")
+                || normalized.contains("describe");
+    }
+
+    /** Phát hiện user xác nhận mua ("mua", "đặt mua", "mua đi", "lấy", "order") - dùng trong trạng thái xác nhận sản phẩm. */
+    static boolean isBuyConfirmation(String normalized) {
+        String[] words = normalized.split(" ");
+        if (words.length > 4)
+            return false;
+        return normalized.equals("mua")
+                || normalized.equals("dat mua")
+                || normalized.equals("mua di")
+                || normalized.equals("mua luon")
+                || normalized.equals("lay")
+                || normalized.equals("order")
+                || normalized.equals("buy")
+                || normalized.startsWith("mua ")
+                || normalized.contains("muon mua")
+                || normalized.contains("dat hang");
+    }
+
     static Integer parseQuantity(String message) {
         Matcher matcher = NUMBER_WITH_OPTIONAL_UNIT.matcher(message.toLowerCase());
         Integer best = null;
