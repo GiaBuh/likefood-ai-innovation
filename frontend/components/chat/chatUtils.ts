@@ -73,6 +73,11 @@ export function getProductMinPrice(p: Product): number {
   return Number(p.price ?? 0);
 }
 
+export function hasInStockVariant(product: Product): boolean {
+  if (!product.variants?.length) return false;
+  return product.variants.some((variant) => Number(variant.quantity ?? 0) > 0);
+}
+
 export function parseVariant(input: string, product: Product): ProductVariant | null {
   if (!product.variants?.length) return null;
   const normalizedInput = normalize(input);
@@ -176,6 +181,7 @@ const HINT_MAP: Record<string, string[]> = {
 export function findRelevantProducts(input: string, products: Product[]): Product[] {
   const query = normalize(input);
   if (!query) return [];
+  const availableProducts = products.filter(hasInStockVariant);
   const tokens = query.split(' ').filter((t) => t.length >= 2);
   const queryNoSpaces = query.replace(/\s+/g, '');
   const hintWords: string[] = [];
@@ -183,7 +189,7 @@ export function findRelevantProducts(input: string, products: Product[]): Produc
     if (HINT_MAP[t]) hintWords.push(...HINT_MAP[t]);
   });
 
-  const scored = products
+  const scored = availableProducts
     .map((product) => {
       const name = normalize(product.name);
       const category = normalize(product.categoryName || product.category || '');
@@ -214,10 +220,11 @@ export function findRelevantProducts(input: string, products: Product[]): Produc
 /** Khi không tìm thấy món trùng: gợi ý món liên quan (token trùng lỏng) hoặc món nổi bật. */
 export function findSuggestionProductsWhenNoMatch(input: string, products: Product[], limit = 4): Product[] {
   const query = normalize(input);
+  const availableProducts = products.filter(hasInStockVariant);
   const tokens = query.split(' ').filter((t) => t.length >= 2);
-  if (tokens.length === 0 || products.length === 0) return products.slice(0, limit);
+  if (tokens.length === 0 || availableProducts.length === 0) return availableProducts.slice(0, limit);
 
-  const withScore = products
+  const withScore = availableProducts
     .map((product) => {
       const name = normalize(product.name);
       const category = normalize(product.categoryName || product.category || '');
@@ -234,5 +241,5 @@ export function findSuggestionProductsWhenNoMatch(input: string, products: Produ
     .sort((a, b) => b.score - a.score);
 
   if (withScore.length > 0) return withScore.slice(0, limit).map((item) => item.product);
-  return products.slice(0, limit);
+  return availableProducts.slice(0, limit);
 }

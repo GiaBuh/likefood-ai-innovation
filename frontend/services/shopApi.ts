@@ -155,6 +155,8 @@ export type AiChatAction = {
   productId?: string;
   variantId?: string;
   quantity?: number;
+  reason?: string;
+  offerType?: string;
 };
 
 export type AiCartInstruction = {
@@ -172,6 +174,14 @@ export type AiAssistantResponse = {
   actions?: AiChatAction[];
   nextContext?: AiChatContext;
   cartInstruction?: AiCartInstruction;
+  recommendationMeta?: {
+    reason?: string;
+    offerType?: string;
+    fallbackLevel?: 'EXACT' | 'RELATED' | 'CATEGORY_BUDGET' | 'SAFE';
+    confidenceBand?: 'high' | 'medium' | 'low';
+    intent?: string;
+    formatProfile?: 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
+  };
 };
 
 function toProductVariant(variant: BackendProductVariant): ProductVariant {

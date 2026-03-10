@@ -8,6 +8,8 @@ export type ChatAction = {
   variantId?: string;
   quantity?: number;
   command?: string;
+  reason?: string;
+  offerType?: string;
 };
 
 export interface Message {
@@ -16,6 +18,7 @@ export interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   actions?: ChatAction[];
+  formatProfile?: 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
 }
 
 export type ChatView = 'menu' | 'admin' | 'ai';

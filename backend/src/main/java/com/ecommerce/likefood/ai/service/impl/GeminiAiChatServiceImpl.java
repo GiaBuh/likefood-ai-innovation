@@ -5,6 +5,7 @@ import com.ecommerce.likefood.ai.dto.req.AiChatRequest;
 import com.ecommerce.likefood.ai.dto.res.AiCartInstruction;
 import com.ecommerce.likefood.ai.dto.res.AiChatAction;
 import com.ecommerce.likefood.ai.dto.res.AiChatResponse;
+import com.ecommerce.likefood.ai.dto.res.AiRecommendationMeta;
 import com.ecommerce.likefood.ai.service.AiChatService;
 import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.product.domain.Product;
@@ -56,6 +57,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
     private static final Pattern GEMINI_HTTP_STATUS_PATTERN = Pattern.compile("GEMINI_HTTP_(\\d{3})");
     private static final int GEMINI_KEYWORD_LIMIT = 6;
     private static final int CACHE_MAX_SIZE = 500;
+    private static final int MAX_UPSELL_ACTIONS = 2;
 
     private static final Set<String> NEW_PRODUCT_QUERY_TRIGGERS = Set.of(
             "co ", "mua ", "mon", "san pham", "do you have", "buy ", "product", "tim ", "tim mon",
@@ -67,6 +69,11 @@ public class GeminiAiChatServiceImpl implements AiChatService {
 
     private final ProductRepository productRepository;
     private final ObjectMapper objectMapper;
+    private final AiChatIntentRouter intentRouter;
+    private final AiChatRetrievalService retrievalService;
+    private final AiChatObservabilityService observabilityService;
+    private final AiChatActionContractSupport actionContractSupport;
+    private final AiChatResponseFormattingSupport responseFormattingSupport;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -94,11 +101,20 @@ public class GeminiAiChatServiceImpl implements AiChatService {
     @Value("${likefood.ai.gemini.cooldown-ms:180000}")
     private long geminiCooldownMs;
 
+    @Value("${likefood.ai.chat.pipeline.rule-first-enabled:true}")
+    private boolean ruleFirstPipelineEnabled;
+
     @Override
     @Transactional(readOnly = true)
     public AiChatResponse respond(AiChatRequest request) {
+        long startMs = System.currentTimeMillis();
+        AiChatIntentRouter.Intent intent = intentRouter.detectIntent(request == null ? "" : request.getMessage(),
+                request == null ? null : request.getContext());
         try {
-            return respondInternal(request);
+            AiChatResponse response = actionContractSupport.sanitize(respondInternal(request));
+            response = responseFormattingSupport.apply(response, intent);
+            recordObservability(intent, response, startMs);
+            return response;
         } catch (Exception e) {
             log.error("AI respond failed, returning safe fallback. message={}", e.getMessage(), e);
             String lang = "vi";
@@ -106,7 +122,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 lang = request.getPreferredLanguage();
             }
             boolean isEn = "en".equalsIgnoreCase(lang);
-            return AiChatResponse.builder()
+            AiChatResponse fallback = AiChatResponse.builder()
                     .reply(isEn
                             ? "Sorry, the system is temporarily busy. Please try again with a product name (e.g. \"khoai môn cọng 3\")."
                             : "Xin lỗi, hệ thống đang bận. Bạn thử nhập lại tên món (vd: khoai môn cọng 3) để tôi gợi ý nhé.")
@@ -117,6 +133,8 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                     .matchedProductIds(List.of())
                     .actions(List.of())
                     .build();
+            recordObservability(intent, fallback, startMs);
+            return fallback;
         }
     }
 
@@ -134,6 +152,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         String language = resolveLanguage(request);
         AiChatContext context = sanitizeContext(request.getContext());
         String message = request.getMessage().trim();
+        AiChatIntentRouter.Intent detectedIntent = intentRouter.detectIntent(message, context);
 
         AiChatResponse stateResponse = handleStateDrivenFlow(message, context, productById, language);
         if (stateResponse != null) {
@@ -146,17 +165,26 @@ public class GeminiAiChatServiceImpl implements AiChatService {
             return cachedResponse;
         }
 
+        if (ruleFirstPipelineEnabled && isFastPathIntent(detectedIntent)) {
+            AiChatResponse localFirstResponse = buildLocalFirstResponseIfPossible(message, language, productCatalog,
+                    productById);
+            if (localFirstResponse != null) {
+                putCachedResponse(cacheKey, localFirstResponse, context);
+                return localFirstResponse;
+            }
+        }
+
         if (geminiEnabled && !isGeminiTemporarilyBlocked()) {
             try {
                 GeminiKeywordPlan plan = extractKeywordPlanWithGemini(request, language, catalogSummary);
                 AiChatResponse byPlan = buildResponseFromGeminiPlan(plan, message, language, productCatalog,
                         productById);
                 if (byPlan != null) {
-                    putCachedResponse(cacheKey, byPlan);
+                    putCachedResponse(cacheKey, byPlan, context);
                     return byPlan;
                 }
                 AiChatResponse geminiFallback = buildGeminiPlanFallbackResponse(plan, language, productById);
-                putCachedResponse(cacheKey, geminiFallback);
+                putCachedResponse(cacheKey, geminiFallback, context);
                 return geminiFallback;
             } catch (AppException ex) {
                 log.warn("Gemini unavailable, fallback to local recommendation. reason={}", ex.getMessage());
@@ -166,7 +194,7 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         AiChatResponse localFirstResponse = buildLocalFirstResponseIfPossible(message, language, productCatalog,
                 productById);
         if (localFirstResponse != null) {
-            putCachedResponse(cacheKey, localFirstResponse);
+            putCachedResponse(cacheKey, localFirstResponse, context);
             return localFirstResponse;
         }
 
@@ -181,8 +209,13 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
                 .matchedProductIds(List.of())
                 .actions(List.of())
+                .recommendationMeta(AiRecommendationMeta.builder()
+                        .fallbackLevel(AiChatRetrievalService.FallbackLevel.SAFE.name())
+                        .reason("safe-fallback")
+                        .confidenceBand("low")
+                        .build())
                 .build();
-        putCachedResponse(cacheKey, fallbackResponse);
+        putCachedResponse(cacheKey, fallbackResponse, context);
         return fallbackResponse;
     }
 
@@ -480,33 +513,9 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
 
         String normalized = normalize(message);
-        // User muốn xem chi tiết / giải thích thêm về sản phẩm
-        if (isViewDetailIntent(message)) {
-            String detail = AiChatProductSupport.buildProductDetailText(selectedProduct, language);
-            String detailReply = t(language,
-                    "Dạ đây là thông tin chi tiết về %s ạ:\n%s\n\nAnh/chị có muốn mua món này không ạ?"
-                            .formatted(selectedProduct.getName(), detail),
-                    "Here are the details for %s:\n%s\n\nWould you like to buy this product?"
-                            .formatted(selectedProduct.getName(), detail));
-            return AiChatResponse.builder()
-                    .reply(detailReply)
-                    .language(language)
-                    .nextContext(context)
-                    .matchedProductIds(List.of(selectedProduct.getId()))
-                    .actions(List.of(
-                            AiChatAction.builder()
-                                    .type("confirm-product")
-                                    .label(t(language, "Có, mình muốn mua", "Yes, I want to buy"))
-                                    .command("/confirm-product:" + selectedProduct.getId())
-                                    .productId(selectedProduct.getId())
-                                    .build(),
-                            AiChatAction.builder()
-                                    .type("reject-product")
-                                    .label(t(language, "Không, để mình xem tiếp", "No, let me browse more"))
-                                    .command("/reject-product:" + selectedProduct.getId())
-                                    .productId(selectedProduct.getId())
-                                    .build()))
-                    .build();
+        AiChatIntentRouter.Intent detectedIntent = intentRouter.detectIntent(message, context);
+        if (detectedIntent == AiChatIntentRouter.Intent.PRODUCT_DETAIL_FOLLOW_UP || isViewDetailIntent(message)) {
+            return buildPersuasiveDetailFollowUpResponse(selectedProduct, language, context);
         }
         // User gõ "mua" hoặc xác nhận mua
         if (isAffirmative(normalized) || isBuyConfirmation(normalized)) {
@@ -859,6 +868,57 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         return buildProductConfirmationResponse(product, language, quantity, variantHint);
     }
 
+    private AiChatResponse buildPersuasiveDetailFollowUpResponse(Product product, String language, AiChatContext currentContext) {
+        String detailText = AiChatProductSupport.buildProductDetailText(product, language);
+        String fallbackReply = t(language,
+                "Dạ món %s bên em có vị rất cuốn, đậm đà và dễ ăn. %s\n\nAnh/chị muốn em gợi ý quy cách phù hợp để mình chốt luôn không ạ?"
+                        .formatted(product.getName(), detailText),
+                "%s is flavorful, satisfying, and very easy to enjoy. %s\n\nWould you like me to suggest the best variant so you can order right away?"
+                        .formatted(product.getName(), detailText));
+        String aiReply = generateConversationalReply(
+                language,
+                "Customer asks follow-up detail about selected product '%s'. Explain with persuasive but factual tone based on product details only. End with gentle buy CTA."
+                        .formatted(product.getName()),
+                fallbackReply);
+        return AiChatResponse.builder()
+                .reply(aiReply)
+                .language(language)
+                .nextContext(AiChatContext.builder()
+                        .selectedProductId(product.getId())
+                        .selectedVariantId(currentContext.getSelectedVariantId())
+                        .awaiting(AWAITING_PRODUCT_CONFIRMATION)
+                        .pendingQuantity(currentContext.getPendingQuantity())
+                        .pendingVariantHint(currentContext.getPendingVariantHint())
+                        .build())
+                .matchedProductIds(List.of(product.getId()))
+                .actions(List.of(
+                        AiChatAction.builder()
+                                .type("confirm-product")
+                                .label(t(language, "Có, mình muốn mua", "Yes, I want to buy"))
+                                .command("/confirm-product:" + product.getId())
+                                .productId(product.getId())
+                                .build(),
+                        AiChatAction.builder()
+                                .type("open-product")
+                                .label(t(language, "Xem chi tiết", "View details"))
+                                .command("/open-product:" + product.getId())
+                                .productId(product.getId())
+                                .build(),
+                        AiChatAction.builder()
+                                .type("reject-product")
+                                .label(t(language, "Để mình xem thêm", "Let me browse more"))
+                                .command("/reject-product:" + product.getId())
+                                .productId(product.getId())
+                                .build()))
+                .recommendationMeta(recommendationMeta(
+                        t(language, "Chi tiet mon dang quan tam", "Selected product details"),
+                        "primary",
+                        "EXACT",
+                        "high",
+                        AiChatIntentRouter.Intent.PRODUCT_DETAIL_FOLLOW_UP))
+                .build();
+    }
+
     private Optional<ProductVariant> findVariantByHint(Product product, String hint) {
         if (product.getVariants() == null || !StringUtils.hasText(hint)) return Optional.empty();
         String normalizedHint = normalize(hint);
@@ -1079,6 +1139,62 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         return actions;
     }
 
+    private AiChatResponse applyUpsellGuardrail(
+            AiChatResponse response,
+            List<Product> matchedProducts,
+            Map<String, Product> productById,
+            String language,
+            AiChatIntentRouter.Intent intent) {
+        if (!ruleFirstPipelineEnabled || response == null || matchedProducts == null || matchedProducts.isEmpty()) {
+            return response;
+        }
+        boolean canUpsell = intent == AiChatIntentRouter.Intent.ADD_TO_CART
+                || intent == AiChatIntentRouter.Intent.RELATED_RECOMMENDATION
+                || intent == AiChatIntentRouter.Intent.PRODUCT_SEARCH;
+        if (!canUpsell) return response;
+
+        Set<String> baseProductIds = matchedProducts.stream().map(Product::getId).collect(Collectors.toSet());
+        Set<String> baseCategories = matchedProducts.stream()
+                .map(p -> p.getCategory() == null ? "" : p.getCategory().getName())
+                .filter(StringUtils::hasText)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        List<Product> complements = productById.values().stream()
+                .filter(p -> !baseProductIds.contains(p.getId()))
+                .filter(p -> p.getVariants() != null && p.getVariants().stream().anyMatch(v -> v.getQuantity() != null && v.getQuantity() > 0))
+                .filter(p -> {
+                    String cat = p.getCategory() == null ? "" : p.getCategory().getName();
+                    if (!StringUtils.hasText(cat)) return true;
+                    return !baseCategories.contains(cat.toLowerCase());
+                })
+                .limit(MAX_UPSELL_ACTIONS)
+                .toList();
+
+        if (complements.isEmpty()) return response;
+
+        List<AiChatAction> mergedActions = new ArrayList<>(response.getActions() == null ? List.of() : response.getActions());
+        complements.forEach(product -> mergedActions.add(AiChatAction.builder()
+                .type("buy-product")
+                .label(t(language, "Goi y mua them " + product.getName(), "Add-on: " + product.getName()))
+                .command("/buy-product:" + product.getId())
+                .productId(product.getId())
+                .reason("complementary")
+                .offerType("upsell")
+                .build()));
+        response.setActions(mergedActions.stream().limit(12).toList());
+
+        if (response.getRecommendationMeta() == null) {
+            response.setRecommendationMeta(recommendationMeta(
+                    t(language, "Goi y bo sung", "Complementary add-on suggestions"),
+                    "upsell",
+                    "RELATED",
+                    "medium",
+                    intent));
+        }
+        return response;
+    }
+
     private boolean isBuyIntent(String normalized) {
         if (!StringUtils.hasText(normalized)) return false;
         return BUY_INTENT_TRIGGERS.stream().anyMatch(normalized::contains);
@@ -1164,49 +1280,46 @@ public class GeminiAiChatServiceImpl implements AiChatService {
 
         String categoryHint = AiChatProductSupport.parseCategoryHintFromMessage(message);
         int maxBudgetVnd = AiChatProductSupport.parseBudgetVndFromMessage(message);
-
-        // Ưu tiên exact match: nếu tìm thấy sản phẩm khớp chính xác tên, chỉ trả về món đó
-        Optional<String> exactMatchId = AiChatProductSupport.findExactMatchProductId(message, productCatalog);
-        if (exactMatchId.isPresent()) {
-            Product exactProduct = productById.get(exactMatchId.get());
+        AiChatIntentRouter.Intent detectedIntent = intentRouter.detectIntent(message, null);
+        AiChatRetrievalService.RetrievalResult retrieval = retrievalService.retrieve(
+                message, productCatalog, RELATED_PRODUCTS_LIMIT, categoryHint, maxBudgetVnd);
+        if (retrieval.fallbackLevel() == AiChatRetrievalService.FallbackLevel.EXACT && !retrieval.productIds().isEmpty()) {
+            Product exactProduct = productById.get(retrieval.productIds().getFirst());
             if (exactProduct != null) {
-                if (isBuyIntent(normalized)) {
-                    return buildBuyIntentResponse(exactProduct, message, language);
-                }
-                return buildSingleProductResponse(exactProduct, language);
+                AiChatResponse exactResponse = isBuyIntent(normalized)
+                        ? buildBuyIntentResponse(exactProduct, message, language)
+                        : buildSingleProductResponse(exactProduct, language);
+                exactResponse.setRecommendationMeta(recommendationMeta(
+                        t(language, "Khop chinh xac", "Exact match"),
+                        "primary",
+                        "EXACT",
+                        "high",
+                        detectedIntent));
+                return exactResponse;
             }
         }
 
-        List<String> matchedIds = (StringUtils.hasText(categoryHint) || maxBudgetVnd > 0)
-                ? findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT, categoryHint, maxBudgetVnd)
-                : findRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
+        List<String> matchedIds = retrieval.productIds();
         if (matchedIds.isEmpty()) {
-            List<String> looselyRelatedIds = findLooselyRelatedProductIds(message, productCatalog, RELATED_PRODUCTS_LIMIT);
-            List<Product> relatedProducts = looselyRelatedIds.stream()
-                    .map(productById::get).filter(item -> item != null).toList();
-            if (!relatedProducts.isEmpty()) {
-                return AiChatResponse.builder()
+            List<Product> featured = pickFeaturedProducts(new ArrayList<>(productById.values()), RELATED_PRODUCTS_LIMIT);
+            AiChatResponse noMatchResponse = AiChatResponse.builder()
                         .reply(t(language,
-                                "Hiện tại bên em không có món đó nhưng em có các món liên quan sau: %s. Anh/chị muốn xem món nào ạ?"
-                                        .formatted(joinProductNames(relatedProducts)),
-                                "We don't have that item, but here are related products: %s. Which one would you like to view?"
-                                        .formatted(joinProductNames(relatedProducts))))
+                                "Hiện tại bên em không có món đó. Em gợi ý các món đang có: %s."
+                                        .formatted(featured.isEmpty() ? "chưa có sản phẩm" : joinProductNames(featured)),
+                                "We don't have that item. Here are our available products: %s."
+                                        .formatted(featured.isEmpty() ? "no products yet" : joinProductNames(featured))))
                         .refusal(false).shouldOfferAddToCart(false).language(language)
                         .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
-                        .matchedProductIds(relatedProducts.stream().map(Product::getId).toList())
-                        .actions(buildProductListActions(relatedProducts, language, false)).build();
-            }
-            List<Product> featured = pickFeaturedProducts(new ArrayList<>(productById.values()), RELATED_PRODUCTS_LIMIT);
-            return AiChatResponse.builder()
-                    .reply(t(language,
-                            "Hiện tại bên em không có món đó. Em gợi ý các món đang có: %s."
-                                    .formatted(featured.isEmpty() ? "chưa có sản phẩm" : joinProductNames(featured)),
-                            "We don't have that item. Here are our available products: %s."
-                                    .formatted(featured.isEmpty() ? "no products yet" : joinProductNames(featured))))
-                    .refusal(false).shouldOfferAddToCart(false).language(language)
-                    .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
-                    .matchedProductIds(featured.stream().map(Product::getId).toList())
-                    .actions(buildProductListActions(featured, language, false)).build();
+                        .matchedProductIds(featured.stream().map(Product::getId).toList())
+                        .actions(buildProductListActions(featured, language, false))
+                        .recommendationMeta(recommendationMeta(
+                                t(language, "Goi y thay the khi khong co mon", "Alternative suggestions for no-match"),
+                                "alternative",
+                                "SAFE",
+                                "low",
+                                detectedIntent))
+                        .build();
+            return noMatchResponse;
         }
 
         List<Product> matchedProducts = matchedIds.stream()
@@ -1218,10 +1331,10 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
 
         boolean buyIntent = isBuyIntent(normalized);
-        return AiChatResponse.builder()
+        AiChatResponse relatedResponse = AiChatResponse.builder()
                 .reply(t(language,
                         buyIntent
-                                ? "Bạn muốn mua à? Em có các món: %s. Chọn quy cách để mua nhé!"
+                                ? "Dạ hiện tại em có các món: %s."
                                         .formatted(joinProductNames(matchedProducts))
                                 : "Em tìm thấy các món liên quan: %s. Anh/chị muốn xem món nào ạ?"
                                         .formatted(joinProductNames(matchedProducts)),
@@ -1233,7 +1346,17 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 .refusal(false).shouldOfferAddToCart(false).language(language)
                 .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
                 .matchedProductIds(matchedProducts.stream().map(Product::getId).toList())
-                .actions(buildProductListActions(matchedProducts, language, buyIntent)).build();
+                .actions(buildProductListActions(matchedProducts, language, buyIntent))
+                .recommendationMeta(recommendationMeta(
+                        retrieval.fallbackLevel() == AiChatRetrievalService.FallbackLevel.CATEGORY_BUDGET
+                                ? t(language, "Goi y theo danh muc/ngan sach", "Recommended by category/budget")
+                                : t(language, "Mon lien quan", "Related products"),
+                        buyIntent ? "upsell" : "related",
+                        retrieval.fallbackLevel().name(),
+                        retrieval.fallbackLevel() == AiChatRetrievalService.FallbackLevel.RELATED ? "medium" : "high",
+                        detectedIntent))
+                .build();
+        return applyUpsellGuardrail(relatedResponse, matchedProducts, productById, language, detectedIntent);
     }
 
     private AiChatResponse buildResponseFromGeminiPlan(
@@ -1304,11 +1427,12 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         }
 
         String lookup = plan.keywords.isEmpty() ? message : (message + " " + String.join(" ", plan.keywords));
+        AiChatIntentRouter.Intent detectedIntent = intentRouter.detectIntent(message, null);
 
-        // Ưu tiên exact match: nếu tìm thấy sản phẩm khớp chính xác tên, chỉ trả về món đó
-        Optional<String> exactMatchId = AiChatProductSupport.findExactMatchProductId(lookup, productCatalog);
-        if (exactMatchId.isPresent()) {
-            Product exactProduct = productById.get(exactMatchId.get());
+        AiChatRetrievalService.RetrievalResult retrieval = retrievalService.retrieve(
+                lookup, productCatalog, RELATED_PRODUCTS_LIMIT, plan.categoryHint, plan.maxBudgetVnd);
+        if (retrieval.fallbackLevel() == AiChatRetrievalService.FallbackLevel.EXACT && !retrieval.productIds().isEmpty()) {
+            Product exactProduct = productById.get(retrieval.productIds().getFirst());
             if (exactProduct != null) {
                 if (productDetail) {
                     String detailText = AiChatProductSupport.buildProductDetailText(exactProduct, language);
@@ -1327,18 +1451,37 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                     return AiChatResponse.builder()
                             .reply(detailReply).refusal(false).shouldOfferAddToCart(false).language(language)
                             .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
-                            .matchedProductIds(List.of(exactProduct.getId())).actions(detailActions).build();
+                            .matchedProductIds(List.of(exactProduct.getId())).actions(detailActions)
+                            .recommendationMeta(recommendationMeta(
+                                    t(language, "Khop chinh xac", "Exact match"),
+                                    "primary",
+                                    "EXACT",
+                                    "high",
+                                    detectedIntent))
+                            .build();
                 }
                 if (buy) {
-                    return buildBuyIntentResponse(exactProduct, message, language, plan);
+                    AiChatResponse buyIntentResponse = buildBuyIntentResponse(exactProduct, message, language, plan);
+                    buyIntentResponse.setRecommendationMeta(recommendationMeta(
+                            t(language, "Khop chinh xac", "Exact match"),
+                            "primary",
+                            "EXACT",
+                            "high",
+                            detectedIntent));
+                    return buyIntentResponse;
                 }
-                return buildSingleProductResponse(exactProduct, language);
+                AiChatResponse single = buildSingleProductResponse(exactProduct, language);
+                single.setRecommendationMeta(recommendationMeta(
+                        t(language, "Khop chinh xac", "Exact match"),
+                        "primary",
+                        "EXACT",
+                        "high",
+                        detectedIntent));
+                return single;
             }
         }
 
-        List<String> matchedIds = (StringUtils.hasText(plan.categoryHint) || plan.maxBudgetVnd > 0)
-                ? findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT, plan.categoryHint, plan.maxBudgetVnd)
-                : findRelatedProductIds(lookup, productCatalog, RELATED_PRODUCTS_LIMIT);
+        List<String> matchedIds = retrieval.productIds();
         List<Product> matchedProducts = matchedIds.stream()
                 .map(productById::get).filter(item -> item != null).toList();
 
@@ -1360,7 +1503,14 @@ public class GeminiAiChatServiceImpl implements AiChatService {
             return AiChatResponse.builder()
                     .reply(reply).refusal(false).shouldOfferAddToCart(false).language(language)
                     .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
-                    .matchedProductIds(List.of(detailProduct.getId())).actions(actions).build();
+                    .matchedProductIds(List.of(detailProduct.getId())).actions(actions)
+                    .recommendationMeta(recommendationMeta(
+                            t(language, "Goi y lien quan", "Related recommendation"),
+                            "related",
+                            retrieval.fallbackLevel().name(),
+                            "medium",
+                            detectedIntent))
+                    .build();
         }
 
         if (greeting || recommendation || browse) {
@@ -1375,7 +1525,14 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                         .reply(reply).refusal(false).shouldOfferAddToCart(false).language(language)
                         .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
                         .matchedProductIds(matchedProducts.stream().map(Product::getId).toList())
-                        .actions(buildProductListActions(matchedProducts, language, buy)).build();
+                        .actions(buildProductListActions(matchedProducts, language, buy))
+                        .recommendationMeta(recommendationMeta(
+                                t(language, "Mon lien quan", "Related products"),
+                                buy ? "upsell" : "related",
+                                retrieval.fallbackLevel().name(),
+                                "medium",
+                                detectedIntent))
+                        .build();
             }
             List<Product> featured = pickFeaturedProducts(new ArrayList<>(productById.values()), RELATED_PRODUCTS_LIMIT);
             if (featured.isEmpty()) return null;
@@ -1417,7 +1574,16 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                     .reply(reply).refusal(false).shouldOfferAddToCart(false).language(language)
                     .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
                     .matchedProductIds(productsToShow.stream().map(Product::getId).toList())
-                    .actions(buildProductListActions(productsToShow, language)).build();
+                    .actions(buildProductListActions(productsToShow, language))
+                    .recommendationMeta(recommendationMeta(
+                            isRelated
+                                    ? t(language, "Mon lien quan thay the", "Related alternatives")
+                                    : t(language, "De xuat an toan", "Safe fallback suggestions"),
+                            isRelated ? "related" : "alternative",
+                            isRelated ? "RELATED" : "SAFE",
+                            isRelated ? "medium" : "low",
+                            detectedIntent))
+                    .build();
         }
 
         if (buy && matchedProducts.size() == 1) {
@@ -1430,11 +1596,19 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                                 .formatted(joinProductNames(matchedProducts)),
                         "I found related products: %s. Which one would you like to buy?"
                                 .formatted(joinProductNames(matchedProducts)));
-        return AiChatResponse.builder()
+        AiChatResponse response = AiChatResponse.builder()
                 .reply(reply).refusal(false).shouldOfferAddToCart(false).language(language)
                 .nextContext(AiChatContext.builder().awaiting(AWAITING_NONE).build())
                 .matchedProductIds(matchedProducts.stream().map(Product::getId).toList())
-                .actions(buildProductListActions(matchedProducts, language, buy)).build();
+                .actions(buildProductListActions(matchedProducts, language, buy))
+                .recommendationMeta(recommendationMeta(
+                        t(language, "Mon lien quan", "Related products"),
+                        buy ? "upsell" : "related",
+                        retrieval.fallbackLevel().name(),
+                        "medium",
+                        detectedIntent))
+                .build();
+        return applyUpsellGuardrail(response, matchedProducts, productById, language, detectedIntent);
     }
 
     private AiChatResponse buildGeminiPlanFallbackResponse(
@@ -1511,8 +1685,47 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         return new ParsedCommand(trimmed.substring(1, separator), trimmed.substring(separator + 1));
     }
 
+    private void recordObservability(AiChatIntentRouter.Intent intent, AiChatResponse response, long startMs) {
+        if (response == null) return;
+        String fallbackLevel = response.getRecommendationMeta() != null
+                ? response.getRecommendationMeta().getFallbackLevel()
+                : "unknown";
+        boolean noMatch = response.getMatchedProductIds() == null || response.getMatchedProductIds().isEmpty();
+        long latencyMs = Math.max(0L, System.currentTimeMillis() - startMs);
+        observabilityService.recordRequest(intent, fallbackLevel, noMatch, response.isRefusal(), latencyMs);
+        if (response.getRecommendationMeta() != null) {
+            observabilityService.recordRecommendationExposure(
+                    response.getRecommendationMeta().getOfferType(),
+                    response.getRecommendationMeta().getReason());
+        }
+        if (response.getActions() != null) {
+            response.getActions().forEach(action -> {
+                if (action != null && StringUtils.hasText(action.getType())
+                        && ("buy-product".equals(action.getType()) || "go-checkout".equals(action.getType()))) {
+                    observabilityService.recordRecommendationConversion(action.getType(),
+                            response.getRecommendationMeta() != null ? response.getRecommendationMeta().getOfferType() : null);
+                }
+            });
+        }
+    }
+
     private String t(String language, String vi, String en) {
         return "en".equalsIgnoreCase(language) ? en : vi;
+    }
+
+    private com.ecommerce.likefood.ai.dto.res.AiRecommendationMeta recommendationMeta(
+            String reason,
+            String offerType,
+            String fallbackLevel,
+            String confidenceBand,
+            AiChatIntentRouter.Intent intent) {
+        return com.ecommerce.likefood.ai.dto.res.AiRecommendationMeta.builder()
+                .reason(reason)
+                .offerType(offerType)
+                .fallbackLevel(fallbackLevel)
+                .confidenceBand(confidenceBand)
+                .intent(intent == null ? "UNKNOWN" : intent.name())
+                .build();
     }
 
     private String joinProductNames(List<Product> products) {
@@ -1551,7 +1764,10 @@ public class GeminiAiChatServiceImpl implements AiChatService {
                 : context.getSelectedProductId();
         String selectedVariantId = context == null || !StringUtils.hasText(context.getSelectedVariantId()) ? "-"
                 : context.getSelectedVariantId();
-        return String.join("|", language, awaiting, selectedProductId, selectedVariantId, normalizedMessage);
+        String quantity = context == null || context.getPendingQuantity() == null ? "-"
+                : String.valueOf(context.getPendingQuantity());
+        return String.join("|", language, awaiting, selectedProductId, selectedVariantId, quantity,
+                normalizedMessage);
     }
 
     private AiChatResponse getCachedResponse(String cacheKey) {
@@ -1566,12 +1782,27 @@ public class GeminiAiChatServiceImpl implements AiChatService {
         return entry.response;
     }
 
-    private void putCachedResponse(String cacheKey, AiChatResponse response) {
+    private void putCachedResponse(String cacheKey, AiChatResponse response, AiChatContext context) {
         if (!StringUtils.hasText(cacheKey) || response == null || cacheTtlMs <= 0)
             return;
         evictCacheIfNeeded();
-        long expireAtMs = System.currentTimeMillis() + cacheTtlMs;
+        long expireAtMs = System.currentTimeMillis() + resolveCacheTtlMs(context);
         responseCache.put(cacheKey, new CachedAiResponseEntry(response, expireAtMs));
+    }
+
+    private long resolveCacheTtlMs(AiChatContext context) {
+        if (context == null || !StringUtils.hasText(context.getAwaiting()) || AWAITING_NONE.equals(context.getAwaiting())) {
+            return cacheTtlMs;
+        }
+        // Shorter TTL for active, multi-turn states to reduce stale context reuse.
+        return Math.max(8000L, cacheTtlMs / 2);
+    }
+
+    private boolean isFastPathIntent(AiChatIntentRouter.Intent intent) {
+        return intent == AiChatIntentRouter.Intent.PRODUCT_SEARCH
+                || intent == AiChatIntentRouter.Intent.RELATED_RECOMMENDATION
+                || intent == AiChatIntentRouter.Intent.BUDGET_CONSTRAINT
+                || intent == AiChatIntentRouter.Intent.OUT_OF_STOCK_ALTERNATIVE;
     }
 
     private void evictCacheIfNeeded() {

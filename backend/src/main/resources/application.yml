@@ -49,6 +49,9 @@ likefood:
     accessToken-validity-in-second: 7200 #2 hour
     refreshToken-validity-in-second: 1296000 #15 day
   ai:
+    chat:
+      pipeline:
+        rule-first-enabled: ${AI_CHAT_RULE_FIRST_PIPELINE_ENABLED:true}
     gemini:
       enabled: ${GEMINI_ENABLED:true}
       api-key: ${GEMINI_API_KEY:}
@@ -69,3 +72,9 @@ likefood:
       region: ${AWS_REGION:ap-southeast-1}
       bucket: ${AWS_S3_BUCKET}
       public-base-url: ${AWS_S3_PUBLIC_BASE_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

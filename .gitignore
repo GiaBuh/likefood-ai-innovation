@@ -5,4 +5,22 @@
 backend/.env
 frontend/.env
 docker-compose.yml
+.gradle-local/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local logs and temp files
+*.log
+*.tmp
+tmp/
+temp/
+.cache/
+
+# Local Gradle cache (outside module-specific ignores)
+.gradle/
+**/.gradle/
 
