@@ -18,4 +18,6 @@ public class AiChatAction {
     private String productId;
     private String variantId;
     private Integer quantity;
+    private String reason;
+    private String offerType;
 }

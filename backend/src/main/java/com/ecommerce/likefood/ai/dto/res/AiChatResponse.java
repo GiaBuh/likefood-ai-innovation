@@ -22,6 +22,7 @@ public class AiChatResponse {
     private String language;
     private AiChatContext nextContext;
     private AiCartInstruction cartInstruction;
+    private AiRecommendationMeta recommendationMeta;
 
     @Builder.Default
     private List<String> matchedProductIds = new ArrayList<>();

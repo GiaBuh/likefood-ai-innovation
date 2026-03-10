@@ -53,6 +53,18 @@ const toAiHistory = (messages: Message[]) =>
     }))
     .slice(-10);
 
+type MessageFormatProfile = 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
+
+const resolveFormatProfileFallback = (reply: string): MessageFormatProfile => {
+  const normalized = (reply || '').trim();
+  if (!normalized) return 'simple_cta';
+  if (normalized.includes('\n•') || normalized.includes('\n-')) return 'recommendation_list';
+  const sentenceCount = normalized.split(/(?<=[.!?])\s+/).filter(Boolean).length;
+  if (sentenceCount >= 3) return 'recommendation_list';
+  if (sentenceCount === 2) return 'compact_detail';
+  return 'simple_cta';
+};
+
 export function useChatAi(params: UseChatAiParams) {
   const {
     products,
@@ -81,13 +93,18 @@ export function useChatAi(params: UseChatAiParams) {
   const t = (viText: string, enText: string) => (activeLang === 'en' ? enText : viText);
 
   const pushAiMessage = useCallback(
-    (text: string, actions?: ChatAction[]) => {
+    (
+      text: string,
+      actions?: ChatAction[],
+      formatProfile?: MessageFormatProfile
+    ) => {
       const botMessage: Message = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         text,
         sender: 'bot',
         timestamp: new Date(),
         actions,
+        formatProfile,
       };
       setAiMessages((prev) => [...prev, botMessage]);
     },
@@ -100,6 +117,36 @@ export function useChatAi(params: UseChatAiParams) {
     setPendingVariant(null);
     setPendingQuantity(null);
   }, [setAiStage, setPendingProduct, setPendingVariant, setPendingQuantity]);
+
+  const syncStateFromContext = useCallback(
+    (nextContext: AiChatContext | undefined, cartInstruction?: { quantity?: number; productId?: string }) => {
+      if (!nextContext) return;
+      setAiContext(nextContext);
+
+      if (!nextContext.awaiting || nextContext.awaiting === 'NONE') {
+        return;
+      }
+
+      if (nextContext.awaiting === 'AWAITING_CHECKOUT') {
+        setAiStage('awaiting_checkout_confirmation');
+        return;
+      }
+
+      if (!nextContext.selectedProductId) return;
+      const selected = products.find((item) => String(item.id) === String(nextContext.selectedProductId));
+      if (!selected) return;
+
+      setPendingProduct(selected);
+      const ctxQty = nextContext.pendingQuantity ?? cartInstruction?.quantity;
+      if (ctxQty) setPendingQuantity(ctxQty);
+      if (nextContext.awaiting === 'AWAITING_PRODUCT_CONFIRMATION') {
+        setAiStage('awaiting_add_confirmation');
+      } else if (nextContext.awaiting === 'AWAITING_VARIANT_OR_QUANTITY') {
+        setAiStage('awaiting_variant');
+      }
+    },
+    [products, setAiContext, setAiStage, setPendingProduct, setPendingQuantity]
+  );
 
   const addPendingItemToCart = useCallback(
     (quantity: number, productOverride?: Product | null, variantOverride?: ProductVariant | null) => {
@@ -534,28 +581,11 @@ export function useChatAi(params: UseChatAiParams) {
       try {
         const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), requestLanguage, aiContext);
         if (aiResponse.language) setChatLanguage(aiResponse.language);
-        if (aiResponse.nextContext) {
-          setAiContext(aiResponse.nextContext);
-          if (aiResponse.nextContext.awaiting === 'AWAITING_PRODUCT_CONFIRMATION' && aiResponse.nextContext.selectedProductId) {
-            const p = products.find((item) => String(item.id) === String(aiResponse.nextContext!.selectedProductId));
-            if (p) {
-              setPendingProduct(p);
-              setAiStage('awaiting_add_confirmation');
-              const ctxQty = aiResponse.nextContext.pendingQuantity ?? aiResponse.cartInstruction?.quantity;
-              if (ctxQty) setPendingQuantity(ctxQty);
-            }
-          }
-          if (aiResponse.nextContext.awaiting === 'AWAITING_VARIANT_OR_QUANTITY' && aiResponse.nextContext.selectedProductId) {
-            const p = products.find((item) => String(item.id) === String(aiResponse.nextContext!.selectedProductId));
-            if (p) {
-              setPendingProduct(p);
-              setAiStage('awaiting_variant');
-              const ctxQty = aiResponse.nextContext.pendingQuantity ?? aiResponse.cartInstruction?.quantity;
-              if (ctxQty) setPendingQuantity(ctxQty);
-            }
-          }
-          if (aiResponse.nextContext.awaiting === 'AWAITING_CHECKOUT') setAiStage('awaiting_checkout_confirmation');
-        }
+        const allowedActionProductIds = new Set<string>([
+          ...(aiResponse.matchedProductIds || []).map((id) => String(id)),
+          ...(aiResponse.nextContext?.selectedProductId ? [String(aiResponse.nextContext.selectedProductId)] : []),
+        ]);
+        syncStateFromContext(aiResponse.nextContext, aiResponse.cartInstruction);
         if (aiResponse.cartInstruction?.variantId && aiResponse.cartInstruction?.quantity) {
           const product = products.find((item) => String(item.id) === String(aiResponse.cartInstruction?.productId));
           const variant = product?.variants?.find((item) => item.id === aiResponse.cartInstruction?.variantId);
@@ -566,16 +596,35 @@ export function useChatAi(params: UseChatAiParams) {
             );
           }
         }
-        const responseActions: ChatAction[] = (aiResponse.actions || []).map((action, index) => ({
-          id: `${Date.now()}-${index}-${action.type}`,
-          label: action.label,
-          type: action.type,
-          productId: action.productId,
-          variantId: action.variantId,
-          quantity: action.quantity,
-          command: action.command,
-        }));
-        pushAiMessage(aiResponse.reply, responseActions.length > 0 ? responseActions : undefined);
+        const actionNeedsProductBinding = (type?: string) =>
+          type === 'open-product' || type === 'buy-product' || type === 'choose-variant';
+        const responseActions: ChatAction[] = (aiResponse.actions || [])
+          .filter((action) => {
+            if (!actionNeedsProductBinding(action.type)) return true;
+            if (!action.productId) return false;
+            return allowedActionProductIds.has(String(action.productId));
+          })
+          .map((action, index) => ({
+            id: `${Date.now()}-${index}-${action.type}`,
+            label: action.label,
+            type: action.type,
+            productId: action.productId,
+            variantId: action.variantId,
+            quantity: action.quantity,
+            command: action.command,
+            reason: action.reason,
+            offerType: action.offerType,
+          }));
+        const recommendationHint =
+          aiResponse.recommendationMeta?.reason && aiResponse.recommendationMeta?.fallbackLevel !== 'EXACT'
+            ? `(${aiResponse.recommendationMeta.reason})`
+            : '';
+        const composedReply = recommendationHint ? `${aiResponse.reply}\n${recommendationHint}` : aiResponse.reply;
+        pushAiMessage(
+          composedReply,
+          responseActions.length > 0 ? responseActions : undefined,
+          aiResponse.recommendationMeta?.formatProfile ?? resolveFormatProfileFallback(composedReply)
+        );
       } catch (error) {
         console.error('Cannot get Gemini response from backend.', error);
         fallbackLocalAiResponse(trimmed);
@@ -596,8 +645,8 @@ export function useChatAi(params: UseChatAiParams) {
       setAiStage,
       setPendingProduct,
       setPendingQuantity,
-      setAiContext,
       setChatLanguage,
+      syncStateFromContext,
       onGoToCheckout,
       onOpenProduct,
       t,

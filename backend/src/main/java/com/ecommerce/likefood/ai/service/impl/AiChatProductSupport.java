@@ -321,14 +321,14 @@ final class AiChatProductSupport {
             return List.of();
         }
         List<String> tokens = List.of(normalizedMessage.split(" ")).stream()
-                .filter(token -> token.length() >= 2)
+                .filter(token -> token.length() >= MIN_TOKEN_LENGTH)
                 .filter(token -> !SEARCH_STOP_WORDS.contains(token))
                 .toList();
         if (tokens.isEmpty()) {
             return List.of();
         }
 
-        return productCatalog.stream()
+        List<Map.Entry<String, int[]>> scoredCandidates = productCatalog.stream()
                 .map(item -> {
                     String id = String.valueOf(item.get("id"));
                     String name = AiChatTextSupport.normalize(String.valueOf(item.getOrDefault("name", "")));
@@ -337,6 +337,7 @@ final class AiChatProductSupport {
                             .normalize(String.valueOf(item.getOrDefault("description", "")));
                     int score = 0;
                     int nameScore = 0;
+                    int nameTokenMatches = 0;
                     if (name.contains(normalizedMessage) || normalizedMessage.contains(name)) {
                         score += 8;
                         nameScore += 8;
@@ -345,6 +346,7 @@ final class AiChatProductSupport {
                         if (containsWord(name, token)) {
                             score += 3;
                             nameScore += 3;
+                            nameTokenMatches++;
                         } else if (name.contains(token)) {
                             score += 1;
                             nameScore += 1;
@@ -354,14 +356,26 @@ final class AiChatProductSupport {
                         if (description.contains(token))
                             score += 1;
                     }
-                    return Map.entry(id, new int[]{ score, nameScore });
+                    return Map.entry(id, new int[]{ score, nameScore, nameTokenMatches });
                 })
+                .toList();
+        int maxNameTokenMatches = scoredCandidates.stream()
+                .map(Map.Entry::getValue)
+                .mapToInt(value -> value[2])
+                .max()
+                .orElse(0);
+        boolean hasStrongNameMatch = tokens.size() >= 2 && maxNameTokenMatches >= 2;
+
+        return scoredCandidates.stream()
                 .filter(entry -> {
                     int score = entry.getValue()[0];
                     int nameScore = entry.getValue()[1];
+                    int nameTokenMatches = entry.getValue()[2];
                     if (score < minScore) return false;
                     // Khi user hỏi sản phẩm cụ thể (2+ token), bắt buộc phải có match trong TÊN sản phẩm
                     if (tokens.size() >= 2 && nameScore <= 0) return false;
+                    // Nếu đã có sản phẩm khớp mạnh theo cụm tên (>=2 token), loại các ứng viên chỉ khớp 1 token.
+                    if (hasStrongNameMatch && nameTokenMatches < 2) return false;
                     return true;
                 })
                 .sorted((a, b) -> Integer.compare(b.getValue()[0], a.getValue()[0]))
