@@ -8,7 +8,7 @@ type ChatMenuViewProps = {
 export const ChatMenuView: React.FC<ChatMenuViewProps> = ({ onSelectAdmin, onSelectAi }) => (
   <div className="flex-1 p-6 flex flex-col justify-center gap-4">
     <p className="text-center text-stone-600 dark:text-stone-300 mb-2 font-medium">
-      Please select a support option:
+      Chọn hình thức hỗ trợ:
     </p>
 
     <button
@@ -19,7 +19,7 @@ export const ChatMenuView: React.FC<ChatMenuViewProps> = ({ onSelectAdmin, onSel
         <span className="material-symbols-outlined text-2xl">support_agent</span>
       </div>
       <div>
-        <h4 className="font-bold text-slate-900 dark:text-white">Chat with Admin</h4>
+        <h4 className="font-bold text-slate-900 dark:text-white">Chat với Admin</h4>
         <p className="text-xs text-stone-500 dark:text-stone-400">Order issues, shipping, returns</p>
       </div>
       <span className="absolute right-4 text-stone-300 group-hover:text-primary transition-colors">
@@ -35,8 +35,8 @@ export const ChatMenuView: React.FC<ChatMenuViewProps> = ({ onSelectAdmin, onSel
         <span className="material-symbols-outlined text-2xl">smart_toy</span>
       </div>
       <div>
-        <h4 className="font-bold text-slate-900 dark:text-white">Chat with AI</h4>
-        <p className="text-xs text-stone-500 dark:text-stone-400">Recipes, product info, tips</p>
+        <h4 className="font-bold text-slate-900 dark:text-white">Chat với AI</h4>
+        <p className="text-xs text-stone-500 dark:text-stone-400">Công thức, thông tin sản phẩm, mẹo</p>
       </div>
       <span className="absolute right-4 text-stone-300 group-hover:text-indigo-600 transition-colors">
         <span className="material-symbols-outlined">chevron_right</span>

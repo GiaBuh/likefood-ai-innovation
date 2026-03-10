@@ -784,7 +784,7 @@ export async function askAiAssistant(
     }),
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Failed to get AI response (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Không thể nhận phản hồi AI (${response.status})`));
   }
   const payload = (await response.json()) as RestResponse<AiAssistantResponse> | AiAssistantResponse;
   return unwrapRestResponse(payload);
@@ -796,7 +796,7 @@ export async function getMyCart(): Promise<BackendCart> {
     requireAuth: true,
   });
   if (!response.ok) {
-    throw new Error(`Failed to get my cart (${response.status})`);
+    throw new Error(`Không thể tải giỏ hàng (${response.status})`);
   }
   const payload = (await response.json()) as RestResponse<BackendCart> | BackendCart;
   return unwrapRestResponse(payload);
@@ -849,7 +849,7 @@ export async function getCartRecommendations(): Promise<CartRecommendationRespon
     requireAuth: true,
   });
   if (!response.ok) {
-    throw new Error(`Failed to get recommendations (${response.status})`);
+    throw new Error(`Không thể tải gợi ý (${response.status})`);
   }
   const payload = (await response.json()) as RestResponse<{ recommendations: BackendCartRecommendationItem[] }> | { recommendations: BackendCartRecommendationItem[] };
   const data = unwrapRestResponse(payload) as { recommendations: BackendCartRecommendationItem[] };
@@ -932,7 +932,7 @@ export type ChatConversationRes = {
 export async function getMyChatMessages(): Promise<ChatMessageRes[]> {
   const response = await apiFetch('/chat/me/messages', { method: 'GET', requireAuth: true });
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Failed to get messages (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Không thể tải tin nhắn (${response.status})`));
   }
   const payload = (await response.json()) as RestResponse<ChatMessageRes[]> | ChatMessageRes[];
   return unwrapRestResponse(payload) || [];
@@ -954,7 +954,7 @@ export async function sendChatMessageAsUser(content: string): Promise<ChatMessag
 export async function getAdminConversations(): Promise<ChatConversationRes[]> {
   const response = await apiFetch('/chat/admin/conversations', { method: 'GET', requireAuth: true });
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Failed to get conversations (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Không thể tải hội thoại (${response.status})`));
   }
   const payload = (await response.json()) as RestResponse<ChatConversationRes[]> | ChatConversationRes[];
   return unwrapRestResponse(payload) || [];
@@ -966,7 +966,7 @@ export async function getAdminMessages(userId: string): Promise<ChatMessageRes[]
     requireAuth: true,
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Failed to get messages (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Không thể tải tin nhắn (${response.status})`));
   }
   const payload = (await response.json()) as RestResponse<ChatMessageRes[]> | ChatMessageRes[];
   return unwrapRestResponse(payload) || [];

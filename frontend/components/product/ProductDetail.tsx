@@ -77,7 +77,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           className="flex items-center gap-1 hover:text-primary transition-colors font-semibold"
         >
           <span className="material-symbols-outlined !text-lg">arrow_back</span>
-          Back to Shop
+          Quay lại cửa hàng
         </button>
         <span>/</span>
         <span className="text-stone-900 dark:text-stone-200 font-medium truncate">{product.name}</span>
@@ -101,7 +101,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             {product.isUsShip && (
               <div className="absolute top-4 left-4 px-3 py-1.5 bg-secondary/90 backdrop-blur-sm rounded-lg text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 shadow-md">
                 <span className="material-symbols-outlined !text-sm">flight_takeoff</span>
-                US Ship
+                Giao nhanh
               </div>
             )}
           </div>
@@ -152,7 +152,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="space-y-6 mb-8">
              {/* Weight Options Selector */}
              <div>
-                <span className="block text-xs text-stone-500 dark:text-stone-400 uppercase font-bold mb-2">Select Weight</span>
+                <span className="block text-xs text-stone-500 dark:text-stone-400 uppercase font-bold mb-2">Chọn quy cách</span>
                 <div className="flex flex-wrap gap-2">
                   {product.variants && product.variants.length > 0 ? (
                     product.variants.map((variant) => (
@@ -176,10 +176,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
              {/* Packaging Info */}
              <div className="p-4 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-100 dark:border-stone-700 inline-block w-full">
-                <span className="block text-xs text-stone-500 dark:text-stone-400 uppercase font-bold mb-1">Quy Cách (Packaging)</span>
+                <span className="block text-xs text-stone-500 dark:text-stone-400 uppercase font-bold mb-1">Quy cách (Đóng gói)</span>
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-stone-400">package_2</span>
-                  <p className="font-bold text-slate-900 dark:text-white">{product.packaging}</p>
+                  <p className="font-bold text-slate-900 dark:text-white">
+                    {product.packaging === 'Standard Pack' ? 'Gói tiêu chuẩn' : product.packaging}
+                  </p>
                 </div>
              </div>
           </div>
@@ -192,7 +194,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
           <div className="flex items-center gap-2 mb-8 text-sm text-stone-500 dark:text-stone-400 font-medium">
             <span className="material-symbols-outlined !text-lg">location_on</span>
-            <span>Origin: {product.location}, Vietnam</span>
+            <span>Xuất xứ: {product.location && product.location !== 'Viet Nam' && product.location !== 'Vietnam' ? `${product.location}, Việt Nam` : 'Việt Nam'}</span>
           </div>
 
           {/* Actions */}
@@ -218,25 +220,25 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                 className="flex-1 bg-primary hover:bg-primary-dark text-white font-bold text-lg py-3 px-8 rounded-xl shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
-                Add - ${(selectedVariant.price * quantity).toFixed(2)}
+                Thêm - ${(selectedVariant.price * quantity).toFixed(2)}
               </button>
             </div>
             <button 
               onClick={handleBuyNow}
               className="w-full py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 font-bold text-slate-700 dark:text-white hover:border-primary hover:text-primary transition-colors"
             >
-              Buy Now
+              Mua ngay
             </button>
           </div>
           
           <div className="mt-8 pt-8 border-t border-stone-200 dark:border-stone-700 grid grid-cols-2 gap-4">
             <div className="flex flex-col items-center text-center p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
               <span className="material-symbols-outlined text-primary mb-2 text-2xl">verified_user</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">Authentic Guarantee</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">Cam kết chính gốc</span>
             </div>
             <div className="flex flex-col items-center text-center p-4 bg-stone-50 dark:bg-stone-800/50 rounded-xl">
               <span className="material-symbols-outlined text-primary mb-2 text-2xl">local_shipping</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">Fast Shipping</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">Giao hàng nhanh</span>
             </div>
           </div>
         </div>

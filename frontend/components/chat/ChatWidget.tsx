@@ -40,7 +40,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [aiStage, setAiStage] = useState('idle');
-  const [chatLanguage, setChatLanguage] = useState<'vi' | 'en' | null>(null);
   const [aiContext, setAiContext] = useState<{ awaiting?: string; selectedProductId?: string; selectedVariantId?: string }>({ awaiting: 'NONE' });
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
   const [pendingVariant, setPendingVariant] = useState<ProductVariant | null>(null);
@@ -53,7 +52,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const currentMessages = activeView === 'admin' ? adminMessages : aiMessages;
 
-  const { handleActionClick, sendAiMessage, detectLanguage } = useChatAi({
+  const { handleActionClick, sendAiMessage } = useChatAi({
     products,
     addToCart,
     aiMessages,
@@ -68,8 +67,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     setPendingQuantity,
     aiContext,
     setAiContext,
-    chatLanguage,
-    setChatLanguage,
     setIsTyping,
     onOpenProduct,
     onGoToCheckout,
@@ -91,7 +88,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       setActiveView('menu');
       setAdminMessages(createDefaultAdminMessages());
       setAiMessages(createDefaultAiMessages());
-      setChatLanguage(null);
       setAiContext({ awaiting: 'NONE' });
       return;
     }
@@ -115,14 +111,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       setActiveView(parsed.activeView || 'menu');
       setAdminMessages(deserializeMessages(parsed.adminMessages, createDefaultAdminMessages()));
       setAiMessages(deserializeMessages(parsed.aiMessages, createDefaultAiMessages()));
-      setChatLanguage(parsed.chatLanguage || null);
       setAiContext(parsed.aiContext || { awaiting: 'NONE' });
       hasHydratedChatRef.current = true;
     } catch {
       setActiveView('menu');
       setAdminMessages(createDefaultAdminMessages());
       setAiMessages(createDefaultAiMessages());
-      setChatLanguage(null);
       setAiContext({ awaiting: 'NONE' });
       hasHydratedChatRef.current = true;
     }
@@ -183,11 +177,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       activeView,
       adminMessages: serializeMessages(adminMessages),
       aiMessages: serializeMessages(aiMessages),
-      chatLanguage,
       aiContext,
     };
     localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [user, activeView, adminMessages, aiMessages, chatLanguage, aiContext]);
+  }, [user, activeView, adminMessages, aiMessages, aiContext]);
 
   const toggleChat = () => setIsOpen(!isOpen);
   const handleBackToMenu = () => setActiveView('menu');
@@ -221,18 +214,17 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       return;
     }
 
-    setChatLanguage(detectLanguage(newMessage.text));
     setAiMessages((prev) => [...prev, newMessage]);
     setIsTyping(true);
     setInputText('');
-    sendAiMessage(newMessage.text, [...aiMessages, newMessage], detectLanguage(newMessage.text));
+    sendAiMessage(newMessage.text, [...aiMessages, newMessage]);
   };
 
   const getHeaderTitle = () => {
     switch (activeView) {
-      case 'admin': return 'Customer Support';
-      case 'ai': return 'AI Assistant';
-      default: return 'Help Center';
+      case 'admin': return 'Hỗ trợ khách hàng';
+      case 'ai': return 'Trợ lý AI';
+      default: return 'Trung tâm trợ giúp';
     }
   };
 
@@ -315,15 +307,15 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 <div className="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-4xl text-stone-400">lock</span>
                 </div>
-                <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Login Required</h4>
+                <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Yêu cầu đăng nhập</h4>
                 <p className="text-sm text-stone-500 dark:text-stone-400 mb-8">
-                  Please sign in to your account to chat with {activeView === 'ai' ? 'our AI' : 'support'}.
+                  Vui lòng đăng nhập để chat với {activeView === 'ai' ? 'trợ lý AI' : 'hỗ trợ'}.
                 </p>
                 <button
                   onClick={onOpenLogin}
                   className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark shadow-lg shadow-green-500/20 transition-all"
                 >
-                  Login to Chat
+                  Đăng nhập để chat
                 </button>
               </div>
             ))}
@@ -347,7 +339,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             isHovered && !isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
           }`}
         >
-          Chat with us 👋
+          Chat với chúng tôi 👋
         </div>
         {!isOpen && (
           <span className="absolute top-0 right-0 flex h-4 w-4">

@@ -71,13 +71,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
         <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
           <div>
             <div className="flex items-center gap-3">
-              <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Order {order.id}</h3>
+              <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Đơn hàng {order.id}</h3>
               <StatusSelect 
                 status={order.fulfillmentStatus} 
                 onChange={(newStatus) => onUpdateStatus && onUpdateStatus(order.id, newStatus)} 
               />
             </div>
-            <p className="text-sm text-subtext-light dark:text-subtext-dark mt-1">Placed on {order.createdAt} at {order.time}</p>
+            <p className="text-sm text-subtext-light dark:text-subtext-dark mt-1">Đặt ngày {order.createdAt} lúc {order.time}</p>
           </div>
           <button onClick={onClose} className="text-subtext-light hover:text-text-light dark:text-subtext-dark dark:hover:text-text-dark">
             <span className="material-symbols-outlined">close</span>
@@ -89,7 +89,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 {/* Customer Info */}
                 <div>
-                    <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Customer</h4>
+                    <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Khách hàng</h4>
                     <div className="flex items-center gap-3 mb-3">
                         {order.customer.avatarUrl ? (
                             <img src={order.customer.avatarUrl} alt={order.customer.fullname} className="h-10 w-10 rounded-full object-cover" />
@@ -107,7 +107,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
 
                 {/* Shipping Info */}
                 <div>
-                    <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Shipping To</h4>
+                    <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Giao đến</h4>
                     <p className="text-sm text-text-light dark:text-text-dark">{order.customer.fullname}</p>
                     <p className="text-sm text-subtext-light dark:text-subtext-dark mt-1">{order.shippingAddress || order.customer.address}</p>
                     <p className="text-sm text-subtext-light dark:text-subtext-dark mt-1">{order.customer.phoneNumber}</p>
@@ -115,7 +115,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
             </div>
 
             {/* Order Items */}
-            <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Order Items</h4>
+            <h4 className="text-sm font-bold text-subtext-light dark:text-subtext-dark uppercase mb-3">Chi tiết đơn hàng</h4>
             <div className="space-y-4">
                 {order.items && order.items.length > 0 ? (
                     order.items.map((item) => (
@@ -125,7 +125,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h5 className="text-sm font-bold text-text-light dark:text-text-dark truncate">{item.productName}</h5>
-                                <p className="text-xs text-subtext-light dark:text-subtext-dark mt-0.5">Variant: {item.variantLabel}</p>
+                                <p className="text-xs text-subtext-light dark:text-subtext-dark mt-0.5">Quy cách: {item.variantLabel}</p>
                                 <div className="mt-2 text-xs font-medium text-subtext-light dark:text-subtext-dark">
                                     Qty: {item.quantity} × ${item.price.toFixed(2)}
                                 </div>
@@ -146,11 +146,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
             <div className="mt-6 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
                 <div className="w-full max-w-xs space-y-2">
                     <div className="flex justify-between text-sm">
-                        <span className="text-subtext-light dark:text-subtext-dark">Subtotal</span>
+                        <span className="text-subtext-light dark:text-subtext-dark">Tạm tính</span>
                         <span className="font-medium text-text-light dark:text-text-dark">${order.totalAmount.toFixed(2)}</span>
                     </div>
                      <div className="flex justify-between text-sm">
-                        <span className="text-subtext-light dark:text-subtext-dark">Shipping</span>
+                        <span className="text-subtext-light dark:text-subtext-dark">Phí vận chuyển</span>
                         <span className="font-medium text-text-light dark:text-text-dark">$0.00</span>
                     </div>
                      <div className="flex justify-between text-sm">
@@ -158,7 +158,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                         <span className="font-medium text-text-light dark:text-text-dark">$0.00</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold border-t border-border-light dark:border-border-dark pt-2 mt-2">
-                        <span className="text-text-light dark:text-text-dark">Total</span>
+                        <span className="text-text-light dark:text-text-dark">Tổng cộng</span>
                         <span className="text-primary">${order.totalAmount.toFixed(2)}</span>
                     </div>
                 </div>
@@ -168,7 +168,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
         {/* Footer Actions */}
         <div className="p-6 bg-background-light dark:bg-background-dark rounded-b-2xl border-t border-border-light dark:border-border-dark flex justify-between items-center">
             <div className="flex items-center gap-2">
-                 <span className="text-sm font-medium text-subtext-light dark:text-subtext-dark">Payment:</span>
+                 <span className="text-sm font-medium text-subtext-light dark:text-subtext-dark">Thanh toán:</span>
                  <PaymentStatusBadge status={order.paymentStatus} />
             </div>
             <div className="flex gap-3">
@@ -177,11 +177,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                         onClick={() => onCancelOrder && onCancelOrder(order.id)}
                         className="px-4 py-2 rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium transition-colors"
                     >
-                        Cancel Order
+                        Hủy đơn
                     </button>
                  )}
                  <button className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-blue-600 text-sm font-bold shadow-lg shadow-blue-500/20 transition-colors">
-                    Print Invoice
+                    In hóa đơn
                  </button>
             </div>
         </div>

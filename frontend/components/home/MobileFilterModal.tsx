@@ -94,7 +94,7 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
         <div className="flex-none px-4 pt-4 pb-2 text-center relative">
           <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300 dark:bg-stone-700 mb-4"></div>
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Filters</h2>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Bộ lọc</h2>
             <button 
               onClick={onClose}
               className="p-2 -mr-2 text-stone-400 hover:text-stone-500 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800"
@@ -107,11 +107,11 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-8 scrollbar-hide">
           {/* Categories */}
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 uppercase tracking-wider opacity-80">Categories</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 uppercase tracking-wider opacity-80">Danh mục</h3>
             <div className="space-y-3">
               <label className={`flex items-center justify-between p-4 rounded-2xl border ${activeCategory === 'all' ? 'border-primary bg-primary/5' : 'border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30'} cursor-pointer transition-all`}>
                   <span className="font-bold text-lg text-slate-700 dark:text-stone-200">
-                    All Products
+                    Tất cả sản phẩm
                   </span>
                   <input 
                     type="radio" 
@@ -141,7 +141,7 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
 
           {/* Price Range */}
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-8 uppercase tracking-wider opacity-80">Price Range</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-8 uppercase tracking-wider opacity-80">Khoảng giá</h3>
             <div className="px-2 pt-6 pb-6">
               <div 
                 ref={sliderRef}
@@ -184,7 +184,7 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
 
           {/* Origin */}
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 uppercase tracking-wider opacity-80">Origin</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 uppercase tracking-wider opacity-80">Xuất xứ</h3>
             <div className="flex flex-wrap gap-3">
               {['Ca Mau', 'Da Lat', 'Nha Trang', 'Tay Ninh'].map((place, index) => (
                 <label key={place} className="cursor-pointer">
@@ -207,13 +207,13 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
               }}
               className="flex-1 py-4 rounded-2xl font-bold text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 transition-colors active:scale-95 transform"
             >
-              Reset
+              Đặt lại
             </button>
             <button 
               onClick={onClose}
               className="flex-[2] py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-orange-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
             >
-              Show {resultCount} Results
+              Hiển thị {resultCount} kết quả
             </button>
           </div>
         </div>

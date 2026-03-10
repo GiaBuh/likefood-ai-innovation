@@ -47,7 +47,7 @@ export interface Category {
   icon?: string;
 }
 
-export type SortOption = 'Best Selling' | 'Newest Arrivals' | 'Price: Low to High' | 'Price: High to Low';
+export type SortOption = 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
 
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Refunded';
 export type FulfillmentStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';

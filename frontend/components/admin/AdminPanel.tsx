@@ -237,12 +237,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleDeleteProduct = async (productId: string | number) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
       try {
         await onDeleteProduct(String(productId));
       } catch (error) {
         console.error('Cannot delete product.', error);
-        alert(error instanceof Error ? error.message : 'Cannot delete product.');
+        alert(error instanceof Error ? error.message : 'Không thể xóa sản phẩm.');
       }
     }
   };
@@ -258,12 +258,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       await onUpdateOrderStatus(orderId, newStatus);
     } catch (error) {
       console.error('Cannot update order status.', error);
-      alert('Cannot update order status. Please try again.');
+      alert('Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.');
     }
   };
 
   const handleCancelOrder = (orderId: string) => {
-    if (window.confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+    if (window.confirm('Bạn có chắc muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) {
       setOrders(prev => prev.map(o => {
         if (o.id === orderId) {
           return { ...o, status: 'Cancelled', fulfillmentStatus: 'Cancelled' };
@@ -349,31 +349,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     const activeCustomers = customers.filter((customer) => customer.status === 'Active').length;
 
     const dashboardKpi: KPIStats[] = [
-      { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, trend: 'Live data', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Total Orders', value: `${orders.length}`, trend: 'Live data', trendDirection: 'up', icon: 'shopping_bag', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
-      { label: 'Customers', value: `${customers.length}`, trend: `${activeCustomers} active`, trendDirection: 'up', icon: 'group_add', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
-      { label: 'Pending Fulfillment', value: `${pendingOrders}`, trend: 'Needs processing', trendDirection: 'down', icon: 'pending_actions', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' }
+      { label: 'Tổng doanh thu', value: `$${totalRevenue.toFixed(2)}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
+      { label: 'Tổng đơn', value: `${orders.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'shopping_bag', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
+      { label: 'Khách hàng', value: `${customers.length}`, trend: `${activeCustomers} đang hoạt động`, trendDirection: 'up', icon: 'group_add', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
+      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần xử lý', trendDirection: 'down', icon: 'pending_actions', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' }
     ];
 
     const orderKpi: KPIStats[] = [
-      { label: 'Total Orders', value: `${orders.length}`, trend: 'Live data', trendDirection: 'up', icon: 'shopping_cart', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Pending Fulfillment', value: `${pendingOrders}`, trend: 'Requires attention', trendDirection: 'down', icon: 'schedule', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
-      { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, trend: 'Live data', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
-      { label: 'Cancelled', value: `${orders.filter((o) => o.fulfillmentStatus === 'Cancelled').length}`, trend: 'Live data', trendDirection: 'down', icon: 'assignment_return', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' }
+      { label: 'Tổng đơn', value: `${orders.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'shopping_cart', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
+      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần chú ý', trendDirection: 'down', icon: 'schedule', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
+      { label: 'Doanh thu', value: `$${totalRevenue.toFixed(2)}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
+      { label: 'Đã hủy', value: `${orders.filter((o) => o.fulfillmentStatus === 'Cancelled').length}`, trend: 'Dữ liệu thực', trendDirection: 'down', icon: 'assignment_return', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' }
     ];
 
     const productKpi: KPIStats[] = [
-      { label: 'Total Products', value: `${products.length}`, trend: 'Live data', trendDirection: 'up', icon: 'inventory_2', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Low Stock', value: `${lowStockProducts}`, trend: 'Restock needed', trendDirection: 'down', icon: 'production_quantity_limits', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
-      { label: 'Out of Stock', value: `${outOfStockProducts}`, trend: 'Critical', trendDirection: 'down', icon: 'event_busy', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' },
-      { label: 'Categories', value: `${new Set(products.map((p) => p.categoryName || p.category)).size}`, trend: 'Live data', trendDirection: 'up', icon: 'category', iconColorClass: 'text-purple-500', iconBgClass: 'bg-purple-500/10' }
+      { label: 'Tổng sản phẩm', value: `${products.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'inventory_2', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
+      { label: 'Tồn kho thấp', value: `${lowStockProducts}`, trend: 'Cần nhập thêm', trendDirection: 'down', icon: 'production_quantity_limits', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
+      { label: 'Hết hàng', value: `${outOfStockProducts}`, trend: 'Khẩn cấp', trendDirection: 'down', icon: 'event_busy', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' },
+      { label: 'Danh mục', value: `${new Set(products.map((p) => p.categoryName || p.category)).size}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'category', iconColorClass: 'text-purple-500', iconBgClass: 'bg-purple-500/10' }
     ];
 
     const customerKpi: KPIStats[] = [
-      { label: 'Total Customers', value: `${customers.length}`, trend: 'Live data', trendDirection: 'up', icon: 'group', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Active Customers', value: `${activeCustomers}`, trend: 'Current status', trendDirection: 'up', icon: 'online_prediction', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
-      { label: 'New Customers', value: `${customers.filter((c) => c.totalOrders === 1).length}`, trend: 'First-time buyers', trendDirection: 'up', icon: 'person_add', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
-      { label: 'Blocked', value: `${customers.filter((c) => c.status === 'Blocked').length}`, trend: 'Current status', trendDirection: 'down', icon: 'trending_down', iconColorClass: 'text-gray-500', iconBgClass: 'bg-gray-500/10' }
+      { label: 'Tổng khách hàng', value: `${customers.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'group', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
+      { label: 'Khách đang hoạt động', value: `${activeCustomers}`, trend: 'Trạng thái hiện tại', trendDirection: 'up', icon: 'online_prediction', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
+      { label: 'Khách mới', value: `${customers.filter((c) => c.totalOrders === 1).length}`, trend: 'Mua lần đầu', trendDirection: 'up', icon: 'person_add', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
+      { label: 'Bị chặn', value: `${customers.filter((c) => c.status === 'Blocked').length}`, trend: 'Trạng thái hiện tại', trendDirection: 'down', icon: 'trending_down', iconColorClass: 'text-gray-500', iconBgClass: 'bg-gray-500/10' }
     ];
 
     switch(currentView) {
@@ -387,17 +387,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const getHeaderInfo = () => {
     switch(currentView) {
       case 'dashboard':
-        return { title: 'Dashboard', subtitle: 'Overview of your store performance', btnText: '' };
+        return { title: 'Tổng quan', subtitle: 'Tổng quan hiệu suất cửa hàng', btnText: '' };
       case 'orders': 
-        return { title: 'Order Management', subtitle: 'Manage and fulfill customer orders for Vietnamese specialties', btnText: '' };
+        return { title: 'Quản lý đơn hàng', subtitle: 'Quản lý và xử lý đơn hàng đặc sản Việt Nam', btnText: '' };
       case 'products':
-        return { title: 'Product Inventory', subtitle: 'Manage your catalog, stock levels, and product details', btnText: 'Add Product' };
+        return { title: 'Kho sản phẩm', subtitle: 'Quản lý danh mục, tồn kho và chi tiết sản phẩm', btnText: 'Thêm sản phẩm' };
       case 'customers':
-        return { title: 'Customer Base', subtitle: 'View and manage your registered customers and VIPs', btnText: 'Add Customer' };
+        return { title: 'Khách hàng', subtitle: 'Xem và quản lý khách hàng đăng ký', btnText: 'Thêm khách hàng' };
       case 'chatting':
-        return { title: 'Chatting', subtitle: 'Chat with customers in real-time', btnText: '' };
+        return { title: 'Chat', subtitle: 'Chat với khách hàng theo thời gian thực', btnText: '' };
       case 'trends':
-        return { title: 'AI Trend History', subtitle: 'Lịch sử phân tích xu hướng TikTok bằng AI', btnText: '' };
+        return { title: 'Lịch sử xu hướng AI', subtitle: 'Lịch sử phân tích xu hướng TikTok bằng AI', btnText: '' };
     }
   };
 
@@ -484,7 +484,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-sm font-bold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
                   >
                       <span className="material-symbols-outlined text-[20px]">category</span>
-                      Add Category
+                      Thêm danh mục
                   </button>
                   {onImportProductsFromCsv && (
                     <button 
@@ -493,7 +493,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         className="flex h-10 items-center justify-center gap-2 rounded-lg border border-primary bg-primary/5 px-4 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
                     >
                         <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                        {isImporting ? 'Importing...' : 'Import CSV'}
+                        {isImporting ? 'Đang import...' : 'Import CSV'}
                     </button>
                   )}
                   <button 
@@ -501,7 +501,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
                   >
                       <span className="material-symbols-outlined text-[20px]">add</span>
-                      Add Product
+                      Thêm sản phẩm
                   </button>
               </>
             ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'customers' && (

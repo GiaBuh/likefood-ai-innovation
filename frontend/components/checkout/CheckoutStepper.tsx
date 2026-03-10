@@ -7,9 +7,9 @@ interface CheckoutStepperProps {
 
 const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) => {
   const steps = [
-    { id: 1, label: 'Cart' },
-    { id: 2, label: 'Info' },
-    { id: 3, label: 'Done' }
+    { id: 1, label: 'Giỏ hàng' },
+    { id: 2, label: 'Thông tin' },
+    { id: 3, label: 'Hoàn tất' }
   ];
 
   return (
@@ -30,7 +30,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 1 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '1'}
           </button>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 1 ? 'text-primary' : 'text-stone-400'}`}>
-            Cart
+            Giỏ hàng
           </span>
         </div>
 
@@ -54,7 +54,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 2 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '2'}
           </div>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 2 ? 'text-primary' : 'text-stone-400'}`}>
-            Info
+            Thông tin
           </span>
         </div>
 
@@ -78,7 +78,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 3 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '3'}
           </div>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 3 ? 'text-primary' : 'text-stone-400'}`}>
-            Done
+            Hoàn tất
           </span>
         </div>
 

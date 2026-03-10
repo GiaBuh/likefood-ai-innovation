@@ -29,8 +29,8 @@ const GoogleAuthCallbackPage: React.FC<GoogleAuthCallbackPageProps> = ({ onSucce
     const code = searchParams.get('code');
     if (!code) {
       setStatus('error');
-      setErrorMessage('No authorization code received.');
-      onError?.('No authorization code received.');
+      setErrorMessage('Không nhận được mã xác thực.');
+      onError?.('Không nhận được mã xác thực.');
       return;
     }
 
@@ -51,7 +51,7 @@ const GoogleAuthCallbackPage: React.FC<GoogleAuthCallbackPageProps> = ({ onSucce
         if (cancelled) return;
         hasCalledRef.current = false;
         setStatus('error');
-        const msg = err?.message || 'Google login failed.';
+        const msg = err?.message || 'Đăng nhập Google thất bại.';
         setErrorMessage(msg);
         onError?.(msg);
       });
@@ -73,7 +73,7 @@ const GoogleAuthCallbackPage: React.FC<GoogleAuthCallbackPageProps> = ({ onSucce
           onClick={() => navigate('/', { replace: true })}
           className="rounded-xl bg-primary px-6 py-2 text-white font-semibold hover:bg-primary-dark transition-colors"
         >
-          Back to Home
+          Về trang chủ
         </button>
       </div>
     );
@@ -82,7 +82,7 @@ const GoogleAuthCallbackPage: React.FC<GoogleAuthCallbackPageProps> = ({ onSucce
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6">
       <span className="inline-block w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="text-stone-600 dark:text-stone-400">Logging you in with Google...</p>
+      <p className="text-stone-600 dark:text-stone-400">Đang đăng nhập bằng Google...</p>
     </div>
   );
 };

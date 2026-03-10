@@ -1,5 +1,3 @@
-import type { AiChatLanguage } from '../../services/shopApi';
-
 export type ChatAction = {
   id: string;
   label: string;
@@ -36,7 +34,6 @@ export type PersistedChatState = {
   activeView: ChatView;
   adminMessages: PersistedMessage[];
   aiMessages: PersistedMessage[];
-  chatLanguage: AiChatLanguage | null;
   aiContext: { awaiting?: string; selectedProductId?: string; selectedVariantId?: string; pendingQuantity?: number; pendingVariantHint?: string };
 };
 

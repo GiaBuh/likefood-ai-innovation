@@ -108,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            Categories
+            Danh mục
           </h3>
         </div>
         {/* Scrollable Category List with right padding to prevent scrollbar overlap */}
@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   : 'hover:bg-stone-100 dark:hover:bg-stone-800 text-slate-700 dark:text-stone-300'
               }`}
             >
-              <span>All Products</span>
+              <span>Tất cả sản phẩm</span>
             </button>
 
           {categories.map((cat) => (
@@ -143,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       
       {/* Price Range */}
       <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-stone-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Price Range</h3>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Khoảng giá</h3>
         
         {/* Dual Range Slider with increased padding to prevent label clipping */}
         <div className="px-5 pt-6 pb-2">
@@ -188,8 +188,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           
           <div className="flex justify-between mt-6 text-xs text-stone-500 font-medium">
-             <span>Min: $1</span>
-             <span>Max: $100</span>
+             <span>Tối thiểu: $1</span>
+             <span>Tối đa: $100</span>
           </div>
         </div>
       </div>

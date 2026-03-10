@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Product, ProductVariant } from '../../types';
-import type { AiChatLanguage, AiChatContext } from '../../services/shopApi';
+import type { AiChatContext } from '../../services/shopApi';
 import { askAiAssistant } from '../../services/shopApi';
 import {
   normalize,
@@ -18,7 +18,6 @@ import {
   isPaymentIntent,
   isViewDetailIntent,
   isCancelIntent,
-  detectLanguage,
 } from './chatUtils';
 import type { ChatAction, Message } from './chatTypes';
 
@@ -37,8 +36,6 @@ type UseChatAiParams = {
   setPendingQuantity: (q: number | null) => void;
   aiContext: AiChatContext;
   setAiContext: (c: AiChatContext) => void;
-  chatLanguage: AiChatLanguage | null;
-  setChatLanguage: (l: AiChatLanguage | null) => void;
   setIsTyping: (v: boolean) => void;
   onOpenProduct: (id: string) => void;
   onGoToCheckout: () => void;
@@ -81,16 +78,11 @@ export function useChatAi(params: UseChatAiParams) {
     setPendingQuantity,
     aiContext,
     setAiContext,
-    chatLanguage,
-    setChatLanguage,
     setIsTyping,
     onOpenProduct,
     onGoToCheckout,
     onGoToOrders,
   } = params;
-
-  const activeLang: AiChatLanguage = chatLanguage || 'vi';
-  const t = (viText: string, enText: string) => (activeLang === 'en' ? enText : viText);
 
   const pushAiMessage = useCallback(
     (
@@ -165,18 +157,15 @@ export function useChatAi(params: UseChatAiParams) {
       );
 
       pushAiMessage(
-        t(
-          `Đã thêm ${quantity} x ${product.name} (${variant.weight}) vào giỏ hàng. Bạn có muốn thanh toán ngay không?`,
-          `Added ${quantity} x ${product.name} (${variant.weight}) to your cart. Do you want to checkout now?`
-        ),
+        `Đã thêm ${quantity} x ${product.name} (${variant.weight}) vào giỏ hàng. Bạn có muốn thanh toán ngay không?`,
         [
-          { id: 'checkout-yes', label: t('Thanh toán ngay', 'Checkout now'), type: 'confirm_yes' },
-          { id: 'checkout-no', label: t('Để sau', 'Later'), type: 'confirm_no' },
+          { id: 'checkout-yes', label: 'Thanh toán ngay', type: 'confirm_yes' },
+          { id: 'checkout-no', label: 'Để sau', type: 'confirm_no' },
         ]
       );
       setAiStage('awaiting_checkout_confirmation');
     },
-    [pendingProduct, pendingVariant, addToCart, pushAiMessage, t, setAiStage]
+    [pendingProduct, pendingVariant, addToCart, pushAiMessage, setAiStage]
   );
 
   const askForVariantOrQuantity = useCallback(
@@ -198,7 +187,7 @@ export function useChatAi(params: UseChatAiParams) {
         } else {
           setAiStage('awaiting_quantity');
           pushAiMessage(
-            t(`Bạn muốn thêm ${product.name} với số lượng bao nhiêu?`, `How many of ${product.name} would you like to add?`),
+            `Bạn muốn thêm ${product.name} với số lượng bao nhiêu?`,
             [
               { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
               { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
@@ -217,10 +206,7 @@ export function useChatAi(params: UseChatAiParams) {
         } else {
           setAiStage('awaiting_quantity');
           pushAiMessage(
-            t(
-              `Sản phẩm này có quy cách ${product.variants[0].weight}. Bạn muốn lấy bao nhiêu?`,
-              `This product has ${product.variants[0].weight}. How many would you like?`
-            ),
+            `Sản phẩm này có quy cách ${product.variants[0].weight}. Bạn muốn lấy bao nhiêu?`,
             [
               { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
               { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
@@ -234,7 +220,7 @@ export function useChatAi(params: UseChatAiParams) {
       if (qty) setPendingQuantity(qty);
       setAiStage('awaiting_variant');
       pushAiMessage(
-        t(`"${product.name}" có nhiều quy cách. Bạn chọn loại nào?`, `"${product.name}" has multiple variants. Which one would you like?`),
+        `"${product.name}" có nhiều quy cách. Bạn chọn loại nào?`,
         product.variants.slice(0, 6).map((variant) => ({
           id: `variant-${variant.id}`,
           label: variant.weight,
@@ -252,7 +238,6 @@ export function useChatAi(params: UseChatAiParams) {
       setAiStage,
       addPendingItemToCart,
       pushAiMessage,
-      t,
     ]
   );
 
@@ -321,23 +306,17 @@ export function useChatAi(params: UseChatAiParams) {
           const budgetLabel = formatBudgetDisplay(budget);
           const productList = inBudget.map((p) => `${p.name} (từ ${formatProductPrice(getProductMinPrice(p))})`).join(', ');
           pushAiMessage(
-            t(
-              `Với ngân sách khoảng ${budgetLabel}, em gợi ý các món phù hợp: ${productList}. Bạn muốn xem món nào?`,
-              `With a budget around ${budgetLabel}, I suggest: ${productList}. Which one would you like?`
-            ),
+            `Với ngân sách khoảng ${budgetLabel}, em gợi ý các món phù hợp: ${productList}. Bạn muốn xem món nào?`,
             inBudget.flatMap((product) => [
-              { id: `view-${product.id}`, label: t(`Xem ${product.name}`, `View ${product.name}`), type: 'open_product', productId: String(product.id) },
-              { id: `buy-${product.id}`, label: t(`Mua ${product.name}`, `Buy ${product.name}`), type: 'select_product', productId: String(product.id) },
+              { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
+              { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
             ])
           );
           return;
         }
         const budgetLabel = formatBudgetDisplay(budget);
         pushAiMessage(
-          t(
-            `Hiện em chưa có món nào trong tầm ${budgetLabel}. Bạn thử tăng ngân sách hoặc hỏi món khác nhé.`,
-            `We don't have items within ${budgetLabel}. Try a higher budget or ask for other products.`
-          )
+          `Hiện em chưa có món nào trong tầm ${budgetLabel}. Bạn thử tăng ngân sách hoặc hỏi món khác nhé.`
         );
         return;
       }
@@ -352,27 +331,24 @@ export function useChatAi(params: UseChatAiParams) {
           setPendingProduct(best);
           setPendingQuantity(qty);
           setAiStage('awaiting_add_confirmation');
-          const qtyText = qty ? t(` (số lượng ${qty})`, ` (quantity ${qty})`) : '';
+          const qtyText = qty ? ` (số lượng ${qty})` : '';
           pushAiMessage(
-            t(`Tôi tìm thấy "${best.name}"${qtyText}. Bạn có muốn thêm món này vào giỏ hàng không?`, `I found "${best.name}"${qtyText}. Would you like to add it to cart?`),
+            `Tôi tìm thấy "${best.name}"${qtyText}. Bạn có muốn thêm món này vào giỏ hàng không?`,
             [
-              { id: 'add-yes', label: t('Có, thêm vào giỏ', 'Yes, add to cart'), type: 'confirm_yes' },
-              { id: 'add-no', label: t('Không', 'No'), type: 'confirm_no' },
+              { id: 'add-yes', label: 'Có, thêm vào giỏ', type: 'confirm_yes' },
+              { id: 'add-no', label: 'Không', type: 'confirm_no' },
             ]
           );
           return;
         }
 
         const actions: ChatAction[] = topMatches.flatMap((product) => [
-          { id: `view-${product.id}`, label: t(`Xem ${product.name}`, `View ${product.name}`), type: 'open_product', productId: String(product.id) },
-          { id: `buy-${product.id}`, label: t(`Mua ${product.name}`, `Buy ${product.name}`), type: 'select_product', productId: String(product.id) },
+          { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
+          { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
         ]);
 
         pushAiMessage(
-          t(
-            `Tôi tìm thấy ${topMatches.length} sản phẩm phù hợp: ${topMatches.map((item) => item.name).join(', ')}.`,
-            `I found ${topMatches.length} relevant products: ${topMatches.map((item) => item.name).join(', ')}.`
-          ),
+          `Tôi tìm thấy ${topMatches.length} sản phẩm phù hợp: ${topMatches.map((item) => item.name).join(', ')}.`,
           actions
         );
         return;
@@ -380,10 +356,7 @@ export function useChatAi(params: UseChatAiParams) {
 
       if (greetingIntent && !browseIntent && !recommendIntent && products.length > 0) {
         pushAiMessage(
-          t(
-            'Chào bạn! Em là trợ lý bán hàng của LikeFood. Hôm nay anh/chị muốn tìm món gì ạ?',
-            "Hello! I'm LikeFood's shopping assistant. What are you looking for today?"
-          )
+          'Chào bạn! Em là trợ lý bán hàng của LikeFood. Hôm nay anh/chị muốn tìm món gì ạ?'
         );
         return;
       }
@@ -391,13 +364,10 @@ export function useChatAi(params: UseChatAiParams) {
       if ((browseIntent || recommendIntent) && products.length > 0) {
         const featured = products.slice(0, 4);
         pushAiMessage(
-          t(
-            `${greetingIntent ? 'Chào bạn! ' : ''}Hiện tại shop có các món nổi bật: ${featured.map((item) => item.name).join(', ')}. Bạn muốn xem món nào?`,
-            `${greetingIntent ? 'Hello! ' : ''}Here are our featured items: ${featured.map((item) => item.name).join(', ')}. Which one interests you?`
-          ),
+          `${greetingIntent ? 'Chào bạn! ' : ''}Hiện tại shop có các món nổi bật: ${featured.map((item) => item.name).join(', ')}. Bạn muốn xem món nào?`,
           featured.flatMap((product) => [
-            { id: `view-${product.id}`, label: t(`Xem ${product.name}`, `View ${product.name}`), type: 'open_product', productId: String(product.id) },
-            { id: `buy-${product.id}`, label: t(`Mua ${product.name}`, `Buy ${product.name}`), type: 'select_product', productId: String(product.id) },
+            { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
+            { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
           ])
         );
         return;
@@ -407,35 +377,29 @@ export function useChatAi(params: UseChatAiParams) {
         const suggestions = findSuggestionProductsWhenNoMatch(trimmed, products, 4);
         const productList = suggestions.map((p) => p.name).join(', ');
         pushAiMessage(
-          t(
-            `Hiện tại bên em không có món tương tự vậy, nhưng có các món sau: ${productList}. Anh/chị muốn xem món nào ạ?`,
-            `We don't have that exact item right now, but here are some suggestions: ${productList}. Would you like to check any of these?`
-          ),
+          `Hiện tại bên em không có món tương tự vậy, nhưng có các món sau: ${productList}. Anh/chị muốn xem món nào ạ?`,
           suggestions.flatMap((product) => [
-            { id: `view-${product.id}`, label: t(`Xem ${product.name}`, `View ${product.name}`), type: 'open_product', productId: String(product.id) },
-            { id: `buy-${product.id}`, label: t(`Mua ${product.name}`, `Buy ${product.name}`), type: 'select_product', productId: String(product.id) },
+            { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
+            { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
           ])
         );
         return;
       }
 
       pushAiMessage(
-        t(
-          'Xin lỗi, tôi chỉ hỗ trợ tư vấn sản phẩm và đặt hàng trên hệ thống LikeFood. Bạn hãy hỏi về tên món, quy cách (500g/1kg), giá hoặc yêu cầu thêm vào giỏ hàng nhé.',
-          'Sorry, I only support product consultation and ordering on LikeFood. Ask me product names, variants (500g/1kg), prices, or add-to-cart requests.'
-        )
+        'Xin lỗi, tôi chỉ hỗ trợ tư vấn sản phẩm và đặt hàng trên hệ thống LikeFood. Bạn hãy hỏi về tên món, quy cách (500g/1kg), giá hoặc yêu cầu thêm vào giỏ hàng nhé.'
       );
     },
-    [products, pushAiMessage, t, setPendingProduct, setPendingQuantity, setAiStage]
+    [products, pushAiMessage, setPendingProduct, setPendingQuantity, setAiStage]
   );
 
   const handleAiConversation = useCallback(
-    async (input: string, contextMessages: Message[], requestLanguage: AiChatLanguage) => {
+    async (input: string, contextMessages: Message[]) => {
       const trimmed = input.trim();
       if (!trimmed) return;
 
       if (isPaymentIntent(trimmed)) {
-        pushAiMessage(t('Đang chuyển đến trang thanh toán...', 'Redirecting to checkout...'));
+        pushAiMessage('Đang chuyển đến trang thanh toán...');
         onGoToCheckout();
         resetPendingSelection();
         return;
@@ -445,10 +409,7 @@ export function useChatAi(params: UseChatAiParams) {
         if (isViewDetailIntent(trimmed)) {
           onOpenProduct(String(pendingProduct.id));
           pushAiMessage(
-            t(
-              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
-              `Opening product details for "${pendingProduct.name}".`
-            )
+            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
           );
           return;
         }
@@ -458,19 +419,13 @@ export function useChatAi(params: UseChatAiParams) {
         }
         if (isNegative(trimmed)) {
           pushAiMessage(
-            t(
-              'Không sao nhé. Bạn có thể hỏi món khác, tôi sẽ gợi ý tiếp theo dữ liệu sản phẩm.',
-              'No worries. Ask another product and I will suggest from our catalog.'
-            )
+            'Không sao nhé. Bạn có thể hỏi món khác, tôi sẽ gợi ý tiếp theo dữ liệu sản phẩm.'
           );
           resetPendingSelection();
           return;
         }
         pushAiMessage(
-          t(
-            'Bạn giúp xác nhận "có" để thêm vào giỏ hoặc "không" nếu chưa cần nhé.',
-            'Please confirm with "yes" to add to cart or "no" if not now.'
-          )
+          'Bạn giúp xác nhận "có" để thêm vào giỏ hoặc "không" nếu chưa cần nhé.'
         );
         return;
       }
@@ -479,19 +434,13 @@ export function useChatAi(params: UseChatAiParams) {
         if (isViewDetailIntent(trimmed)) {
           onOpenProduct(String(pendingProduct.id));
           pushAiMessage(
-            t(
-              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
-              `Opening product details for "${pendingProduct.name}".`
-            )
+            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
           );
           return;
         }
         if (isCancelIntent(trimmed)) {
           pushAiMessage(
-            t(
-              'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.',
-              'Cancelled. You can ask about another product or browse other items.'
-            )
+            'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.'
           );
           resetPendingSelection();
           return;
@@ -507,7 +456,7 @@ export function useChatAi(params: UseChatAiParams) {
           } else {
             setAiStage('awaiting_quantity');
             pushAiMessage(
-              t(`Bạn muốn thêm ${pendingProduct.name} (${variant.weight}) với số lượng bao nhiêu?`, `How many ${pendingProduct.name} (${variant.weight}) would you like?`),
+              `Bạn muốn thêm ${pendingProduct.name} (${variant.weight}) với số lượng bao nhiêu?`,
               [
                 { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
                 { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
@@ -525,19 +474,13 @@ export function useChatAi(params: UseChatAiParams) {
         if (isViewDetailIntent(trimmed) && pendingProduct) {
           onOpenProduct(String(pendingProduct.id));
           pushAiMessage(
-            t(
-              `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`,
-              `Opening product details for "${pendingProduct.name}".`
-            )
+            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
           );
           return;
         }
         if (isCancelIntent(trimmed)) {
           pushAiMessage(
-            t(
-              'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.',
-              'Cancelled. You can ask about another product or browse other items.'
-            )
+            'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.'
           );
           resetPendingSelection();
           return;
@@ -553,22 +496,19 @@ export function useChatAi(params: UseChatAiParams) {
 
       if (aiStage === 'awaiting_checkout_confirmation') {
         if (isAffirmative(trimmed) || isPaymentIntent(trimmed)) {
-          pushAiMessage(t('Đang chuyển đến trang thanh toán...', 'Redirecting to checkout...'));
+          pushAiMessage('Đang chuyển đến trang thanh toán...');
           onGoToCheckout();
           resetPendingSelection();
           return;
         }
         if (isNegative(trimmed)) {
           pushAiMessage(
-            t(
-              'Ok bạn nhé. Khi cần thanh toán, bạn vào giỏ hàng hoặc nhấn "Đi đến thanh toán" bất kỳ lúc nào.',
-              'Sure. You can checkout anytime from the cart or by tapping "Go to Checkout".'
-            )
+            'Ok bạn nhé. Khi cần thanh toán, bạn vào giỏ hàng hoặc nhấn "Đi đến thanh toán" bất kỳ lúc nào.'
           );
           resetPendingSelection();
           return;
         }
-        pushAiMessage(t('Bạn trả lời "có" để thanh toán ngay hoặc "không" để tiếp tục mua sắm nhé.', 'Reply "yes" to checkout now or "no" to continue shopping.'));
+        pushAiMessage('Bạn trả lời "có" để thanh toán ngay hoặc "không" để tiếp tục mua sắm nhé.');
         return;
       }
 
@@ -579,8 +519,7 @@ export function useChatAi(params: UseChatAiParams) {
       }
 
       try {
-        const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), requestLanguage, aiContext);
-        if (aiResponse.language) setChatLanguage(aiResponse.language);
+        const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), 'vi', aiContext);
         const allowedActionProductIds = new Set<string>([
           ...(aiResponse.matchedProductIds || []).map((id) => String(id)),
           ...(aiResponse.nextContext?.selectedProductId ? [String(aiResponse.nextContext.selectedProductId)] : []),
@@ -645,19 +584,17 @@ export function useChatAi(params: UseChatAiParams) {
       setAiStage,
       setPendingProduct,
       setPendingQuantity,
-      setChatLanguage,
       syncStateFromContext,
       onGoToCheckout,
       onOpenProduct,
-      t,
     ]
   );
 
   const sendAiMessage = useCallback(
-    (input: string, contextMessages: Message[], requestLanguage: AiChatLanguage) => {
+    (input: string, contextMessages: Message[]) => {
       setTimeout(async () => {
         try {
-          await handleAiConversation(input, contextMessages, requestLanguage);
+          await handleAiConversation(input, contextMessages);
         } finally {
           setIsTyping(false);
         }
@@ -690,7 +627,7 @@ export function useChatAi(params: UseChatAiParams) {
         };
         setAiMessages((prev) => [...prev, userActionMessage]);
         setIsTyping(true);
-        sendAiMessage(action.command, [...aiMessages, userActionMessage], activeLang);
+        sendAiMessage(action.command, [...aiMessages, userActionMessage]);
         return;
       }
 
@@ -709,7 +646,7 @@ export function useChatAi(params: UseChatAiParams) {
             } else {
               setAiStage('awaiting_quantity');
               pushAiMessage(
-                t(`Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`, `How many ${product.name} (${variant.weight}) would you like?`),
+                `Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`,
                 [
                   { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
                   { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
@@ -744,7 +681,7 @@ export function useChatAi(params: UseChatAiParams) {
         };
         setAiMessages((prev) => [...prev, userActionMessage]);
         setIsTyping(true);
-        sendAiMessage(action.command, [...aiMessages, userActionMessage], activeLang);
+        sendAiMessage(action.command, [...aiMessages, userActionMessage]);
         return;
       }
 
@@ -761,15 +698,15 @@ export function useChatAi(params: UseChatAiParams) {
         if (action.type === 'select_product') {
           const product = products.find((item) => String(item.id) === action.productId);
           if (!product) {
-            pushAiMessage(t('Sản phẩm vừa chọn không còn tồn tại trong hệ thống. Bạn thử chọn món khác nhé.', 'The selected product is no longer available. Please choose another one.'));
+            pushAiMessage('Sản phẩm vừa chọn không còn tồn tại trong hệ thống. Bạn thử chọn món khác nhé.');
             setIsTyping(false);
             return;
           }
           setPendingProduct(product);
           setAiStage('awaiting_add_confirmation');
-          pushAiMessage(t(`Bạn muốn thêm "${product.name}" vào giỏ hàng không?`, `Do you want to add "${product.name}" to cart?`), [
-            { id: 'add-yes', label: t('Có, thêm vào giỏ', 'Yes, add to cart'), type: 'confirm_yes' },
-            { id: 'add-no', label: t('Không', 'No'), type: 'confirm_no' },
+          pushAiMessage(`Bạn muốn thêm "${product.name}" vào giỏ hàng không?`, [
+            { id: 'add-yes', label: 'Có, thêm vào giỏ', type: 'confirm_yes' },
+            { id: 'add-no', label: 'Không', type: 'confirm_no' },
           ]);
           setIsTyping(false);
           return;
@@ -782,9 +719,9 @@ export function useChatAi(params: UseChatAiParams) {
             return;
           }
           if (aiStage === 'awaiting_checkout_confirmation') {
-            pushAiMessage(t('Bạn bấm nút bên dưới để chuyển đến trang thanh toán.', 'Tap a button below to go to checkout.'), [
-              { id: 'go-checkout', label: t('Đi đến thanh toán', 'Go to Checkout'), type: 'go_checkout' },
-              { id: 'go-orders', label: t('Xem đơn hàng', 'View Orders'), type: 'go_orders' },
+            pushAiMessage('Bạn bấm nút bên dưới để chuyển đến trang thanh toán.', [
+              { id: 'go-checkout', label: 'Đi đến thanh toán', type: 'go_checkout' },
+              { id: 'go-orders', label: 'Xem đơn hàng', type: 'go_orders' },
             ]);
             resetPendingSelection();
             setIsTyping(false);
@@ -794,10 +731,10 @@ export function useChatAi(params: UseChatAiParams) {
 
         if (action.type === 'confirm_no') {
           if (aiStage === 'awaiting_add_confirmation') {
-            pushAiMessage(t('Ok bạn nhé. Bạn có thể hỏi tên món khác để tôi tư vấn tiếp.', 'Sure. You can ask another product and I will help you.'));
+            pushAiMessage('Ok bạn nhé. Bạn có thể hỏi tên món khác để tôi tư vấn tiếp.');
             resetPendingSelection();
           } else if (aiStage === 'awaiting_checkout_confirmation') {
-            pushAiMessage(t('Ok, tôi sẽ giữ giỏ hàng để bạn tiếp tục mua sắm.', 'Okay, I will keep the items in your cart.'));
+            pushAiMessage('Ok, tôi sẽ giữ giỏ hàng để bạn tiếp tục mua sắm.');
             resetPendingSelection();
           }
           setIsTyping(false);
@@ -807,13 +744,13 @@ export function useChatAi(params: UseChatAiParams) {
         if (action.type === 'select_variant') {
           const product = action.productId ? products.find((p) => String(p.id) === String(action.productId)) : pendingProduct;
           if (!product) {
-            pushAiMessage(t('Sản phẩm không còn tồn tại. Bạn thử chọn lại nhé.', 'Product no longer available. Please try again.'));
+            pushAiMessage('Sản phẩm không còn tồn tại. Bạn thử chọn lại nhé.');
             setIsTyping(false);
             return;
           }
           const variant = product.variants?.find((item) => item.id === action.variantId);
           if (!variant) {
-            pushAiMessage(t('Quy cách vừa chọn không hợp lệ. Bạn thử chọn lại nhé.', 'The selected variant is invalid. Please choose again.'));
+            pushAiMessage('Quy cách vừa chọn không hợp lệ. Bạn thử chọn lại nhé.');
             setIsTyping(false);
             return;
           }
@@ -826,7 +763,7 @@ export function useChatAi(params: UseChatAiParams) {
           } else {
             setAiStage('awaiting_quantity');
             pushAiMessage(
-              t(`Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`, `How many ${product.name} (${variant.weight}) would you like?`),
+              `Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`,
               [
                 { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
                 { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
@@ -868,10 +805,8 @@ export function useChatAi(params: UseChatAiParams) {
       resetPendingSelection,
       sendAiMessage,
       aiMessages,
-      t,
-      activeLang,
     ]
   );
 
-  return { handleAiConversation, handleActionClick, sendAiMessage, detectLanguage };
+  return { handleAiConversation, handleActionClick, sendAiMessage };
 }

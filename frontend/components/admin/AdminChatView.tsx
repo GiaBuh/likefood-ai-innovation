@@ -87,9 +87,9 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
       <div className="w-72 flex-shrink-0 border-r border-border-light dark:border-border-dark flex flex-col">
         <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-text-light dark:text-text-dark">Conversations</h3>
+            <h3 className="font-bold text-text-light dark:text-text-dark">Hội thoại</h3>
             <p className="text-xs text-subtext-light dark:text-subtext-dark mt-1">
-              {conversations.length} customer{conversations.length !== 1 ? 's' : ''}
+              {conversations.length} khách hàng
             </p>
           </div>
           {onRefresh && (
@@ -212,7 +212,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type a message..."
+                  placeholder="Nhập tin nhắn..."
                   className="flex-1 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3 text-sm text-text-light dark:text-text-dark placeholder-subtext-light dark:placeholder-subtext-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                   disabled={isSending}
                 />
@@ -222,7 +222,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
                   className="rounded-xl bg-primary px-5 py-3 text-white font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-xl">send</span>
-                  Send
+                  Gửi
                 </button>
               </div>
             </form>
@@ -231,8 +231,8 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
           <div className="flex-1 flex items-center justify-center text-subtext-light dark:text-subtext-dark">
             <div className="text-center">
               <span className="material-symbols-outlined text-6xl mb-4 block opacity-30">forum</span>
-              <p className="font-medium">Select a conversation</p>
-              <p className="text-sm mt-1">Choose a customer from the list to start chatting</p>
+              <p className="font-medium">Chọn hội thoại</p>
+              <p className="text-sm mt-1">Chọn khách hàng từ danh sách để bắt đầu chat</p>
             </div>
           </div>
         )}

@@ -70,7 +70,7 @@ const Checkout: React.FC<CheckoutProps> = ({
       setStep(3);
     } catch (error) {
       console.error('Cannot place order.', error);
-      showError(error instanceof Error ? error.message : 'Cannot place order. Please check your cart and try again.');
+      showError(error instanceof Error ? error.message : 'Không thể đặt hàng. Vui lòng kiểm tra giỏ hàng và thử lại.');
     }
   };
 

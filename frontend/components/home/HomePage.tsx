@@ -18,7 +18,7 @@ interface HomePageProps {
 
 const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
     const { products, categories, isLoadingProducts } = useShop();
-    const [currentSort, setCurrentSort] = useState<SortOption>("Best Selling");
+    const [currentSort, setCurrentSort] = useState<SortOption>("Bán chạy nhất");
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
     const [serverProducts, setServerProducts] = useState<Product[]>([]);
     const [isFilteringProducts, setIsFilteringProducts] = useState(false);
@@ -127,13 +127,13 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
         let result = [...serverProducts];
         // Sort (Uses base price for sorting simplification)
         switch (currentSort) {
-            case "Price: Low to High":
+            case "Giá thấp đến cao":
                 result.sort((a, b) => a.price - b.price);
                 break;
-            case "Price: High to Low":
+            case "Giá cao đến thấp":
                 result.sort((a, b) => b.price - a.price);
                 break;
-            case "Newest Arrivals":
+            case "Mới nhất":
                 // Handle ID sorting whether string or number
                 result.sort((a, b) => {
                     const idA =
@@ -143,7 +143,7 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                     return idB - idA;
                 });
                 break;
-            case "Best Selling":
+            case "Bán chạy nhất":
             default:
                 // Keep default order (demo data)
                 break;
@@ -222,18 +222,17 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                                     search_off
                                 </span>
                                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                                    No products found
+                                    Không tìm thấy sản phẩm
                                 </h3>
                                 <p className="text-stone-500 dark:text-stone-400 max-w-md">
-                                    Try adjusting your search, price range, or
-                                    category filters to find what you're looking
-                                    for.
+                                    Thử điều chỉnh tìm kiếm, khoảng giá hoặc danh mục
+                                    để tìm sản phẩm phù hợp.
                                 </p>
                                 <button
                                     onClick={handleResetFilters}
                                     className="mt-6 px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark transition-colors"
                                 >
-                                    Clear Filters
+                                    Xóa bộ lọc
                                 </button>
                             </div>
                         ) : (
@@ -257,7 +256,7 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                                         onClick={handleLoadMore}
                                         className="px-8 py-3 bg-white border border-slate-300 dark:bg-stone-800 dark:border-stone-700 rounded-lg text-sm font-bold text-slate-700 dark:text-white hover:bg-orange-50 dark:hover:bg-stone-700 transition-colors shadow-sm"
                                     >
-                                        View More Products
+                                        Xem thêm sản phẩm
                                     </button>
                                 </div>
                             )}

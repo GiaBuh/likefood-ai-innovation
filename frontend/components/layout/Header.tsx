@@ -117,7 +117,7 @@ const Header: React.FC<HeaderProps> = ({
             <input
               ref={searchInputRef}
               className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-stone-100 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary transition-all"
-              placeholder="Search for delicacies..."
+              placeholder="Tìm món đặc sản..."
               type="text"
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
@@ -126,12 +126,12 @@ const Header: React.FC<HeaderProps> = ({
               <div className="absolute left-0 right-0 top-full pt-2 z-50 mt-1">
                 <div className="bg-white dark:bg-stone-900 rounded-xl shadow-2xl border border-stone-100 dark:border-stone-800 overflow-hidden max-h-72 overflow-y-auto">
                   <div className="p-3 border-b border-stone-100 dark:border-stone-800">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Search results</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Kết quả tìm kiếm</h3>
                   </div>
                   {isLoadingSearch ? (
-                    <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Loading...</div>
+                    <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Đang tải...</div>
                   ) : searchProducts.length === 0 ? (
-                    <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">No products found</div>
+                    <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Không tìm thấy sản phẩm</div>
                   ) : (
                     <div className="divide-y divide-stone-100 dark:divide-stone-800">
                       {searchProducts.map((product) => (
@@ -165,7 +165,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={() => setIsMobileSearchOpen(false)}
             className="p-2 text-stone-500 dark:text-stone-400 hover:text-slate-900 dark:hover:text-white font-medium whitespace-nowrap"
           >
-            Cancel
+            Hủy
           </button>
         </div>
 
@@ -195,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 <input
                   className="block w-full pl-10 pr-3 py-2 border-none rounded-lg bg-green-50/50 dark:bg-stone-800 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary/50 transition-all sm:text-sm"
-                  placeholder="Search for delicacies..."
+                  placeholder="Tìm món đặc sản..."
                   type="text"
                   value={searchQuery}
                   onChange={(event) => onSearchQueryChange(event.target.value)}
@@ -204,12 +204,12 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="absolute left-0 right-0 top-full pt-2 z-50">
                     <div className="bg-white dark:bg-stone-900 rounded-xl shadow-2xl border border-stone-100 dark:border-stone-800 overflow-hidden max-h-80 overflow-y-auto">
                       <div className="p-3 border-b border-stone-100 dark:border-stone-800">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Search results</h3>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Kết quả tìm kiếm</h3>
                       </div>
                       {isLoadingSearch ? (
-                        <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Loading...</div>
+                        <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Đang tải...</div>
                       ) : searchProducts.length === 0 ? (
-                        <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">No products found</div>
+                        <div className="p-6 text-center text-stone-500 dark:text-stone-400 text-sm">Không tìm thấy sản phẩm</div>
                       ) : (
                         <div className="divide-y divide-stone-100 dark:divide-stone-800">
                           {searchProducts.map((product) => (
@@ -256,13 +256,13 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={onOpenLogin}
                     className="px-3 py-2 rounded-lg text-sm font-bold text-slate-700 dark:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors whitespace-nowrap"
                   >
-                    Login
+                    Đăng nhập
                   </button>
                   <button
                     onClick={onOpenRegister}
                     className="px-3 py-2 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm shadow-green-500/20 whitespace-nowrap"
                   >
-                    Register
+                    Đăng ký
                   </button>
                 </div>
               ) : (
@@ -286,13 +286,13 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="hidden lg:block absolute right-0 top-full pt-2 w-96 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
                       <div className="bg-white dark:bg-stone-900 rounded-xl shadow-2xl border border-stone-100 dark:border-stone-800 overflow-hidden">
                         <div className="p-4 border-b border-stone-100 dark:border-stone-800">
-                          <h3 className="font-bold text-slate-900 dark:text-white">Shopping Cart ({totalItems})</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white">Giỏ hàng ({totalItems})</h3>
                         </div>
 
                         {cart.length === 0 ? (
                           <div className="p-8 text-center text-stone-500 dark:text-stone-400">
                             <span className="material-symbols-outlined !text-4xl mb-2 opacity-50">shopping_cart_off</span>
-                            <p className="text-sm">Your cart is empty</p>
+                            <p className="text-sm">Giỏ hàng trống</p>
                           </div>
                         ) : (
                           <>
@@ -316,10 +316,10 @@ const Header: React.FC<HeaderProps> = ({
                                     </div>
                                     <div className="flex gap-2">
                                       <p className="text-xs text-stone-500 dark:text-stone-400">
-                                        Weight: <span className="font-bold text-slate-700 dark:text-stone-300">{item.weight}</span>
+                                        KL: <span className="font-bold text-slate-700 dark:text-stone-300">{item.weight}</span>
                                       </p>
                                       <p className="text-xs text-stone-500 dark:text-stone-400">
-                                        Qty: <span className="font-bold text-slate-700 dark:text-stone-300">{item.quantity}</span>
+                                        SL: <span className="font-bold text-slate-700 dark:text-stone-300">{item.quantity}</span>
                                       </p>
                                     </div>
                                   </div>
@@ -333,7 +333,7 @@ const Header: React.FC<HeaderProps> = ({
                                         removeFromCart(item.backendCartItemId ?? item.cartId ?? item.id);
                                       }}
                                       className="text-stone-400 hover:text-red-500 transition-colors p-1.5 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800"
-                                      title="Remove item"
+                                      title="Xóa sản phẩm"
                                     >
                                       <span className="material-symbols-outlined !text-lg">delete</span>
                                     </button>
@@ -342,20 +342,20 @@ const Header: React.FC<HeaderProps> = ({
                               ))}
                               {cart.length > 3 && (
                                 <div className="p-2 text-center text-xs text-stone-500 border-t border-stone-100 dark:border-stone-800">
-                                  and {cart.length - 3} more items...
+                                  và {cart.length - 3} sản phẩm khác...
                                 </div>
                               )}
                             </div>
                             <div className="p-4 bg-stone-50 dark:bg-stone-900/50 border-t border-stone-100 dark:border-stone-800">
                               <div className="flex justify-between text-base font-bold text-slate-900 dark:text-white mb-4">
-                                <p>Subtotal</p>
+                                <p>Tạm tính</p>
                                 <p>${totalPrice.toFixed(2)}</p>
                               </div>
                               <button
                                 onClick={onCheckout}
                                 className="w-full flex items-center justify-center rounded-lg border border-transparent bg-primary px-6 py-3 text-base font-bold text-white shadow-sm hover:bg-primary-dark transition-colors"
                               >
-                                Checkout Now
+                                Thanh toán ngay
                               </button>
                             </div>
                           </>
@@ -413,7 +413,7 @@ const Header: React.FC<HeaderProps> = ({
                               className="w-full text-left px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-bold transition-colors flex items-center gap-2"
                             >
                               <span className="material-symbols-outlined !text-lg">dashboard</span>
-                              Admin Dashboard
+                              Trang quản trị
                             </button>
                             <div className="my-1 border-t border-stone-100 dark:border-stone-800"></div>
                           </>
@@ -427,7 +427,7 @@ const Header: React.FC<HeaderProps> = ({
                           className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-primary transition-colors flex items-center gap-2"
                         >
                           <span className="material-symbols-outlined !text-lg">person</span>
-                          Personal Info
+                          Thông tin cá nhân
                         </button>
 
                         <button
@@ -438,7 +438,7 @@ const Header: React.FC<HeaderProps> = ({
                           className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-primary transition-colors flex items-center gap-2"
                         >
                           <span className="material-symbols-outlined !text-lg">receipt_long</span>
-                          Order History
+                          Lịch sử đơn hàng
                         </button>
 
                         <div className="my-1 border-t border-stone-100 dark:border-stone-800"></div>
@@ -451,7 +451,7 @@ const Header: React.FC<HeaderProps> = ({
                           className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
                         >
                           <span className="material-symbols-outlined !text-lg">logout</span>
-                          Logout
+                          Đăng xuất
                         </button>
                       </div>
                     </div>

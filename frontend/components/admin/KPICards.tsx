@@ -40,7 +40,7 @@ const KPICards: React.FC<KPICardsProps> = ({ data, isLoading = false }) => {
           <div className={`flex items-center gap-1 text-sm font-medium ${
             kpi.trendDirection === 'up' 
               ? 'text-green-600 dark:text-green-500' 
-              : ['Pending Fulfillment', 'Low Stock', 'Out of Stock'].includes(kpi.label)
+              : ['Chờ xử lý', 'Tồn kho thấp', 'Hết hàng'].includes(kpi.label)
                 ? 'text-orange-600 dark:text-orange-500'
                 : 'text-red-600 dark:text-red-500'
           }`}>

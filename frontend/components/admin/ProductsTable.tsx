@@ -44,13 +44,13 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onEdit, onDelet
         <table className="w-full text-left text-sm text-subtext-light dark:text-subtext-dark">
           <thead className="bg-background-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark text-xs uppercase text-subtext-light dark:text-subtext-dark font-semibold">
             <tr>
-              <th scope="col" className="px-6 py-4">Product</th>
+              <th scope="col" className="px-6 py-4">Sản phẩm</th>
               <th scope="col" className="px-6 py-4">SKU</th>
-              <th scope="col" className="px-6 py-4">Category</th>
-              <th scope="col" className="px-6 py-4">Variants (Weight)</th>
-              <th scope="col" className="px-6 py-4">Price</th>
-              <th scope="col" className="px-6 py-4">Status</th>
-              <th scope="col" className="px-6 py-4 text-right">Actions</th>
+              <th scope="col" className="px-6 py-4">Danh mục</th>
+              <th scope="col" className="px-6 py-4">Quy cách (KL)</th>
+              <th scope="col" className="px-6 py-4">Giá</th>
+              <th scope="col" className="px-6 py-4">Trạng thái</th>
+              <th scope="col" className="px-6 py-4 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
