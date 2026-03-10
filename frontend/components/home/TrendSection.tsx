@@ -187,7 +187,7 @@ const TrendSection: React.FC = () => {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                    AI Trend Spotter
+                                    Phân tích xu hướng AI
                                 </h2>
                                 <p className="text-xs font-bold flex items-center gap-1 mt-1 text-stone-400">
                                     Chưa phân tích
@@ -208,10 +208,10 @@ const TrendSection: React.FC = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 dark:text-stone-100 mb-2">
-                                        Analyzing TikTok trends using AI.
+                                        Phân tích xu hướng TikTok bằng AI.
                                     </h3>
                                     <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md">
-                                        Press the button below to have Gemini AI analyze current trends on TikTok and suggest suitable products for your store.
+                                        Nhấn nút bên dưới để Gemini AI phân tích xu hướng TikTok hiện tại và gợi ý sản phẩm phù hợp.
                                     </p>
                                 </div>
                                 <button
@@ -219,7 +219,7 @@ const TrendSection: React.FC = () => {
                                     className="mt-2 inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all hover:scale-[1.03] active:scale-[0.98]"
                                 >
                                     <span className="material-symbols-outlined !text-lg">rocket_launch</span>
-                                    Analyze trends
+                                    Phân tích xu hướng
                                 </button>
                             </div>
                         </div>
@@ -249,7 +249,7 @@ const TrendSection: React.FC = () => {
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                AI Trend Spotter
+                                Phân tích xu hướng AI
                             </h2>
                             <p
                                 className="text-xs font-bold flex items-center gap-1 mt-1 text-red-500"
@@ -282,7 +282,7 @@ const TrendSection: React.FC = () => {
                                 <span className="material-symbols-outlined !text-sm">
                                     auto_awesome
                                 </span>
-                                Gemini AI Strategy
+                                Chiến lược Gemini AI
                             </span>
 
                             <h3 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-stone-100 mb-6 leading-relaxed italic">
@@ -366,7 +366,7 @@ const TrendSection: React.FC = () => {
                     <div className="bg-white/60 dark:bg-stone-800/60 backdrop-blur-xl rounded-[32px] border border-white dark:border-stone-700 p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-6">
                             <h4 className="font-bold text-slate-700 dark:text-white uppercase text-sm">
-                                🔥 Real-time Hashtags
+                                🔥 Hashtag theo thời gian thực
                             </h4>
                             <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded">
                                 {data?.trends.length} TOPICS

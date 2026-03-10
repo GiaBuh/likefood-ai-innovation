@@ -81,12 +81,12 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onOrderClick, onUpdat
         <table className="w-full text-left text-sm text-subtext-light dark:text-subtext-dark">
           <thead className="bg-background-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark text-xs uppercase text-subtext-light dark:text-subtext-dark font-semibold">
             <tr>
-              <th scope="col" className="px-6 py-4">Order ID</th>
-              <th scope="col" className="px-6 py-4">Customer</th>
-              <th scope="col" className="px-6 py-4">Date</th>
-              <th scope="col" className="px-6 py-4">Total</th>
-              <th scope="col" className="px-6 py-4">Payment Status</th>
-              <th scope="col" className="px-6 py-4">Status</th>
+              <th scope="col" className="px-6 py-4">Mã đơn</th>
+              <th scope="col" className="px-6 py-4">Khách hàng</th>
+              <th scope="col" className="px-6 py-4">Ngày</th>
+              <th scope="col" className="px-6 py-4">Tổng</th>
+              <th scope="col" className="px-6 py-4">Thanh toán</th>
+              <th scope="col" className="px-6 py-4">Trạng thái</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">

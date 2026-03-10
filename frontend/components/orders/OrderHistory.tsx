@@ -50,9 +50,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">cancel</span>
-              Cancel Order
+              Hủy đơn
             </button>
-            <p className="text-xs text-center text-stone-400">Order can be cancelled before shipping.</p>
+            <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
           </>
         );
       case 'Confirm':
@@ -63,9 +63,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">cancel</span>
-              Cancel Order
+              Hủy đơn
             </button>
-            <p className="text-xs text-center text-stone-400">Order can be cancelled before shipping.</p>
+            <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
           </>
         );
       case 'Shipped':
@@ -76,10 +76,10 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">local_shipping</span>
-              Track Order
+              Theo dõi đơn
             </button>
             <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
-              Contact Support
+              Liên hệ hỗ trợ
             </button>
           </>
         );
@@ -92,11 +92,11 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">shopping_cart</span>
-              Buy Again
+              Mua lại
             </button>
             {status === 'Complete' && (
               <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
-                Write a Review
+                Viết đánh giá
               </button>
             )}
           </>
@@ -110,7 +110,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">My Orders</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Đơn hàng của tôi</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1">Track and manage your recent purchases</p>
         </div>
         <button 

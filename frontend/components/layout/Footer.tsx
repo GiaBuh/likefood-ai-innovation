@@ -13,42 +13,42 @@ const Footer: React.FC = () => {
               <span className="text-xl font-bold">LIKEFOOD</span>
             </div>
             <p className="text-sm leading-relaxed mb-6 text-stone-400">
-              Connecting you to the heart of Vietnam through premium, authentic specialty foods. From the Mekong Delta to your dining table.
+              Kết nối bạn với vùng đất Việt Nam qua những đặc sản cao cấp, chính gốc. Từ đồng bằng sông Cửu Long đến bàn ăn của bạn.
             </p>
           </div>
 
           {/* Products Links */}
           <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Our Products</h3>
+            <h3 className="text-white font-semibold mb-4">Sản phẩm</h3>
             <ul className="space-y-3 text-sm">
-              <li><a className="hover:text-primary transition-colors" href="#">Dried Seafood</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#">Tropical Fruits</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#">Tea & Coffee</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Hải sản khô</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Trái cây nhiệt đới</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Trà & Cà phê</a></li>
             </ul>
           </div>
 
           {/* Customer Care Links */}
           <div className="col-span-1">
-            <h3 className="text-white font-semibold mb-4">Customer Care</h3>
+            <h3 className="text-white font-semibold mb-4">Hỗ trợ khách hàng</h3>
             <ul className="space-y-3 text-sm">
-              <li><a className="hover:text-primary transition-colors" href="#">Shipping to US</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#">Wholesale Inquiries</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#">Quality Guarantee</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Giao hàng tới Mỹ</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Đặt hàng sỉ</a></li>
+              <li><a className="hover:text-primary transition-colors" href="#">Cam kết chất lượng</a></li>
             </ul>
           </div>
 
           {/* Newsletter - Full width on mobile, 1 col on desktop */}
           <div className="col-span-2 md:col-span-1">
-            <h3 className="text-white font-semibold mb-4">Newsletter</h3>
-            <p className="text-xs text-stone-400 mb-3">Subscribe to get special offers and once-in-a-lifetime deals.</p>
+            <h3 className="text-white font-semibold mb-4">Nhận tin khuyến mãi</h3>
+            <p className="text-xs text-stone-400 mb-3">Đăng ký để nhận ưu đãi đặc biệt.</p>
             <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
               <input
                 className="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-sm text-white placeholder-stone-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                placeholder="Enter your email"
+                placeholder="Nhập email của bạn"
                 type="email"
               />
               <button className="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
-                Join
+                Đăng ký
               </button>
             </form>
           </div>

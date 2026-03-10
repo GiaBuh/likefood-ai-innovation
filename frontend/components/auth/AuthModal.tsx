@@ -79,7 +79,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
 
   const handleGoogleLogin = async () => {
     if (!onGoogleLoginUrl) {
-      showError('Google login is not available.');
+      showError('Đăng nhập Google không khả dụng.');
       return;
     }
     setIsLoading(true);
@@ -87,7 +87,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
       const url = await onGoogleLoginUrl();
       window.location.href = url; // redirect to Google
     } catch (err: any) {
-      showError(err?.message || 'Cannot get Google login URL.');
+      showError(err?.message || 'Không thể lấy URL đăng nhập Google.');
     } finally {
       setIsLoading(false);
     }
@@ -134,10 +134,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
           confirmPassword: trimmed.confirmPassword,
         });
         setMode('login');
-        showSuccess('Register successful. Please login.');
+        showSuccess('Đăng ký thành công. Vui lòng đăng nhập.');
       }
     } catch (err: any) {
-      showError(err?.message || 'Authentication failed');
+      showError(err?.message || 'Xác thực thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +157,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
           {/* Header */}
           <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-stone-100 dark:border-stone-800">
             <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              {mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản'}
             </h3>
             <button 
               onClick={onClose}
@@ -175,7 +175,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               {mode === 'register' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Username</label>
+                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Tên đăng nhập</label>
                     <input 
                       type="text" 
                       name="username"
@@ -193,7 +193,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
 
               {/* Common Fields */}
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email Address</label>
+                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email</label>
                 <input 
                   type="email" 
                   name="email"
@@ -208,7 +208,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Password</label>
+                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Mật khẩu</label>
                 <input 
                   type="password" 
                   name="password"
@@ -226,7 +226,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               {mode === 'register' && (
                 <>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Confirm Password</label>
+                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Xác nhận mật khẩu</label>
                     <input 
                       type="password" 
                       name="confirmPassword"
@@ -243,7 +243,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                   {/* Phone and Gender Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-20">
                     <div>
-                      <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Phone Number</label>
+                      <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Số điện thoại</label>
                       <input 
                         type="tel" 
                         name="phone"
@@ -257,7 +257,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                       {fieldErrors.phone && <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p>}
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Gender</label>
+                      <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Giới tính</label>
                       <div className="relative">
                         {/* Invisible backdrop to handle click outside */}
                         {isGenderDropdownOpen && (
@@ -278,7 +278,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                             }`}
                           >
                             <span className="text-slate-900 dark:text-white capitalize font-medium">
-                              {formData.gender === 'male' ? 'Male' : 'Female'}
+                              {formData.gender === 'male' ? 'Nam' : 'Nữ'}
                             </span>
                             <span className={`material-symbols-outlined text-xl text-stone-500 transition-transform duration-200 ${isGenderDropdownOpen ? 'rotate-180' : ''}`}>
                               expand_more
@@ -288,8 +288,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                           {isGenderDropdownOpen && (
                             <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                               {[
-                                { value: 'male', label: 'Male' },
-                                { value: 'female', label: 'Female' }
+                                { value: 'male', label: 'Nam' },
+                                { value: 'female', label: 'Nữ' }
                               ].map((option) => (
                                 <button
                                   key={option.value}
@@ -319,7 +319,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
 
                   {/* Address Row (Full Width) */}
                   <div className="relative z-10">
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Address</label>
+                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Địa chỉ</label>
                     <input 
                       type="text" 
                       name="address"
@@ -343,7 +343,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                 {isLoading ? (
                   <span className="inline-block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                  mode === 'login' ? 'Login with Email' : 'Create Account'
+                  mode === 'login' ? 'Đăng nhập bằng Email' : 'Tạo tài khoản'
                 )}
               </button>
             </form>
@@ -354,7 +354,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                     <div className="w-full border-t border-stone-200 dark:border-stone-700"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
-                    <span className="bg-white dark:bg-stone-900 px-3 text-stone-400 dark:text-stone-500">Or continue with</span>
+                    <span className="bg-white dark:bg-stone-900 px-3 text-stone-400 dark:text-stone-500">Hoặc tiếp tục với</span>
                 </div>
             </div>
 
@@ -371,18 +371,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
-                Continue with Google
+                Tiếp tục với Google
             </button>
 
             <div className="mt-6 text-center text-sm">
               <span className="text-stone-500 dark:text-stone-400">
-                {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+                {mode === 'login' ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
               </span>
               <button 
                 onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
                 className="font-bold text-primary hover:underline"
               >
-                {mode === 'login' ? 'Register' : 'Login'}
+                {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
               </button>
             </div>
             

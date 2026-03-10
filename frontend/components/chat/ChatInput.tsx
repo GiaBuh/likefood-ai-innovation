@@ -22,7 +22,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         type="text"
         value={inputText}
         onChange={(e) => onInputChange(e.target.value)}
-        placeholder="Type a message..."
+        placeholder="Nhập tin nhắn..."
         className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-slate-900 dark:text-white placeholder-stone-400 p-0"
       />
       <button

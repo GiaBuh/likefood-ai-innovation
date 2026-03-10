@@ -106,7 +106,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-surface-light dark:bg-surface-dark shadow-xl border border-border-light dark:border-border-dark">
         <div className="flex-none flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Category Management</h3>
+          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Quản lý danh mục</h3>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-subtext-light hover:text-text-light dark:text-subtext-dark dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark"
@@ -123,7 +123,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="flex-1 h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="New category name (e.g. Snacks, Beverages)"
+              placeholder="Tên danh mục mới (vd: Đồ ăn vặt, Đồ uống)"
               disabled={isSubmitting}
             />
             <button
@@ -131,7 +131,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
               disabled={isSubmitting || !newName.trim()}
               className="h-11 px-6 rounded-lg bg-primary font-bold text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Add
+              Thêm
             </button>
           </form>
 
@@ -144,12 +144,12 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
           {/* Category list */}
           <div>
             <h4 className="mb-3 text-sm font-semibold text-text-light dark:text-text-dark">
-              List ({categories.length})
+              Danh sách ({categories.length})
             </h4>
             <div className="space-y-2">
               {categories.length === 0 ? (
                 <p className="py-8 text-center text-subtext-light dark:text-subtext-dark">
-                  No categories yet. Add a new category above.
+                  Chưa có danh mục. Thêm danh mục mới ở trên.
                 </p>
               ) : (
                 categories.map((cat) => (
@@ -164,7 +164,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm"
-                          placeholder="Category name"
+                          placeholder="Tên danh mục"
                           autoFocus
                         />
                         <button
@@ -173,7 +173,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           disabled={isSubmitting || !editingName.trim()}
                           className="h-10 px-4 rounded-lg bg-primary text-white font-medium text-sm hover:bg-blue-600 disabled:opacity-50"
                         >
-                          Save
+                          Lưu
                         </button>
                         <button
                           type="button"
@@ -181,7 +181,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           disabled={isSubmitting}
                           className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-sm hover:bg-background-light dark:hover:bg-background-dark"
                         >
-                          Cancel
+                          Hủy
                         </button>
                       </>
                     ) : (
@@ -192,7 +192,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           onClick={() => handleStartEdit(cat.id, cat.name)}
                           disabled={isSubmitting}
                           className="p-2 rounded-lg text-subtext-light hover:text-primary hover:bg-primary/10"
-                          title="Edit"
+                          title="Sửa"
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
@@ -201,7 +201,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           onClick={() => handleDelete(cat.id)}
                           disabled={isSubmitting}
                           className="p-2 rounded-lg text-subtext-light hover:text-red-500 hover:bg-red-500/10"
-                          title="Delete"
+                          title="Xóa"
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
@@ -301,7 +301,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
         await onSave(productData);
       } catch (error) {
         console.error('Save product failed', error);
-        alert('Cannot save product. Please check data and try again.');
+        alert('Không thể lưu sản phẩm. Vui lòng kiểm tra dữ liệu và thử lại.');
       }
     }
   };
@@ -315,7 +315,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
         return;
       }
       if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        alert(`Thumbnail is too large. Max size is ${MAX_IMAGE_SIZE_MB}MB.`);
+        alert(`Ảnh đại diện quá lớn. Kích thước tối đa là ${MAX_IMAGE_SIZE_MB}MB.`);
         e.target.value = '';
         return;
       }
@@ -402,7 +402,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
       <div className="w-full max-w-3xl rounded-2xl bg-surface-light dark:bg-surface-dark p-6 shadow-xl border border-border-light dark:border-border-dark my-auto">
         <div className="mb-6 flex items-center justify-between">
           <h3 className="text-xl font-bold text-text-light dark:text-text-dark">
-            {product ? 'Edit Product' : 'Add New Product'}
+            {product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
           </h3>
           <button onClick={onClose} className="text-subtext-light hover:text-text-light dark:text-subtext-dark dark:hover:text-text-dark">
             <span className="material-symbols-outlined">close</span>
@@ -416,7 +416,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
              <div className="flex flex-col md:flex-row gap-6">
                 {/* Thumbnail Upload - Increased width to ~33% (w-1/3) */}
                 <div className="w-full md:w-1/3 flex-shrink-0">
-                    <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark mb-2 block">Thumbnail</label>
+                    <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark mb-2 block">Ảnh đại diện</label>
                     <div 
                       className="relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary transition-colors overflow-hidden group"
                       onClick={() => fileInputRef.current?.click()}
@@ -431,7 +431,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                       ) : (
                         <div className="flex flex-col items-center gap-1 text-subtext-light dark:text-subtext-dark p-4 text-center">
                           <span className="material-symbols-outlined text-3xl">cloud_upload</span>
-                          <span className="text-[10px] font-medium">Upload</span>
+                          <span className="text-[10px] font-medium">Tải lên</span>
                         </div>
                       )}
                       <input 
@@ -447,14 +447,14 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                 {/* Gallery Upload */}
                 <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark">Gallery Images</label>
+                        <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark">Ảnh thư viện</label>
                         <button 
                             type="button" 
                             onClick={() => galleryInputRef.current?.click()}
                             className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                         >
                             <span className="material-symbols-outlined text-sm">add_photo_alternate</span>
-                            Add More
+                            Thêm ảnh
                         </button>
                         <input 
                             type="file" 
@@ -495,26 +495,26 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
 
           {/* Row 2: Product Name (Full Width) */}
           <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Product Name</label>
+              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Tên sản phẩm</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="h-10 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" 
-                placeholder="e.g. Pho Bo Kit" 
+                placeholder="vd. Gói Phở Bò" 
                 required 
               />
           </div>
 
           {/* Row 3: Category */}
           <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Category</label>
+              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Danh mục</label>
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="h-10 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="">Select Category</option>
+                <option value="">Chọn danh mục</option>
                 {categories.map((item) => (
                   <option key={item.id} value={item.name}>
                     {item.name}
@@ -525,26 +525,26 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
 
           {/* Row 4: Description */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Description</label>
+            <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Mô tả</label>
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="h-24 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none" 
-              placeholder="Enter product description..."
+              placeholder="Nhập mô tả sản phẩm..."
             ></textarea>
           </div>
 
           {/* Row 5: Variants */}
           <div>
             <div className="flex items-center justify-between mb-3 border-b border-border-light dark:border-border-dark pb-2">
-              <h4 className="text-sm font-bold text-text-light dark:text-text-dark uppercase">Product Variants</h4>
+              <h4 className="text-sm font-bold text-text-light dark:text-text-dark uppercase">Quy cách sản phẩm</h4>
               <button 
                   type="button"
                   onClick={addVariant}
                   className="flex items-center gap-1 text-xs font-bold text-primary hover:text-blue-600 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
-                Add Variant
+                Thêm quy cách
               </button>
             </div>
             
@@ -558,12 +558,12 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                           value={variant.sku ?? ''}
                           onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
                           className="h-9 w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm font-mono focus:border-primary focus:outline-none" 
-                          placeholder="e.g. PHO-500G" 
+                          placeholder="vd. PHO-500G" 
                           required 
                         />
                     </div>
                     <div className="col-span-3">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Weight</label>
+                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Khối lượng</label>
                         <div className="flex">
                           <input 
                               type="number" 
@@ -585,7 +585,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                         </div>
                     </div>
                     <div className="col-span-2">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Price ($)</label>
+                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Giá ($)</label>
                         <input 
                           type="number" 
                           step="0.01" 
@@ -596,7 +596,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Stock</label>
+                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Tồn kho</label>
                         <input 
                           type="number" 
                           value={variant.quantity}
@@ -628,13 +628,13 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
               onClick={onClose}
               className="rounded-lg px-6 py-2.5 text-sm font-medium text-subtext-light hover:bg-background-light dark:text-subtext-dark dark:hover:bg-background-dark transition-colors"
             >
-              Cancel
-            </button>
+Hủy
+              </button>
             <button 
               type="submit"
               className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
             >
-              Save Product
+              Lưu sản phẩm
             </button>
           </div>
         </form>

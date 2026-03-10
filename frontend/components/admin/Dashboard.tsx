@@ -31,11 +31,11 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
         {/* Middle Left: Revenue Chart (Simulated) */}
         <div className="lg:col-span-2 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Revenue Overview</h3>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Tổng quan doanh thu</h3>
             <select className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-1.5 text-xs font-medium text-text-light dark:text-text-dark focus:border-primary focus:outline-none">
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>This Year</option>
+              <option>7 ngày qua</option>
+              <option>30 ngày qua</option>
+              <option>Năm nay</option>
             </select>
           </div>
           
@@ -47,7 +47,7 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
             </div>
           ) : chartData.length === 0 ? (
             <div className="flex h-64 items-center justify-center text-sm text-subtext-light dark:text-subtext-dark">
-              No revenue data yet.
+              Chưa có dữ liệu doanh thu.
             </div>
           ) : (
             <div className="flex h-64 items-end justify-between gap-2 px-2">
@@ -74,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
         <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 shadow-sm">
            <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Top Products</h3>
-            <a href="#" className="text-xs font-bold text-primary hover:underline">View All</a>
+            <a href="#" className="text-xs font-bold text-primary hover:underline">Xem tất cả</a>
           </div>
           
           <div className="flex flex-col gap-4">
@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
                     </div>
                     <div className="flex flex-1 flex-col overflow-hidden">
                     <span className="truncate text-sm font-bold text-text-light dark:text-text-dark">{product.name}</span>
-                    <span className="truncate text-xs text-subtext-light dark:text-subtext-dark">{product.variants.reduce((acc, v) => acc + v.quantity, 0)} in stock</span>
+                    <span className="truncate text-xs text-subtext-light dark:text-subtext-dark">{product.variants.reduce((acc, v) => acc + v.quantity, 0)} còn hàng</span>
                     </div>
                     <div className="text-right">
                     <span className="block text-sm font-bold text-text-light dark:text-text-dark">${product.variants[0]?.price.toFixed(2)}</span>
@@ -107,7 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
             )}
           </div>
           <button className="mt-6 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark py-2 text-sm font-bold text-subtext-light dark:text-subtext-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            See All Products
+            Xem tất cả sản phẩm
           </button>
         </div>
       </div>
@@ -117,18 +117,18 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
         <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
            <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Recent Orders</h3>
            <button className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-1.5 text-xs font-bold text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-             Filter
+             Lọc
            </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-background-light dark:bg-surface-dark text-xs uppercase text-subtext-light dark:text-subtext-dark font-semibold">
               <tr>
-                <th className="px-6 py-3">Order ID</th>
-                <th className="px-6 py-3">Customer</th>
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Amount</th>
-                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Mã đơn</th>
+                <th className="px-6 py-3">Khách hàng</th>
+                <th className="px-6 py-3">Ngày</th>
+                <th className="px-6 py-3">Số tiền</th>
+                <th className="px-6 py-3">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">

@@ -183,7 +183,7 @@ export async function registerWithBackend(input: {
   });
 
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, 'Register failed. Please check your information.'));
+    throw new Error(await getErrorMessageFromResponse(response, 'Đăng ký thất bại. Vui lòng kiểm tra thông tin.'));
   }
 }
 

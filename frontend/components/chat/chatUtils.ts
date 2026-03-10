@@ -159,17 +159,6 @@ export function isPaymentIntent(input: string): boolean {
   );
 }
 
-export function detectLanguage(text: string): 'vi' | 'en' {
-  const raw = text.trim().toLowerCase();
-  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(raw)) {
-    return 'vi';
-  }
-  const normalized = normalize(raw);
-  const viHints = ['xin', 'chao', 'toi', 'ban', 'mon', 'khong', 'co', 'bao nhieu', 'gio hang'];
-  if (viHints.some((item) => normalized.includes(item))) return 'vi';
-  return 'en';
-}
-
 const HINT_MAP: Record<string, string[]> = {
   muoi: ['kho', 'bo'],
   ot: ['muoi'],

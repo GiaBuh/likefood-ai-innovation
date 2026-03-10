@@ -61,10 +61,10 @@ const SocialMediaSection: React.FC = () => {
                 {/* Header: Gọn gàng, nằm trên 1 dòng nếu màn hình lớn */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                        Connect with us
+                        Kết nối với chúng tôi
                     </h2>
                     <p className="text-sm text-slate-500 dark:text-stone-400 hidden md:block">
-                        Stay updated with our latest recipes & news
+                        Cập nhật công thức và tin tức mới nhất
                     </p>
                 </div>
 

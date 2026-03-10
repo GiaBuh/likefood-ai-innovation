@@ -39,7 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         {product.isUsShip && (
           <div className="absolute top-3 left-3 px-2 py-1 bg-secondary/90 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-white flex items-center gap-1 shadow-sm">
             <span className="material-symbols-outlined !text-xs">flight_takeoff</span>
-            US Ship
+            Giao nhanh
           </div>
         )}
       </div>

@@ -41,16 +41,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      showError('Only image files are allowed.');
+      showError('Chỉ cho phép file ảnh.');
       return;
     }
     setIsUploadingAvatar(true);
     try {
       const key = await uploadAvatar(file);
       await onUpdateUser({ avatarKey: key });
-      showSuccess('Avatar updated.');
+      showSuccess('Đã cập nhật ảnh đại diện.');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Upload avatar failed.');
+      showError(err instanceof Error ? err.message : 'Tải ảnh đại diện thất bại.');
     } finally {
       setIsUploadingAvatar(false);
       e.target.value = '';
@@ -81,9 +81,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
         address: formData.address.trim(),
       });
       setIsEditing(false);
-      showSuccess('Profile updated.');
+      showSuccess('Đã cập nhật thông tin.');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Update profile failed.');
+      showError(err instanceof Error ? err.message : 'Cập nhật thông tin thất bại.');
     } finally {
       setIsSaving(false);
     }
@@ -107,7 +107,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
              <div 
                 className={`group relative h-24 w-24 rounded-full bg-white dark:bg-stone-700 p-1 shadow-md mb-3 ${isUploadingAvatar ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
                 onClick={isUploadingAvatar ? undefined : handleAvatarClick}
-                title={isUploadingAvatar ? 'Uploading...' : 'Click to change avatar'}
+                title={isUploadingAvatar ? 'Đang tải...' : 'Nhấn để đổi ảnh đại diện'}
              >
                <img 
                  src={user.avatar} 
@@ -127,7 +127,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
              </div>
 
              <h3 className="text-xl font-bold text-slate-900 dark:text-white" id="modal-title">{formData.name || user.name}</h3>
-             <p className="text-sm text-stone-500 dark:text-stone-400">Premium Member</p>
+             <p className="text-sm text-stone-500 dark:text-stone-400">Thành viên Premium</p>
              <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 text-stone-400 hover:text-stone-500 dark:hover:text-stone-300"
@@ -139,7 +139,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
           {/* Body */}
           <div className="px-4 py-6 sm:p-6 space-y-5">
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Full Name</label>
+              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Họ và tên</label>
               <input
                 type="text"
                 name="name"
@@ -154,7 +154,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email Address</label>
+              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email</label>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-200 font-medium opacity-70">
                 <span className="material-symbols-outlined text-stone-400">mail</span>
                 {user.email}
@@ -162,7 +162,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Phone Number</label>
+              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Số điện thoại</label>
               <input
                 type="text"
                 name="phone"
@@ -177,7 +177,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Default Address</label>
+              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Địa chỉ mặc định</label>
               <textarea
                 name="address"
                 value={formData.address}
@@ -206,7 +206,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
               disabled={isSaving}
               className="inline-flex w-full justify-center rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-primary-dark sm:w-auto transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}
+              {isSaving ? 'Đang lưu...' : isEditing ? 'Lưu thay đổi' : 'Chỉnh sửa hồ sơ'}
             </button>
             {isEditing && (
               <button 
@@ -222,7 +222,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
                   });
                 }}
               >
-                Cancel
+                Hủy
               </button>
             )}
             <button 
@@ -230,7 +230,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
               className="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-stone-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-stone-200 shadow-sm ring-1 ring-inset ring-stone-300 dark:ring-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 sm:mt-0 sm:w-auto transition-colors" 
               onClick={onClose}
             >
-              Close
+              Đóng
             </button>
           </div>
         </div>

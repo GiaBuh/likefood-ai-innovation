@@ -59,16 +59,16 @@ const CartReview: React.FC<CartReviewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Review Your Cart</h2>
-        <span className="text-sm text-stone-500 dark:text-stone-400">{cart.length} items</span>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Xem giỏ hàng</h2>
+        <span className="text-sm text-stone-500 dark:text-stone-400">{cart.length} sản phẩm</span>
       </div>
 
       {cart.length === 0 ? (
         <div className="text-center py-12 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-200 dark:border-stone-700">
           <span className="material-symbols-outlined !text-6xl text-stone-300 mb-4">remove_shopping_cart</span>
-          <p className="text-lg font-medium text-stone-600 dark:text-stone-300">Your cart is empty</p>
+          <p className="text-lg font-medium text-stone-600 dark:text-stone-300">Giỏ hàng trống</p>
           <button onClick={onBackToHome} className="mt-4 text-primary font-bold hover:underline">
-            Go back to shop
+            Quay lại cửa hàng
           </button>
         </div>
       ) : (
@@ -83,7 +83,7 @@ const CartReview: React.FC<CartReviewProps> = ({
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1">{item.name}</h3>
                     <p className="text-sm text-stone-500 dark:text-stone-400">{item.category}</p>
-                    <p className="text-xs font-bold text-stone-600 dark:text-stone-300 mt-1">Weight: {item.weight}</p>
+                    <p className="text-xs font-bold text-stone-600 dark:text-stone-300 mt-1">KL: {item.weight}</p>
                   </div>
                   <button 
                     onClick={() => onRemoveItem(item.backendCartItemId ?? item.cartId ?? item.id)}
@@ -123,7 +123,7 @@ const CartReview: React.FC<CartReviewProps> = ({
         <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-700 flex items-center justify-between">
           <div className="hidden sm:block">
              <div className="text-lg font-medium text-slate-900 dark:text-white">
-               Total: <span className="font-black text-2xl ml-2">${total.toFixed(2)}</span>
+               Tổng cộng: <span className="font-black text-2xl ml-2">${total.toFixed(2)}</span>
              </div>
           </div>
 

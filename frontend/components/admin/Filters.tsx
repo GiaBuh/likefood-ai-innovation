@@ -34,9 +34,9 @@ const Filters: React.FC<FiltersProps> = ({
 }) => {
   const getPlaceHolder = () => {
     switch(view) {
-      case 'orders': return 'Search Order ID, Customer...';
-      case 'products': return 'Search Product Name, SKU...';
-      case 'customers': return 'Search Name, Email, Phone...';
+      case 'orders': return 'Tìm Mã đơn, Khách hàng...';
+      case 'products': return 'Tìm Tên SP, SKU...';
+      case 'customers': return 'Tìm Tên, Email, SĐT...';
     }
   };
 
@@ -48,10 +48,10 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onPrimaryFilterChange(e.target.value)}
           className="h-10 w-full appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="All">All Statuses</option>
-          <option value="Paid">Paid</option>
-          <option value="Unpaid">Unpaid</option>
-          <option value="Refunded">Refunded</option>
+          <option value="All">Tất cả trạng thái</option>
+          <option value="Paid">Đã thanh toán</option>
+          <option value="Unpaid">Chưa thanh toán</option>
+          <option value="Refunded">Đã hoàn tiền</option>
         </select>
       );
     } else if (view === 'products') {
@@ -61,7 +61,7 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onPrimaryFilterChange(e.target.value)}
           className="h-10 w-full appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="All">All Categories</option>
+          <option value="All">Tất cả danh mục</option>
           {productCategories.map((category) => (
             <option key={category.id} value={category.name}>
               {category.name}
@@ -76,10 +76,10 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onPrimaryFilterChange(e.target.value)}
           className="h-10 w-full appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="All">All Customers</option>
-          <option value="Active">Active</option>
-          <option value="Blocked">Blocked</option>
-          <option value="Inactive">Inactive</option>
+          <option value="All">Tất cả khách hàng</option>
+          <option value="Active">Đang hoạt động</option>
+          <option value="Blocked">Bị chặn</option>
+          <option value="Inactive">Không hoạt động</option>
         </select>
       );
     }
@@ -93,10 +93,10 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onSecondaryFilterChange(e.target.value)}
           className="h-10 w-full appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="30">Last 30 Days</option>
-          <option value="7">Last 7 Days</option>
-          <option value="1">Today</option>
-          <option value="month">This Month</option>
+          <option value="30">30 ngày qua</option>
+          <option value="7">7 ngày qua</option>
+          <option value="1">Hôm nay</option>
+          <option value="month">Tháng này</option>
         </select>
       );
     } else if (view === 'products') {
@@ -106,10 +106,10 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onSecondaryFilterChange(e.target.value)}
           className="h-10 w-full appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="All">All Statuses</option>
-          <option value="Active">Active</option>
-          <option value="Draft">Draft</option>
-          <option value="Archived">Archived</option>
+          <option value="All">Tất cả trạng thái</option>
+          <option value="Active">Đang bán</option>
+          <option value="Draft">Nháp</option>
+          <option value="Archived">Đã lưu trữ</option>
         </select>
       );
     } else {
@@ -162,8 +162,8 @@ const Filters: React.FC<FiltersProps> = ({
         <div className="h-6 w-px bg-border-light dark:bg-border-dark mx-2"></div>
         <span className="text-sm text-subtext-light dark:text-subtext-dark">
           {view === 'products' && resultCount > 0
-            ? `Showing ${(productsPage - 1) * productsPageSize + 1}-${Math.min(productsPage * productsPageSize, resultCount)} of ${resultCount}`
-            : `Showing ${resultCount === 0 ? 0 : 1}-${resultCount} of ${resultCount}`}
+            ? `Hiển thị ${(productsPage - 1) * productsPageSize + 1}-${Math.min(productsPage * productsPageSize, resultCount)} / ${resultCount}`
+            : `Hiển thị ${resultCount === 0 ? 0 : 1}-${resultCount} / ${resultCount}`}
         </span>
       </div>
     </div>

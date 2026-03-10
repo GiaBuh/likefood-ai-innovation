@@ -21,10 +21,10 @@ const NotFound: React.FC<NotFoundProps> = ({ onGoHome }) => {
     >
       <div style={{ fontSize: '5rem', marginBottom: '0.5rem', fontWeight: 700, color: '#64748b' }}>404</div>
       <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>
-        Page Not Found
+        Không tìm thấy trang
       </h1>
       <p style={{ color: '#94a3b8', marginBottom: '1.5rem', textAlign: 'center', maxWidth: 360 }}>
-        The page you are looking for does not exist or has been moved.
+        Trang bạn tìm kiếm không tồn tại hoặc đã được di chuyển.
       </p>
       <button
         onClick={onGoHome}
@@ -45,7 +45,7 @@ const NotFound: React.FC<NotFoundProps> = ({ onGoHome }) => {
           e.currentTarget.style.background = '#3b82f6';
         }}
       >
-        Go to Home
+        Về trang chủ
       </button>
     </div>
   );

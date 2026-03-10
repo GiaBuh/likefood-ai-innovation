@@ -15,10 +15,10 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
   const [isSortOpen, setIsSortOpen] = useState(false);
   
   const sortOptions: SortOption[] = [
-    'Best Selling', 
-    'Newest Arrivals', 
-    'Price: Low to High', 
-    'Price: High to Low'
+    'Bán chạy nhất', 
+    'Mới nhất', 
+    'Giá thấp đến cao', 
+    'Giá cao đến thấp'
   ];
 
   const handleSortSelect = (option: SortOption) => {
@@ -32,9 +32,9 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
       className="sticky top-20 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm py-3 mb-6 flex flex-wrap items-center justify-between gap-4 -mx-4 px-4 sm:mx-0 sm:px-0 transition-shadow duration-300"
     >
       <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        Featured Specialties
+        Đặc sản nổi bật
         <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold uppercase hidden sm:inline-block">
-          In Stock
+          Còn hàng
         </span>
       </h2>
       <div className="flex items-center gap-3">
@@ -43,7 +43,7 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
           className="lg:hidden flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-stone-300 transition-colors"
         >
           <span className="material-symbols-outlined !text-lg">tune</span>
-          <span className="hidden xs:inline">Filters</span>
+          <span className="hidden xs:inline">Bộ lọc</span>
         </button>
         
         {/* Custom Sort Dropdown */}
@@ -52,7 +52,7 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
             onClick={() => setIsSortOpen(!isSortOpen)}
             className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg shadow-sm hover:border-primary dark:hover:border-primary/50 transition-colors group"
           >
-            <span className="text-sm text-slate-500 dark:text-stone-400">Sort by:</span>
+            <span className="text-sm text-slate-500 dark:text-stone-400">Sắp xếp:</span>
             <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{currentSort}</span>
             <span className={`material-symbols-outlined !text-lg text-slate-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`}>expand_more</span>
           </button>

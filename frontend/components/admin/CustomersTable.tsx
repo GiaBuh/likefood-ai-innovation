@@ -31,12 +31,12 @@ const CustomersTable: React.FC<CustomersTableProps> = ({ customers, isLoading = 
         <table className="w-full text-left text-sm text-subtext-light dark:text-subtext-dark">
           <thead className="bg-background-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark text-xs uppercase text-subtext-light dark:text-subtext-dark font-semibold">
             <tr>
-              <th scope="col" className="px-6 py-4">Customer</th>
-              <th scope="col" className="px-6 py-4">Contact Info</th>
-              <th scope="col" className="px-6 py-4">Location</th>
-              <th scope="col" className="px-6 py-4">Total Orders</th>
-              <th scope="col" className="px-6 py-4">Total Spent</th>
-              <th scope="col" className="px-6 py-4">Status</th>
+              <th scope="col" className="px-6 py-4">Khách hàng</th>
+              <th scope="col" className="px-6 py-4">Liên hệ</th>
+              <th scope="col" className="px-6 py-4">Địa điểm</th>
+              <th scope="col" className="px-6 py-4">Tổng đơn</th>
+              <th scope="col" className="px-6 py-4">Tổng chi</th>
+              <th scope="col" className="px-6 py-4">Trạng thái</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
