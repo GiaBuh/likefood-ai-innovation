@@ -10,13 +10,7 @@ type ChatMessageListProps = {
 
 const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-const MAX_VISIBLE_ACTIONS = 4;
-
-const actionPriority = (action: ChatAction): number => {
-  if (action.type === 'buy-product' || action.type === 'confirm-product' || action.type === 'go-checkout') return 0;
-  if (action.type === 'open-product' || action.type === 'choose-variant') return 1;
-  return 2;
-};
+const MAX_VISIBLE_ACTIONS = 3;
 
 const normalizeBotText = (text: string, formatProfile?: Message['formatProfile']): string[] => {
   if (!text) return [];
@@ -61,10 +55,8 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
         <div className="text-center text-xs text-stone-400 my-4">Today</div>
 
         {messages.map((msg) => {
-          const sortedActions = dedupeActions([...(msg.actions || [])]).sort(
-            (a, b) => actionPriority(a) - actionPriority(b)
-          );
-          const maxVisibleActions = msg.formatProfile === 'recommendation_list' ? 3 : MAX_VISIBLE_ACTIONS;
+          const sortedActions = dedupeActions([...(msg.actions || [])]);
+          const maxVisibleActions = MAX_VISIBLE_ACTIONS;
           const isExpanded = Boolean(expandedActionMessageIds[msg.id]);
           const visibleActions = isExpanded ? sortedActions : sortedActions.slice(0, maxVisibleActions);
           const hiddenActionCount = sortedActions.length - visibleActions.length;
@@ -132,11 +124,6 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
                 >
                   {formatTime(msg.timestamp)}
                 </p>
-                {msg.sender === 'bot' && msg.debugContextId && (
-                  <p className="text-[10px] mt-1 text-stone-400 font-mono">
-                    {`debug ${msg.debugContextId} | ${msg.debugFromAwaiting || 'NONE'} -> ${msg.debugToAwaiting || 'NONE'}`}
-                  </p>
-                )}
               </div>
             </div>
           );

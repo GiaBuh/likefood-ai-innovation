@@ -123,6 +123,22 @@ class ChatService:
         selected_product = product_map.get(context.selectedProductId or "")
         requested_qty = self._parse_quantity(message)
 
+        # Deterministic command routing from frontend action buttons.
+        if command_name == "buy-product" and command_arg:
+            target = product_map.get(command_arg)
+            if target:
+                return await self._build_product_confirmation(target, language, pending_quantity=context.pendingQuantity)
+        if command_name == "open-product" and command_arg:
+            target = product_map.get(command_arg)
+            if target:
+                return await self._build_product_detail_followup(target, language)
+        if command_name == "show-more":
+            return self._build_three_alternatives(
+                list(product_map.values()),
+                language,
+                context.pendingCategory,
+            )
+
         # User explicitly wants to switch item: drop current flow and offer next options.
         if command_name == "reject-product" or self._is_switch_product_intent(message):
             preferred_category = selected_product.category if selected_product else context.pendingCategory

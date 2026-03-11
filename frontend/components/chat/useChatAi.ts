@@ -452,10 +452,48 @@ export function useChatAi(params: UseChatAiParams) {
             reason: action.reason,
             offerType: action.offerType,
           }));
+        const minPriceByProductId = (productId?: string) => {
+          if (!productId) return Number.POSITIVE_INFINITY;
+          const product = products.find((item) => String(item.id) === String(productId));
+          if (!product) return Number.POSITIVE_INFINITY;
+          if (product.variants && product.variants.length > 0) {
+            return Math.min(...product.variants.map((variant) => Number(variant.price ?? Number.POSITIVE_INFINITY)));
+          }
+          return Number(product.price ?? Number.POSITIVE_INFINITY);
+        };
+        const groupedActions = new Map<
+          string,
+          { open?: ChatAction; buy?: ChatAction; others: ChatAction[] }
+        >();
+        const passThroughActions: ChatAction[] = [];
+        for (const action of responseActions) {
+          if (action.productId && (action.type === 'open-product' || action.type === 'buy-product')) {
+            const key = String(action.productId);
+            const existing = groupedActions.get(key) ?? { others: [] };
+            if (action.type === 'open-product') existing.open = action;
+            else existing.buy = action;
+            groupedActions.set(key, existing);
+          } else {
+            passThroughActions.push(action);
+          }
+        }
+        const orderedProductIds = [...groupedActions.keys()].sort(
+          (a, b) => minPriceByProductId(a) - minPriceByProductId(b)
+        );
+        const orderedActions: ChatAction[] = [];
+        for (const productId of orderedProductIds) {
+          const grouped = groupedActions.get(productId);
+          if (!grouped) continue;
+          // User-preferred quick action order: Xem 1 -> Mua 1 -> Xem 2 -> Mua 2.
+          if (grouped.open) orderedActions.push(grouped.open);
+          if (grouped.buy) orderedActions.push(grouped.buy);
+          orderedActions.push(...grouped.others);
+        }
+        orderedActions.push(...passThroughActions);
         const composedReply = aiResponse.reply;
         pushAiMessage(
           composedReply,
-          responseActions.length > 0 ? responseActions : undefined,
+          orderedActions.length > 0 ? orderedActions : undefined,
           aiResponse.recommendationMeta?.formatProfile ?? resolveFormatProfileFallback(composedReply),
           {
             debugContextId: aiResponse.recommendationMeta?.debugContextId,
@@ -498,6 +536,12 @@ export function useChatAi(params: UseChatAiParams) {
       if (action.type === 'go-checkout' || action.type === 'go_checkout') {
         onGoToCheckout();
         return;
+      }
+      if (action.type === 'buy-product') {
+        if (!action.command || !action.productId) {
+          pushAiMessage('Nút mua nhanh đang thiếu dữ liệu. Anh/chị chọn lại món giúp em nhé.');
+          return;
+        }
       }
       if (action.type === 'view-orders' || action.type === 'go_orders') {
         onGoToOrders();
