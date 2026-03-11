@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface TrendData {
     desc: string;
@@ -344,15 +345,15 @@ const TrendSection: React.FC = () => {
                                             </div>
                                         );
 
-                                        // Wrap in link if productSlug exists
-                                        return product.productSlug ? (
-                                            <a
+                                        // Wrap in link if productId exists and is a real product
+                                        return product.productId && product.productId !== "demo-1" ? (
+                                            <Link
                                                 key={idx}
-                                                href={`/product/${product.productSlug}`}
+                                                to={`/product/${product.productId}`}
                                                 className="block no-underline"
                                             >
                                                 {card}
-                                            </a>
+                                            </Link>
                                         ) : (
                                             card
                                         );
