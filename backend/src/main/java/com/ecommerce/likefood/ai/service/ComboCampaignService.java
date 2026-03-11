@@ -4,6 +4,14 @@ import com.ecommerce.likefood.ai.domain.ComboCampaign;
 import com.ecommerce.likefood.ai.dto.req.ComboGenerateRequestDto;
 import com.ecommerce.likefood.ai.dto.res.ComboGenerateResponseDto;
 import com.ecommerce.likefood.ai.repository.ComboCampaignRepository;
+import com.ecommerce.likefood.storage.service.StorageService;
+import com.ecommerce.likefood.storage.enums.StorageObjectType;
+import com.ecommerce.likefood.product.domain.Category;
+import com.ecommerce.likefood.product.domain.Product;
+import com.ecommerce.likefood.product.domain.ProductStatus;
+import com.ecommerce.likefood.product.domain.ProductVariant;
+import com.ecommerce.likefood.product.repository.CategoryRepository;
+import com.ecommerce.likefood.product.repository.ProductRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +38,10 @@ import java.util.Map;
 public class ComboCampaignService {
 
     private final ComboCampaignRepository comboCampaignRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
+    private final StorageService storageService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${likefood.ai.gemini.api-key}")
@@ -39,7 +50,8 @@ public class ComboCampaignService {
     @Value("${likefood.ai.gemini.model:gemini-2.5-flash}")
     private String GEMINI_MODEL;
 
-    private static final String GEMINI_BASE_URL = "https://newapi.ccfilm.online/v1/chat/completions";
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+    private static final String IMAGEN_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=%s";
 
     @Transactional
     public ComboCampaign generateComboCampaign(ComboGenerateRequestDto request) {
@@ -49,11 +61,15 @@ public class ComboCampaignService {
             // 1. Call Gemini to get Combo JSON
             ComboGenerateResponseDto geminiResponse = callGeminiForCombo(request);
 
-            // 2. Call Pollinations AI to get Image URL
-            String imagePromptEncoded = URLEncoder.encode(geminiResponse.getImagePrompt(), StandardCharsets.UTF_8);
-            String imageUrl = "https://image.pollinations.ai/prompt/" + imagePromptEncoded + "?width=1080&height=1080&nologo=true";
+            // 2. Call Gemini Imagen API to get Image Base64
+            String base64Image = callGeminiImagen(geminiResponse.getImagePrompt());
+            byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Image);
+            
+            // 3. Upload the image to S3
+            var uploadResponse = storageService.uploadImageBytes(imageBytes, "image/png", "combo-ai.png", StorageObjectType.PRODUCT);
+            String imageUrl = storageService.getPublicImageUrl(uploadResponse.getKey());
 
-            // 3. Save to Database
+            // 4. Save to Database
             ComboCampaign campaign = ComboCampaign.builder()
                     .hashtag(request.getHashtag())
                     .comboName(geminiResponse.getComboName())
@@ -73,34 +89,114 @@ public class ComboCampaignService {
         }
     }
 
+    @Transactional
+    public Product publishCombo(String comboId) {
+        ComboCampaign combo = comboCampaignRepository.findById(comboId)
+                .orElseThrow(() -> new RuntimeException("Combo not found"));
+
+        if (!"DRAFT".equals(combo.getStatus())) {
+            throw new RuntimeException("Combo is already published or in invalid state");
+        }
+
+        // 1. Get or Create a category for AI Combos
+        Category aiCategory = categoryRepository.findByName("AI Combos").orElseGet(() -> {
+            Category newCategory = Category.builder()
+                    .name("AI Combos")
+                    .build();
+            return categoryRepository.save(newCategory);
+        });
+
+        // 2. Extract image key from S3 URL
+        String imageUrl = combo.getImageUrl();
+        String thumbnailKey = null;
+        if (imageUrl != null && imageUrl.contains("amazonaws.com/")) {
+            thumbnailKey = imageUrl.substring(imageUrl.indexOf("amazonaws.com/") + 14);
+        }
+
+        // 3. Create Product
+        Product product = Product.builder()
+                .name(combo.getComboName())
+                .slug("ai-combo-" + java.util.UUID.randomUUID().toString().substring(0, 8))
+                .status(ProductStatus.ACTIVE)
+                .description(combo.getDescription() + "\n\n" + combo.getSlogan())
+                .thumbnailKey(thumbnailKey)
+                .category(aiCategory)
+                .build();
+
+        // 4. Create one default Variant
+        ProductVariant defaultVariant = ProductVariant.builder()
+                .sku("AI-COMBO-" + java.util.UUID.randomUUID().toString().substring(0, 8))
+                .price(java.math.BigDecimal.valueOf(99000.0)) // Placeholder price
+                .quantity(100)
+                .product(product)
+                .weightValue(java.math.BigDecimal.valueOf(1.0))
+                .weightUnit("kg")
+                .build();
+        product.getVariants().add(defaultVariant);
+
+        productRepository.save(product);
+
+        // 5. Update Combo Status
+        combo.setStatus("PUBLISHED");
+        comboCampaignRepository.save(combo);
+
+        return product;
+    }
+
     private ComboGenerateResponseDto callGeminiForCombo(ComboGenerateRequestDto request) throws JsonProcessingException {
         String prompt = buildPrompt(request);
 
+        // Build request body for official Google Gemini API format
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", GEMINI_MODEL);
-        requestBody.put("temperature", 0.7);
+        
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("temperature", 0.7);
+        generationConfig.put("responseMimeType", "application/json");
+        requestBody.put("generationConfig", generationConfig);
 
-        Map<String, Object> responseFormat = new HashMap<>();
-        responseFormat.put("type", "json_object");
-        requestBody.put("response_format", responseFormat);
-
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", prompt);
-        requestBody.put("messages", List.of(message));
+        Map<String, Object> part = new HashMap<>();
+        part.put("text", prompt);
+        
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(part));
+        requestBody.put("contents", List.of(content));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + GEMINI_API_KEY);
+
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        String url = String.format(GEMINI_BASE_URL, GEMINI_MODEL, GEMINI_API_KEY);
 
         log.info("Calling Gemini API for Combo Generation...");
-        ResponseEntity<String> response = restTemplate.postForEntity(GEMINI_BASE_URL, entity, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
         JsonNode root = objectMapper.readTree(response.getBody());
-        String jsonText = root.path("choices").get(0).path("message").path("content").asText("").trim();
+        String jsonText = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText("").trim();
         
         return objectMapper.readValue(jsonText, ComboGenerateResponseDto.class);
+    }
+
+    private String callGeminiImagen(String prompt) throws JsonProcessingException {
+        // Build payload for predict method
+        Map<String, Object> requestBody = new HashMap<>();
+        Map<String, Object> instance = new HashMap<>();
+        instance.put("prompt", prompt);
+        requestBody.put("instances", List.of(instance));
+        
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("sampleCount", 1);
+        requestBody.put("parameters", parameters);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        
+        String url = String.format(IMAGEN_API_URL, GEMINI_API_KEY);
+        log.info("Calling Gemini Imagen API for image generation...");
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        
+        JsonNode root = objectMapper.readTree(response.getBody());
+        return root.path("predictions").get(0).path("bytesBase64Encoded").asText();
     }
 
     private String buildPrompt(ComboGenerateRequestDto request) {

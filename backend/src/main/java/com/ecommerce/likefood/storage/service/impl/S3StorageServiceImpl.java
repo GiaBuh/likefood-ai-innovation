@@ -75,6 +75,31 @@ public class S3StorageServiceImpl implements StorageService {
     }
 
     @Override
+    public UploadImageResponse uploadImageBytes(byte[] bytes, String contentType, String originalFilename, StorageObjectType type) {
+        S3Client s3Client = requireS3Client();
+
+        String key = buildObjectKey(originalFilename, type);
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(
+                    request,
+                    RequestBody.fromBytes(bytes)
+            );
+        } catch (SdkException e) {
+            throw new AppException("Failed to upload image to S3: " + e.getMessage());
+        }
+
+        return UploadImageResponse.builder()
+                .key(key)
+                .build();
+    }
+
+    @Override
     public UploadImageResponse uploadImageFromUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new AppException("Image URL is required");

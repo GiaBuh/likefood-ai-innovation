@@ -4,6 +4,7 @@ import com.ecommerce.likefood.ai.domain.ComboCampaign;
 import com.ecommerce.likefood.ai.dto.req.ComboGenerateRequestDto;
 import com.ecommerce.likefood.ai.service.ComboCampaignService;
 import com.ecommerce.likefood.common.utils.ApiMessage;
+import com.ecommerce.likefood.product.domain.Product;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,5 +25,13 @@ public class ComboCampaignController {
         log.info("Received request to generate combo for hashtag: {}", request.getHashtag());
         ComboCampaign result = comboCampaignService.generateComboCampaign(request);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{id}/publish")
+    @ApiMessage("Publish AI combo to store")
+    public ResponseEntity<Product> publishCombo(@PathVariable String id) {
+        log.info("Received request to publish combo ID: {}", id);
+        Product publishedProduct = comboCampaignService.publishCombo(id);
+        return ResponseEntity.ok(publishedProduct);
     }
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateAiCombo, AiComboResponse } from '../../services/shopApi';
+import { generateAiCombo, AiComboResponse, publishAiCombo } from '../../services/shopApi';
 import { Product } from '../../types';
 
 interface AiComboGeneratorProps {
@@ -12,6 +12,8 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiComboResponse | null>(null);
   const [error, setError] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
 
   const handleToggleItem = (productName: string) => {
     setSelectedItems(prev => 
@@ -42,6 +44,22 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
       setError(err.message || 'Có lỗi xảy ra khi gọi AI.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!result || !result.id) return;
+    
+    setIsPublishing(true);
+    setError('');
+    
+    try {
+      await publishAiCombo(result.id);
+      setPublishSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi đưa lên cửa hàng.');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -190,9 +208,24 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                 </div>
                 
                 <div className="mt-6">
-                  <button className="w-full py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors">
-                    Publish to Store (Sẵn sàng)
-                  </button>
+                  {publishSuccess ? (
+                    <div className="w-full py-2.5 bg-green-500 text-white rounded-lg font-medium flex justify-center flex-col items-center">
+                      <span>✅ Đã đưa lên cửa hàng thành công!</span>
+                      <span className="text-xs opacity-75">Bạn có thể xem ở mục "Sản phẩm"</span>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={handlePublish}
+                      disabled={isPublishing}
+                      className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
+                        isPublishing 
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+                      }`}
+                    >
+                      {isPublishing ? 'Đang xuất bản...' : 'Publish to Store (Sẵn sàng)'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
