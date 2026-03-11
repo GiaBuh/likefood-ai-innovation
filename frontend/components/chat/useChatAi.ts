@@ -406,28 +406,19 @@ export function useChatAi(params: UseChatAiParams) {
       }
 
       if (aiStage === 'awaiting_add_confirmation' && pendingProduct) {
-        if (isViewDetailIntent(trimmed)) {
-          onOpenProduct(String(pendingProduct.id));
-          pushAiMessage(
-            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
-          );
-          return;
-        }
         if (isAffirmative(trimmed)) {
           askForVariantOrQuantity(pendingProduct);
           return;
         }
         if (isNegative(trimmed)) {
           pushAiMessage(
-            'Không sao nhé. Bạn có thể hỏi món khác, tôi sẽ gợi ý tiếp theo dữ liệu sản phẩm.'
+            'Dạ không sao ạ. Anh/chị có thể hỏi món khác, em sẽ gợi ý tiếp theo dữ liệu sản phẩm.'
           );
           resetPendingSelection();
           return;
         }
-        pushAiMessage(
-          'Bạn giúp xác nhận "có" để thêm vào giỏ hoặc "không" nếu chưa cần nhé.'
-        );
-        return;
+        // Let backend AI handle follow-up questions (e.g. "giải thích món đó")
+        // while preserving current context instead of forcing yes/no locally.
       }
 
       if (aiStage === 'awaiting_variant' && pendingProduct) {
@@ -467,7 +458,7 @@ export function useChatAi(params: UseChatAiParams) {
           return;
         }
         // Not a variant, not a known local intent — fall through to backend AI
-        resetPendingSelection();
+        // and keep current context.
       }
 
       if (aiStage === 'awaiting_quantity') {
@@ -491,7 +482,7 @@ export function useChatAi(params: UseChatAiParams) {
           return;
         }
         // Not a quantity, not a known local intent — fall through to backend AI
-        resetPendingSelection();
+        // and keep current context.
       }
 
       if (aiStage === 'awaiting_checkout_confirmation') {
@@ -554,11 +545,7 @@ export function useChatAi(params: UseChatAiParams) {
             reason: action.reason,
             offerType: action.offerType,
           }));
-        const recommendationHint =
-          aiResponse.recommendationMeta?.reason && aiResponse.recommendationMeta?.fallbackLevel !== 'EXACT'
-            ? `(${aiResponse.recommendationMeta.reason})`
-            : '';
-        const composedReply = recommendationHint ? `${aiResponse.reply}\n${recommendationHint}` : aiResponse.reply;
+        const composedReply = aiResponse.reply;
         pushAiMessage(
           composedReply,
           responseActions.length > 0 ? responseActions : undefined,
