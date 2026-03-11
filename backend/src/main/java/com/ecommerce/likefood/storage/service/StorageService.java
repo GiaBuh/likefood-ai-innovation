@@ -7,6 +7,8 @@ import org.springframework.web.multipart.MultipartFile;
 public interface StorageService {
     UploadImageResponse uploadImage(MultipartFile file, StorageObjectType type);
 
+    UploadImageResponse uploadImageBytes(byte[] bytes, String contentType, String originalFilename, StorageObjectType type);
+
     /**
      * Fetches image from URL and uploads to S3. Returns S3 key.
      */

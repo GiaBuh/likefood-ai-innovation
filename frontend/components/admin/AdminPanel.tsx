@@ -11,6 +11,7 @@ import OrderDetailsModal from './OrderDetailsModal';
 import { CategoryManagementModal, ProductFormModal } from './ProductModals';
 import AdminChatView, { ChatConversation, ChatMessage } from './AdminChatView';
 import TrendHistoryView from './TrendHistoryView';
+import AiComboGenerator from './AiComboGenerator';
 import { Product, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta } from '../../types';
 import {
   getAdminConversations,
@@ -21,7 +22,7 @@ import {
 } from '../../services/shopApi';
 import { useAdminChatWebSocket } from '../../hooks/useAdminChatWebSocket';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends' | 'aicombo';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -398,6 +399,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         return { title: 'Chat', subtitle: 'Chat với khách hàng theo thời gian thực', btnText: '' };
       case 'trends':
         return { title: 'Lịch sử xu hướng AI', subtitle: 'Lịch sử phân tích xu hướng TikTok bằng AI', btnText: '' };
+      case 'aicombo':
+        return { title: 'AI Combo Generator', subtitle: 'Bắt AI tự động tạo chiến dịch Combo bán hàng đu trend', btnText: '' };
     }
   };
 
@@ -504,7 +507,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       Thêm sản phẩm
                   </button>
               </>
-            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'customers' && (
+            ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'customers' && (
                 <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}
@@ -543,8 +546,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <TrendHistoryView />
           )}
 
+          {/* AI Combo Generator View */}
+          {currentView === 'aicombo' && (
+              <AiComboGenerator products={products} />
+          )}
+
           {/* List Views */}
-          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && (
+          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && (
              <div className="flex flex-col gap-6">
                 <KPICards data={getKPIs()} isLoading={isLoading} />
 

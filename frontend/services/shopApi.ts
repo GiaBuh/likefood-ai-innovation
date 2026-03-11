@@ -816,6 +816,55 @@ export async function getMyCart(): Promise<BackendCart> {
   return unwrapRestResponse(payload);
 }
 
+export type AiComboResponse = {
+  id: string;
+  combo_name: string;
+  slogan: string;
+  description: string;
+  discount_percentage: number;
+  image_prompt: string;
+  imageUrl?: string;
+};
+
+export async function generateAiCombo(hashtag: string, items: string[]): Promise<AiComboResponse> {
+  const response = await apiFetch('/ai/combos/generate', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify({ hashtag, items }),
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi tạo Combo AI (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  const data = unwrapRestResponse(payloadJson as any) as any;
+  
+  return {
+    id: data.id,
+    combo_name: data.comboName || data.combo_name,
+    slogan: data.slogan,
+    description: data.description,
+    discount_percentage: data.discountPercentage || data.discount_percentage,
+    image_prompt: data.imagePrompt || data.image_prompt,
+    imageUrl: data.imageUrl
+  };
+}
+
+export async function publishAiCombo(id: string): Promise<Product> {
+  const response = await apiFetch(`/ai/combos/${id}/publish`, {
+    method: 'POST',
+    requireAuth: true,
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo AI (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  return unwrapRestResponse(payloadJson as any) as any as Product;
+}
+
 export async function updateMyCartItem(itemId: string, quantity: number): Promise<BackendCart> {
   const response = await apiFetch(`/carts/me/items/${itemId}?quantity=${quantity}`, {
     method: 'PUT',

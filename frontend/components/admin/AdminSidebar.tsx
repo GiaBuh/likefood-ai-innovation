@@ -1,6 +1,6 @@
 import React from 'react';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends' | 'aicombo';
 
 interface AdminSidebarProps {
   currentView: AdminViewType;
@@ -65,6 +65,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, onNavigate, on
           <div onClick={() => onNavigate('trends')} className={getLinkClass('trends')}>
             <span className={getIconClass('trends')}>trending_up</span>
             <span className={getTextClass('trends')}>Xu hướng AI</span>
+          </div>
+
+          <div onClick={() => onNavigate('aicombo')} className={getLinkClass('aicombo')}>
+            <span className={getIconClass('aicombo')}>magic_button</span>
+            <span className={getTextClass('aicombo')}>Tạo Combo Đu Trend</span>
           </div>
         </nav>
 

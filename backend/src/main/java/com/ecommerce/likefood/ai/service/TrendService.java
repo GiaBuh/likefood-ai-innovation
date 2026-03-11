@@ -57,7 +57,7 @@ public class TrendService {
     @Value("${likefood.ai.gemini.model:gemini-2.5-flash}")
     private String GEMINI_MODEL;
 
-    private static final String GEMINI_BASE_URL = "https://newapi.ccfilm.online/v1/chat/completions";
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     @Value("${likefood.storage.s3.public-base-url:}")
     private String s3PublicBaseUrl;
@@ -176,36 +176,29 @@ public class TrendService {
             String prompt = buildAnalysisPrompt(hashtagList, productCatalog);
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", GEMINI_MODEL);
-            requestBody.put("temperature", 0.7);
+            
+            Map<String, Object> generationConfig = new HashMap<>();
+            generationConfig.put("temperature", 0.7);
+            generationConfig.put("responseMimeType", "application/json");
+            requestBody.put("generationConfig", generationConfig);
 
-            Map<String, Object> responseFormat = new HashMap<>();
-            responseFormat.put("type", "json_object");
-            requestBody.put("response_format", responseFormat);
-
-            Map<String, Object> message = new HashMap<>();
-            message.put("role", "user");
-            message.put("content", prompt);
-            requestBody.put("messages", List.of(message));
+            Map<String, Object> part = new HashMap<>();
+            part.put("text", prompt);
+            
+            Map<String, Object> content = new HashMap<>();
+            content.put("parts", List.of(part));
+            requestBody.put("contents", List.of(content));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + GEMINI_API_KEY);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            ResponseEntity<String> response = restTemplate.postForEntity(GEMINI_BASE_URL, entity, String.class);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            String url = String.format(GEMINI_BASE_URL, GEMINI_MODEL, GEMINI_API_KEY);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode choices = root.path("choices");
-            if (choices.isMissingNode() || !choices.isArray() || choices.isEmpty()) {
-                throw new RuntimeException("AI trả về không có choices");
-            }
-            JsonNode messageNode = choices.get(0).path("message");
-            if (messageNode.isMissingNode()) {
-                throw new RuntimeException("AI trả về không có message");
-            }
-
-            String jsonText = messageNode.path("content").asText("").trim();
+            String jsonText = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText("").trim();
             log.info("✅ Proxy AI SUCCESS!");
 
             Map<String, Object> aiResult = objectMapper.readValue(jsonText, new TypeReference<>() {});
