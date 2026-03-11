@@ -1,5 +1,5 @@
 import { Category, Order, PaginationMeta, Product, ProductVariant } from '../types';
-import { apiFetch, getErrorMessageFromResponse } from './apiClient';
+import { apiFetch, getAccessToken, getErrorMessageFromResponse } from './apiClient';
 
 type RestResponse<T> = {
   statusCode: number;
@@ -181,6 +181,9 @@ export type AiAssistantResponse = {
     confidenceBand?: 'high' | 'medium' | 'low';
     intent?: string;
     formatProfile?: 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
+    debugContextId?: string;
+    debugFromAwaiting?: string;
+    debugToAwaiting?: string;
   };
 };
 
@@ -773,9 +776,20 @@ export async function askAiAssistant(
   preferredLanguage?: AiChatLanguage,
   context?: AiChatContext
 ): Promise<AiAssistantResponse> {
-  const response = await apiFetch('/ai-chat/respond', {
+  const env = (import.meta as any).env;
+  const fastApiBase = String(env?.VITE_FASTAPI_CHATBOT_BASE_URL || '/fastapi-ai-chat').replace(/\/+$/, '');
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const response = await fetch(`${fastApiBase}/ai-chat/respond`, {
     method: 'POST',
-    requireAuth: true,
+    credentials: 'include',
+    cache: 'no-store',
+    headers,
     body: JSON.stringify({
       message,
       history,

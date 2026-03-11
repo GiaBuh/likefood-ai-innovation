@@ -61,6 +61,25 @@ services:
         ports:
             - "8080:8080"
 
+    fastapi-chatbot:
+        build: ./ai-chatbot-fastapi
+        container_name: likefood-fastapi-chatbot
+        restart: unless-stopped
+        env_file: .env
+        depends_on:
+            - backend
+        environment:
+            BACKEND_BASE_URL: http://backend:8080
+            GEMINI_API_KEY: ${GEMINI_API_KEY}
+            GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
+            GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+            GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-5}
+            GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-2}
+            AI_DEBUG_CONTEXT_ENABLED: ${AI_DEBUG_CONTEXT_ENABLED:-false}
+            CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80}
+        ports:
+            - "8091:8091"
+
     frontend:
         container_name: likefood-frontend
         build:
@@ -68,9 +87,11 @@ services:
             args:
                 VITE_API_BASE_URL: ""
                 VITE_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL:-}
+                VITE_FASTAPI_CHATBOT_BASE_URL: ${VITE_FASTAPI_CHATBOT_BASE_URL:-/fastapi-ai-chat}
         restart: unless-stopped
         depends_on:
             - backend
+            - fastapi-chatbot
         ports:
             - "80:80"
 
