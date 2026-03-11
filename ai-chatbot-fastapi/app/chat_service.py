@@ -3,9 +3,11 @@ from __future__ import annotations
 import random
 import re
 import unicodedata
+import uuid
 
 from .backend_client import BackendClient
 from .budget import format_usd, normalize_price_to_usd, parse_budget_value, pick_variants_for_budget
+from .config import settings
 from .domain import Product, ProductVariant
 from .gemini_client import GeminiClient
 from .schemas import (
@@ -27,6 +29,7 @@ class ChatService:
     def __init__(self, backend_client: BackendClient, gemini_client: GeminiClient) -> None:
         self.backend = backend_client
         self.gemini = gemini_client
+        self.debug_context_enabled = settings.ai_debug_context_enabled
 
     async def respond(self, request: AiChatRequest, auth_header: str | None = None) -> AiAssistantResponse:
         message = (request.message or "").strip()
@@ -38,12 +41,12 @@ class ChatService:
         # Stateful flow first
         state_response = await self._handle_stateful(message, context, product_map, language)
         if state_response:
-            return state_response
+            return self._attach_debug_meta(state_response, context.awaiting)
 
         # Receptionist-style welcome for greeting messages.
         if self._is_greeting(message):
             featured = products[:3]
-            return AiAssistantResponse(
+            return self._attach_debug_meta(AiAssistantResponse(
                 reply="Chào mừng anh/chị đến LikeFood! Em là lễ tân AI, rất vui được hỗ trợ. Hôm nay anh/chị muốn em gợi ý món ngon không ạ?",
                 language=language,
                 actions=[
@@ -64,12 +67,27 @@ class ChatService:
                     intent="GREETING",
                     formatProfile="simple_cta",
                 ),
-            )
+            ), context.awaiting)
+
+        requested_category = self._detect_requested_category(products, message)
+        if requested_category:
+            filtered = [p for p in products if self._normalize(p.category) == self._normalize(requested_category)]
+            if filtered:
+                return self._attach_debug_meta(
+                    await self._build_recommendation_response(
+                        filtered,
+                        message,
+                        context,
+                        language,
+                        selected_category=requested_category,
+                    ),
+                    context.awaiting,
+                )
 
         # Broad query -> ask category clarification first
         if self._is_broad_query(message) and not parse_budget_value(message):
             categories = sorted({p.category for p in products if p.category})[:6]
-            return AiAssistantResponse(
+            return self._attach_debug_meta(AiAssistantResponse(
                 reply="Dạ em chào anh/chị! Anh/chị muốn tìm theo nhóm nào để em tư vấn đúng gu và chốt đơn nhanh hơn ạ?",
                 language=language,
                 actions=[
@@ -84,22 +102,42 @@ class ChatService:
                     intent="CATEGORY_CLARIFICATION",
                     formatProfile="simple_cta",
                 ),
-            )
+            ), context.awaiting)
 
         category_from_command = self._parse_category_command(message)
         if category_from_command:
             filtered = [p for p in products if p.category.lower() == category_from_command.lower()]
-            return await self._build_recommendation_response(
+            return self._attach_debug_meta(await self._build_recommendation_response(
                 filtered or products, message, context, language, selected_category=category_from_command
-            )
+            ), context.awaiting)
 
-        return await self._build_recommendation_response(products, message, context, language)
+        return self._attach_debug_meta(
+            await self._build_recommendation_response(products, message, context, language),
+            context.awaiting,
+        )
 
     async def _handle_stateful(
         self, message: str, context: AiChatContext, product_map: dict[str, Product], language: str
     ) -> AiAssistantResponse | None:
         command_name, command_arg = self._parse_command(message)
         selected_product = product_map.get(context.selectedProductId or "")
+        requested_qty = self._parse_quantity(message)
+
+        # User explicitly wants to switch item: drop current flow and offer next options.
+        if command_name == "reject-product" or self._is_switch_product_intent(message):
+            preferred_category = selected_product.category if selected_product else context.pendingCategory
+            return self._build_three_alternatives(
+                list(product_map.values()),
+                language,
+                preferred_category,
+                intro_reply="Dạ vâng, em đổi món ngay cho anh/chị nè. Hiện tại bên em có các món sau, anh/chị xem thử có ưng món nào không ạ:",
+            )
+
+        # Any state: if user asks availability for another product, immediately switch context.
+        if self._is_availability_intent(message):
+            switched_product = self._find_exact_product(list(product_map.values()), message)
+            if switched_product and (not selected_product or switched_product.id != selected_product.id):
+                return await self._build_product_confirmation(switched_product, language, pending_quantity=requested_qty)
 
         if context.awaiting == AWAITING_PRODUCT_CONFIRMATION and selected_product:
             # User asks to explain current product: answer detail and keep current product context.
@@ -109,11 +147,11 @@ class ChatService:
             # If user asks about another product, replace current context with the new product.
             switched_product = self._find_exact_product(list(product_map.values()), message)
             if switched_product and switched_product.id != selected_product.id:
-                return await self._build_product_confirmation(switched_product, language)
+                return await self._build_product_confirmation(switched_product, language, pending_quantity=requested_qty)
 
             if command_name == "confirm-product" or self._is_affirmative(message):
                 return self._ask_variant_or_quantity(selected_product, language, context.pendingQuantity)
-            if command_name == "reject-product" or self._is_negative(message):
+            if self._is_negative(message):
                 return AiAssistantResponse(
                     reply="Dạ, em sẽ gợi ý 3 món khác cho anh/chị nhé.",
                     actions=[AiChatAction(type="show-more-options", label="Xem 3 gợi ý mới", command="/show-more")],
@@ -331,7 +369,7 @@ class ChatService:
                 return await self._build_product_confirmation(exact_product, language)
             topic_category = selected_category or self._infer_topic_from_message(products, message)
             return AiAssistantResponse(
-                reply="Dạ hiện tại em chưa thấy đúng món anh/chị hỏi. Em gợi ý vài món gần nhất để anh/chị tham khảo ạ.",
+                reply="Dạ hiện tại bên em chưa có đúng món anh/chị hỏi. Em gợi ý vài món cùng chủ đề để anh/chị tham khảo nhé:",
                 language=language,
                 **self._build_three_alternatives(products, language, topic_category).model_dump(
                     include={"actions", "matchedProductIds", "nextContext", "recommendationMeta"}
@@ -375,7 +413,9 @@ class ChatService:
             ),
         )
 
-    async def _build_product_confirmation(self, product: Product, language: str) -> AiAssistantResponse:
+    async def _build_product_confirmation(
+        self, product: Product, language: str, pending_quantity: int | None = None
+    ) -> AiAssistantResponse:
         base = f"Dạ bên em có {product.name}. Anh/chị muốn mua luôn không ạ?"
         reply = await self.gemini.rewrite_persuasive(base)
         return AiAssistantResponse(
@@ -387,7 +427,11 @@ class ChatService:
                 AiChatAction(type="reject-product", label="Để mình xem thêm", command=f"/reject-product:{product.id}", productId=product.id),
                 AiChatAction(type="open-product", label="Xem chi tiết", command=f"/open-product:{product.id}", productId=product.id),
             ],
-            nextContext=AiChatContext(awaiting=AWAITING_PRODUCT_CONFIRMATION, selectedProductId=product.id),
+            nextContext=AiChatContext(
+                awaiting=AWAITING_PRODUCT_CONFIRMATION,
+                selectedProductId=product.id,
+                pendingQuantity=pending_quantity,
+            ),
         )
 
     async def _build_product_detail_followup(self, product: Product, language: str) -> AiAssistantResponse:
@@ -463,13 +507,19 @@ class ChatService:
             ),
         )
 
-    def _build_three_alternatives(self, products: list[Product], language: str, selected_category: str | None) -> AiAssistantResponse:
+    def _build_three_alternatives(
+        self,
+        products: list[Product],
+        language: str,
+        selected_category: str | None,
+        intro_reply: str | None = None,
+    ) -> AiAssistantResponse:
         pool = [p for p in products if not selected_category or p.category.lower() == selected_category.lower()]
-        if not pool:
+        if not pool or (selected_category and len(pool) <= 1):
             pool = products
         picks = random.sample(pool, k=min(3, len(pool)))
         return AiAssistantResponse(
-            reply="Dạ em mời anh/chị tham khảo thêm 3 lựa chọn nổi bật này:",
+            reply=intro_reply or "Dạ vâng hiện tại bên em có các món như sau, không biết anh/chị có quan tâm không ạ:",
             language=language,
             matchedProductIds=[p.id for p in picks],
             actions=[
@@ -491,6 +541,16 @@ class ChatService:
             ),
         )
 
+    def _attach_debug_meta(self, response: AiAssistantResponse, from_awaiting: str | None = None) -> AiAssistantResponse:
+        if not self.debug_context_enabled:
+            return response
+        if response.recommendationMeta is None:
+            response.recommendationMeta = AiRecommendationMeta()
+        response.recommendationMeta.debugContextId = f"ctx-{uuid.uuid4().hex[:8]}"
+        response.recommendationMeta.debugFromAwaiting = from_awaiting or AWAITING_NONE
+        response.recommendationMeta.debugToAwaiting = response.nextContext.awaiting or AWAITING_NONE
+        return response
+
     def _search_products(self, products: list[Product], message: str) -> list[Product]:
         normalized = self._normalize(message)
         stopwords = {
@@ -511,6 +571,13 @@ class ChatService:
             "nhe",
             "a",
             "ạ",
+            "lien",
+            "quan",
+            "den",
+            "toi",
+            "muon",
+            "an",
+            "do",
         }
         tokens = [t for t in normalized.split(" ") if len(t) > 1 and t not in stopwords]
         scored: list[tuple[int, Product]] = []
@@ -624,6 +691,33 @@ class ChatService:
                 best_category = product.category
         return best_category if best_score > 0 else None
 
+    def _detect_requested_category(self, products: list[Product], message: str) -> str | None:
+        normalized = self._normalize(message)
+        if not normalized:
+            return None
+
+        alias_map = {
+            "hat": {"hat", "hat dieu", "ngu coc", "nuts"},
+            "kho": {"kho", "do kho", "mon kho"},
+            "banh": {"banh", "banh trang", "snack"},
+            "mut": {"mut", "mut dua"},
+            "muc": {"muc", "hai san", "muc rim"},
+        }
+
+        categories_by_norm: dict[str, str] = {}
+        for product in products:
+            norm_cat = self._normalize(product.category)
+            if norm_cat and norm_cat not in categories_by_norm:
+                categories_by_norm[norm_cat] = product.category
+
+        for norm_cat, original_cat in categories_by_norm.items():
+            if norm_cat in normalized:
+                return original_cat
+            aliases = alias_map.get(norm_cat, {norm_cat})
+            if any(alias in normalized for alias in aliases):
+                return original_cat
+        return None
+
     def _is_greeting(self, message: str) -> bool:
         lowered = message.lower().strip()
         normalized = self._normalize(message)
@@ -647,6 +741,17 @@ class ChatService:
     def _is_negative(self, message: str) -> bool:
         normalized = self._normalize(message)
         return normalized in {"khong", "ko", "khong mua", "de sau", "no"}
+
+    def _is_switch_product_intent(self, message: str) -> bool:
+        normalized = self._normalize(message)
+        switch_keys = {
+            "doi mon khac",
+            "doi mon",
+            "mon khac",
+            "xem mon khac",
+            "tim mon khac",
+        }
+        return normalized in switch_keys or any(k in normalized for k in {"doi mon khac", "xem mon khac"})
 
     def _normalize(self, text: str) -> str:
         lowered = text.lower().strip()

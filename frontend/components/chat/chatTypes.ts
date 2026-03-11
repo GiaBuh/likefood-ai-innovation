@@ -17,6 +17,9 @@ export interface Message {
   timestamp: Date;
   actions?: ChatAction[];
   formatProfile?: 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
+  debugContextId?: string;
+  debugFromAwaiting?: string;
+  debugToAwaiting?: string;
 }
 
 export type ChatView = 'menu' | 'admin' | 'ai';

@@ -181,6 +181,9 @@ export type AiAssistantResponse = {
     confidenceBand?: 'high' | 'medium' | 'low';
     intent?: string;
     formatProfile?: 'compact_detail' | 'recommendation_list' | 'budget_advice' | 'simple_cta';
+    debugContextId?: string;
+    debugFromAwaiting?: string;
+    debugToAwaiting?: string;
   };
 };
 

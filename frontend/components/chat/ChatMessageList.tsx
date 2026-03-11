@@ -132,6 +132,11 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
                 >
                   {formatTime(msg.timestamp)}
                 </p>
+                {msg.sender === 'bot' && msg.debugContextId && (
+                  <p className="text-[10px] mt-1 text-stone-400 font-mono">
+                    {`debug ${msg.debugContextId} | ${msg.debugFromAwaiting || 'NONE'} -> ${msg.debugToAwaiting || 'NONE'}`}
+                  </p>
+                )}
               </div>
             </div>
           );

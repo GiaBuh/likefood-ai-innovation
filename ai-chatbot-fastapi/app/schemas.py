@@ -53,6 +53,9 @@ class AiRecommendationMeta(BaseModel):
     confidenceBand: Literal["high", "medium", "low"] | None = None
     intent: str | None = None
     formatProfile: Literal["compact_detail", "recommendation_list", "budget_advice", "simple_cta"] | None = None
+    debugContextId: str | None = None
+    debugFromAwaiting: str | None = None
+    debugToAwaiting: str | None = None
 
 
 class AiAssistantResponse(BaseModel):

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     gemini_max_retries: int = 2
     chatbot_fastapi_port: int = 8091
     cors_allowed_origins: str = "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80"
+    ai_debug_context_enabled: bool = False
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 

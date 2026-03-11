@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Product, ProductVariant } from '../../types';
 import type { AiChatContext } from '../../services/shopApi';
 import { askAiAssistant } from '../../services/shopApi';
@@ -83,12 +83,18 @@ export function useChatAi(params: UseChatAiParams) {
     onGoToCheckout,
     onGoToOrders,
   } = params;
+  const aiContextRef = useRef<AiChatContext>(aiContext);
+
+  useEffect(() => {
+    aiContextRef.current = aiContext;
+  }, [aiContext]);
 
   const pushAiMessage = useCallback(
     (
       text: string,
       actions?: ChatAction[],
-      formatProfile?: MessageFormatProfile
+      formatProfile?: MessageFormatProfile,
+      debugMeta?: { debugContextId?: string; debugFromAwaiting?: string; debugToAwaiting?: string }
     ) => {
       const botMessage: Message = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -97,6 +103,9 @@ export function useChatAi(params: UseChatAiParams) {
         timestamp: new Date(),
         actions,
         formatProfile,
+        debugContextId: debugMeta?.debugContextId,
+        debugFromAwaiting: debugMeta?.debugFromAwaiting,
+        debugToAwaiting: debugMeta?.debugToAwaiting,
       };
       setAiMessages((prev) => [...prev, botMessage]);
     },
@@ -113,9 +122,12 @@ export function useChatAi(params: UseChatAiParams) {
   const syncStateFromContext = useCallback(
     (nextContext: AiChatContext | undefined, cartInstruction?: { quantity?: number; productId?: string }) => {
       if (!nextContext) return;
+      aiContextRef.current = nextContext;
       setAiContext(nextContext);
 
       if (!nextContext.awaiting || nextContext.awaiting === 'NONE') {
+        // Backend cleared the flow: make sure local pending state is also cleared.
+        resetPendingSelection();
         return;
       }
 
@@ -137,7 +149,7 @@ export function useChatAi(params: UseChatAiParams) {
         setAiStage('awaiting_variant');
       }
     },
-    [products, setAiContext, setAiStage, setPendingProduct, setPendingQuantity]
+    [products, resetPendingSelection, setAiContext, setAiStage, setPendingProduct, setPendingQuantity]
   );
 
   const addPendingItemToCart = useCallback(
@@ -398,111 +410,6 @@ export function useChatAi(params: UseChatAiParams) {
       const trimmed = input.trim();
       if (!trimmed) return;
 
-      if (isPaymentIntent(trimmed)) {
-        pushAiMessage('Đang chuyển đến trang thanh toán...');
-        onGoToCheckout();
-        resetPendingSelection();
-        return;
-      }
-
-      if (aiStage === 'awaiting_add_confirmation' && pendingProduct) {
-        if (isAffirmative(trimmed)) {
-          askForVariantOrQuantity(pendingProduct);
-          return;
-        }
-        if (isNegative(trimmed)) {
-          pushAiMessage(
-            'Dạ không sao ạ. Anh/chị có thể hỏi món khác, em sẽ gợi ý tiếp theo dữ liệu sản phẩm.'
-          );
-          resetPendingSelection();
-          return;
-        }
-        // Let backend AI handle follow-up questions (e.g. "giải thích món đó")
-        // while preserving current context instead of forcing yes/no locally.
-      }
-
-      if (aiStage === 'awaiting_variant' && pendingProduct) {
-        if (isViewDetailIntent(trimmed)) {
-          onOpenProduct(String(pendingProduct.id));
-          pushAiMessage(
-            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
-          );
-          return;
-        }
-        if (isCancelIntent(trimmed)) {
-          pushAiMessage(
-            'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.'
-          );
-          resetPendingSelection();
-          return;
-        }
-        const variant = parseVariant(trimmed, pendingProduct);
-        const quantityFromMessage = parseQuantity(trimmed);
-        const qtyToUse = quantityFromMessage ?? pendingQuantity;
-        if (variant) {
-          setPendingVariant(variant);
-          if (qtyToUse) {
-            addPendingItemToCart(qtyToUse, pendingProduct, variant);
-            setPendingQuantity(null);
-          } else {
-            setAiStage('awaiting_quantity');
-            pushAiMessage(
-              `Bạn muốn thêm ${pendingProduct.name} (${variant.weight}) với số lượng bao nhiêu?`,
-              [
-                { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
-                { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
-                { id: 'qty-3', label: '3', type: 'select_quantity', quantity: 3 },
-              ]
-            );
-          }
-          return;
-        }
-        // Not a variant, not a known local intent — fall through to backend AI
-        // and keep current context.
-      }
-
-      if (aiStage === 'awaiting_quantity') {
-        if (isViewDetailIntent(trimmed) && pendingProduct) {
-          onOpenProduct(String(pendingProduct.id));
-          pushAiMessage(
-            `Đang mở chi tiết sản phẩm "${pendingProduct.name}" cho bạn xem.`
-          );
-          return;
-        }
-        if (isCancelIntent(trimmed)) {
-          pushAiMessage(
-            'Đã hủy. Bạn có thể hỏi món khác hoặc tìm sản phẩm mới nhé.'
-          );
-          resetPendingSelection();
-          return;
-        }
-        const quantity = parseQuantity(trimmed);
-        if (quantity) {
-          addPendingItemToCart(quantity);
-          return;
-        }
-        // Not a quantity, not a known local intent — fall through to backend AI
-        // and keep current context.
-      }
-
-      if (aiStage === 'awaiting_checkout_confirmation') {
-        if (isAffirmative(trimmed) || isPaymentIntent(trimmed)) {
-          pushAiMessage('Đang chuyển đến trang thanh toán...');
-          onGoToCheckout();
-          resetPendingSelection();
-          return;
-        }
-        if (isNegative(trimmed)) {
-          pushAiMessage(
-            'Ok bạn nhé. Khi cần thanh toán, bạn vào giỏ hàng hoặc nhấn "Đi đến thanh toán" bất kỳ lúc nào.'
-          );
-          resetPendingSelection();
-          return;
-        }
-        pushAiMessage('Bạn trả lời "có" để thanh toán ngay hoặc "không" để tiếp tục mua sắm nhé.');
-        return;
-      }
-
       const useLocalOnly = false;
       if (useLocalOnly) {
         fallbackLocalAiResponse(trimmed);
@@ -510,7 +417,7 @@ export function useChatAi(params: UseChatAiParams) {
       }
 
       try {
-        const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), 'vi', aiContext);
+        const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), 'vi', aiContextRef.current);
         const allowedActionProductIds = new Set<string>([
           ...(aiResponse.matchedProductIds || []).map((id) => String(id)),
           ...(aiResponse.nextContext?.selectedProductId ? [String(aiResponse.nextContext.selectedProductId)] : []),
@@ -549,7 +456,12 @@ export function useChatAi(params: UseChatAiParams) {
         pushAiMessage(
           composedReply,
           responseActions.length > 0 ? responseActions : undefined,
-          aiResponse.recommendationMeta?.formatProfile ?? resolveFormatProfileFallback(composedReply)
+          aiResponse.recommendationMeta?.formatProfile ?? resolveFormatProfileFallback(composedReply),
+          {
+            debugContextId: aiResponse.recommendationMeta?.debugContextId,
+            debugFromAwaiting: aiResponse.recommendationMeta?.debugFromAwaiting,
+            debugToAwaiting: aiResponse.recommendationMeta?.debugToAwaiting,
+          }
         );
       } catch (error) {
         console.error('Cannot get Gemini response from backend.', error);
@@ -559,21 +471,12 @@ export function useChatAi(params: UseChatAiParams) {
     [
       aiStage,
       pendingProduct,
-      pendingQuantity,
       fallbackLocalAiResponse,
-      askForVariantOrQuantity,
       pushAiMessage,
-      resetPendingSelection,
-      addPendingItemToCart,
       products,
       aiContext,
       addToCart,
-      setAiStage,
-      setPendingProduct,
-      setPendingQuantity,
       syncStateFromContext,
-      onGoToCheckout,
-      onOpenProduct,
     ]
   );
 
@@ -616,47 +519,6 @@ export function useChatAi(params: UseChatAiParams) {
         setIsTyping(true);
         sendAiMessage(action.command, [...aiMessages, userActionMessage]);
         return;
-      }
-
-      if (action.type === 'choose-variant' && action.productId) {
-        const variantId = action.variantId ?? action.command?.replace(/^\/choose-variant:/, '').trim();
-        if (variantId) {
-          const product = products.find((p) => String(p.id) === String(action.productId));
-          const variant = product?.variants?.find((v) => String(v.id) === String(variantId));
-          if (product && variant) {
-            setPendingProduct(product);
-            setPendingVariant(variant);
-            const qty = action.quantity ?? pendingQuantity;
-            if (qty) {
-              addPendingItemToCart(qty, product, variant);
-              setPendingQuantity(null);
-            } else {
-              setAiStage('awaiting_quantity');
-              pushAiMessage(
-                `Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`,
-                [
-                  { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
-                  { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
-                  { id: 'qty-3', label: '3', type: 'select_quantity', quantity: 3 },
-                ]
-              );
-            }
-            setAiMessages((prev) => [...prev, { id: `${Date.now()}-u`, text: action.label, sender: 'user', timestamp: new Date() }]);
-            return;
-          }
-        }
-      }
-      if (action.type === 'choose-qty') {
-        const qty = action.quantity ?? (action.command ? parseInt(action.command.replace(/^\/choose-qty:/, '').trim(), 10) : NaN);
-        const product = action.productId ? products.find((p) => String(p.id) === String(action.productId)) : pendingProduct;
-        const vid = action.variantId || aiContext?.selectedVariantId;
-        const variant = pendingVariant ?? (product && vid ? product.variants?.find((v) => String(v.id) === String(vid)) : undefined);
-        if (!Number.isNaN(qty) && qty >= 1 && qty <= 99 && product && variant) {
-          addPendingItemToCart(qty, product, variant);
-          setPendingQuantity(null);
-          setAiMessages((prev) => [...prev, { id: `${Date.now()}-u`, text: action.label, sender: 'user', timestamp: new Date() }]);
-          return;
-        }
       }
 
       if (action.command) {
