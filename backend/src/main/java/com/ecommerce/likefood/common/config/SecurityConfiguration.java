@@ -45,7 +45,7 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
-                                .requestMatchers("/ai/**", "/ai-chat/**").permitAll()
+                                .requestMatchers("/ai/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
                                         "/storage/public-url")
                                 .permitAll()
