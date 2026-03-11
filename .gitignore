@@ -24,3 +24,6 @@ temp/
 .gradle/
 **/.gradle/
 
+# Ignore Makefile
+Makefile
+.gitignore

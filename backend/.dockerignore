@@ -1,5 +1,5 @@
-.gradle
-build
-.idea
-*.iml
-.env
+.gradle/
+build/
+out/
+.git/
+.env*

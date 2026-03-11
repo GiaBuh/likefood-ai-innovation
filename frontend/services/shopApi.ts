@@ -802,6 +802,37 @@ export async function getMyCart(): Promise<BackendCart> {
   return unwrapRestResponse(payload);
 }
 
+export type AiComboResponse = {
+  combo_name: string;
+  slogan: string;
+  description: string;
+  discount_percentage: number;
+  image_prompt: string;
+  imageUrl?: string;
+};
+
+export async function generateAiCombo(hashtag: string, items: string[]): Promise<AiComboResponse> {
+  const response = await apiFetch('/ai/combos/generate', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify({ hashtag, items }),
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi tạo Combo AI (${response.status})`));
+  }
+  
+  const payload = await response.json();
+  return {
+    combo_name: payload.comboName || payload.combo_name,
+    slogan: payload.slogan,
+    description: payload.description,
+    discount_percentage: payload.discountPercentage || payload.discount_percentage,
+    image_prompt: payload.imagePrompt || payload.image_prompt,
+    imageUrl: payload.imageUrl
+  };
+}
+
 export async function updateMyCartItem(itemId: string, quantity: number): Promise<BackendCart> {
   const response = await apiFetch(`/carts/me/items/${itemId}?quantity=${quantity}`, {
     method: 'PUT',
