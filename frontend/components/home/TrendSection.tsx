@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 interface TrendData {
@@ -113,10 +113,48 @@ const LoadingSkeleton: React.FC = () => (
 
 /* ───────────────────── MAIN COMPONENT ───────────────────── */
 
+const CACHE_KEY = "likefood_trend_analysis";
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 const TrendSection: React.FC = () => {
     const [data, setData] = useState<TrendResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [isUsingFallback, setIsUsingFallback] = useState(false);
+    const [cachedAt, setCachedAt] = useState<number | null>(null);
+
+    // Load cached data from localStorage on mount
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (raw) {
+                const cached = JSON.parse(raw);
+                const age = Date.now() - (cached.timestamp || 0);
+                if (age < CACHE_TTL_MS && cached.data) {
+                    setData(cached.data);
+                    setIsUsingFallback(cached.isUsingFallback || false);
+                    setCachedAt(cached.timestamp);
+                } else {
+                    localStorage.removeItem(CACHE_KEY);
+                }
+            }
+        } catch {
+            localStorage.removeItem(CACHE_KEY);
+        }
+    }, []);
+
+    const saveToCache = (trendData: TrendResponse, fallback: boolean) => {
+        try {
+            const now = Date.now();
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                data: trendData,
+                isUsingFallback: fallback,
+                timestamp: now,
+            }));
+            setCachedAt(now);
+        } catch {
+            // localStorage full or unavailable — ignore
+        }
+    };
 
     const fetchTrends = () => {
         setLoading(true);
@@ -130,14 +168,16 @@ const TrendSection: React.FC = () => {
             .then((result) => {
                 const payload = result.data || result;
                 if (payload && Array.isArray(payload.trends)) {
-                    setData({
+                    const trendData: TrendResponse = {
                         trends: payload.trends,
                         analysis: payload.analysis || "",
                         recommendedProducts: payload.recommendedProducts || [],
                         source: payload.source,
                         isRealData: payload.isRealData,
-                    });
+                    };
+                    setData(trendData);
                     setIsUsingFallback(payload.isRealData === false);
+                    saveToCache(trendData, payload.isRealData === false);
                 } else {
                     throw new Error("Invalid Structure");
                 }
@@ -145,7 +185,7 @@ const TrendSection: React.FC = () => {
             .catch((err) => {
                 console.warn("⚠️ Switching to Demo Mode:", err);
                 setIsUsingFallback(true);
-                setData({
+                const fallbackData: TrendResponse = {
                     analysis:
                         "Kết quả phân tích AI: Xu hướng đồ ăn lành mạnh đang bùng nổ. Hãy tập trung vào Granola!",
                     trends: [
@@ -170,7 +210,9 @@ const TrendSection: React.FC = () => {
                             reason: "Sản phẩm granola phù hợp với xu hướng ăn vặt lành mạnh.",
                         },
                     ],
-                });
+                };
+                setData(fallbackData);
+                saveToCache(fallbackData, true);
             })
             .finally(() => setLoading(false));
     };
@@ -264,9 +306,22 @@ const TrendSection: React.FC = () => {
                                     ></span>
                                 </span>
                                 LIVE ANALYSIS • TIKTOK US
+                                {cachedAt && (
+                                    <span className="ml-2 text-stone-400 font-normal">
+                                        • {new Date(cachedAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
+                                    </span>
+                                )}
                             </p>
                         </div>
                     </div>
+                    <button
+                        onClick={fetchTrends}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span className="material-symbols-outlined !text-sm">refresh</span>
+                        Phân tích lại
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
