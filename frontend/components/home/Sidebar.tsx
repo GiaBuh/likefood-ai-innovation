@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CategoryOption {
   id: string;
@@ -22,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   priceRange,
   onPriceChange
 }) => {
+  const { t } = useTranslation();
   // Slider Logic
   const minPrice = 1;
   const maxPrice = 100;
@@ -107,8 +109,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Categories */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            Danh mục
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+            {t('home.categories')}
           </h3>
         </div>
         {/* Scrollable Category List with right padding to prevent scrollbar overlap */}
@@ -118,11 +120,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onCategoryChange('all')}
               className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all text-left ${
                 activeCategory === 'all'
-                  ? 'bg-green-50 dark:bg-green-900/20 text-primary dark:text-green-300 font-semibold ring-1 ring-green-200 dark:ring-green-900/40'
-                  : 'hover:bg-stone-100 dark:hover:bg-stone-800 text-slate-700 dark:text-stone-300'
+                  ? 'bg-primary-50 dark:bg-primary-950 text-primary-500 font-semibold ring-1 ring-primary-200 dark:ring-primary-900'
+                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
               }`}
             >
-              <span>Tất cả sản phẩm</span>
+              <span>{t('common.all')}</span>
             </button>
 
           {categories.map((cat) => (
@@ -131,8 +133,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onCategoryChange(cat.name)} // Matching name in Products
               className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all text-left ${
                 activeCategory === cat.name
-                  ? 'bg-green-50 dark:bg-green-900/20 text-primary dark:text-green-300 font-semibold ring-1 ring-green-200 dark:ring-green-900/40'
-                  : 'hover:bg-stone-100 dark:hover:bg-stone-800 text-slate-700 dark:text-stone-300'
+                  ? 'bg-primary-50 dark:bg-primary-950 text-primary-500 font-semibold ring-1 ring-primary-200 dark:ring-primary-900'
+                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
               }`}
             >
               <span>{cat.name}</span>
@@ -142,8 +144,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* Price Range */}
-      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-stone-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Khoảng giá</h3>
+      <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{t('product.price')}</h3>
         
         {/* Dual Range Slider with increased padding to prevent label clipping */}
         <div className="px-5 pt-6 pb-2">

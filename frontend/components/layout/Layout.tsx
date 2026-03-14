@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import MobileBottomNav from './MobileBottomNav';
 import MobileCartModal from '../cart/MobileCartModal';
 import ChatWidget from '../chat/ChatWidget';
 import { useAuth } from '../../contexts/AuthContext';
@@ -61,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({
         onSearchQueryChange={onSearchQueryChange}
       />
       
-      <main className="w-full min-h-screen pt-20">
+      <main className="w-full min-h-screen pt-20 pb-16 lg:pb-0">
         {children}
       </main>
 
@@ -86,6 +87,12 @@ const Layout: React.FC<LayoutProps> = ({
           onRemoveItem={removeFromCart}
         />
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
+        cartCount={cart.length}
+        onOpenCart={() => setIsMobileCartOpen(true)}
+      />
     </div>
   );
 };

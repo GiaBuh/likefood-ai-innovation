@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Order, OrderStatus } from '../../types';
 import Skeleton from '../ui/Skeleton';
 
@@ -18,6 +19,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   onTrackOrder,
   onReorder
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
 
   // Simulate data fetching
@@ -50,7 +52,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">cancel</span>
-              Hủy đơn
+              {t('orders.cancelOrder')}
             </button>
             <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
           </>
@@ -63,7 +65,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">cancel</span>
-              Hủy đơn
+              {t('orders.cancelOrder')}
             </button>
             <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
           </>
@@ -92,7 +94,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">shopping_cart</span>
-              Mua lại
+              {t('orders.reorder')}
             </button>
             {status === 'Complete' && (
               <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
@@ -110,15 +112,15 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Đơn hàng của tôi</h1>
-          <p className="text-stone-500 dark:text-stone-400 mt-1">Track and manage your recent purchases</p>
+          <h1 className="text-3xl font-extrabold text-neutral-900 dark:text-white">{t('orders.title')}</h1>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-1">{t('orders.title')}</p>
         </div>
         <button 
           onClick={onBackToShop}
           className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
         >
           <span className="material-symbols-outlined !text-lg">storefront</span>
-          Continue Shopping
+          {t('cart.continueShopping')}
         </button>
       </div>
 
@@ -165,13 +167,13 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           <div className="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-4">
             <span className="material-symbols-outlined !text-4xl text-stone-400">receipt_long</span>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No orders yet</h2>
-          <p className="text-stone-500 dark:text-stone-400 mb-6 max-w-sm text-center">Looks like you haven't discovered our delicious specialties yet.</p>
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t('orders.empty')}</h2>
+          <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-sm text-center">{t('orders.empty')}</p>
           <button 
             onClick={onBackToShop}
             className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20"
           >
-            Start Shopping
+            {t('common.shop')}
           </button>
         </div>
       ) : (
@@ -182,15 +184,15 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex flex-wrap gap-4 justify-between items-center">
                 <div className="flex gap-6 md:gap-12">
                   <div>
-                    <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Order ID</p>
+                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1">{t('orders.orderId')}</p>
                     <p className="font-bold text-slate-900 dark:text-white">#{order.id}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Date Placed</p>
+                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1">{t('orders.date')}</p>
                     <p className="font-medium text-slate-700 dark:text-stone-300">{order.date || order.createdAt}</p>
                   </div>
                   <div className="hidden sm:block">
-                    <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Total Amount</p>
+                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1">{t('orders.total')}</p>
                     <p className="font-bold text-slate-900 dark:text-white">${(order.totalAmount ?? order.total ?? 0).toFixed(2)}</p>
                   </div>
                 </div>

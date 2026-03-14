@@ -13,8 +13,13 @@ import AuthModal from './components/auth/AuthModal';
 import GoogleAuthCallbackPage from './components/auth/GoogleAuthCallbackPage';
 import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
+import LandingPage from './components/pages/LandingPage';
+import AboutPage from './components/pages/AboutPage';
+import BlogPage from './components/pages/BlogPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import ErrorBoundary from './components/ui/ErrorBoundary';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Wrapper that uses routing and auth
 const MainContent: React.FC = () => {
@@ -81,7 +86,7 @@ const MainContent: React.FC = () => {
   };
 
   const handleBackToShop = () => {
-    navigate('/');
+    navigate('/shop');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -192,61 +197,74 @@ const MainContent: React.FC = () => {
       onSearchQueryChange={setSearchQuery}
     >
       <Routes>
+        <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
         <Route
-          path="/"
+          path="/shop"
           element={
-            <HomePage onProductClick={handleProductClick} searchQuery={searchQuery} />
+            <ErrorBoundary>
+              <HomePage onProductClick={handleProductClick} searchQuery={searchQuery} />
+            </ErrorBoundary>
           }
         />
+        <Route path="/about" element={<ErrorBoundary><AboutPage /></ErrorBoundary>} />
+        <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
         <Route
           path="/product/:id"
           element={
-            <ProductPage
-              onAddToCart={handleAddToCartAuth}
-              onBuyNow={handleBuyNow}
-            />
+            <ErrorBoundary>
+              <ProductPage
+                onAddToCart={handleAddToCartAuth}
+                onBuyNow={handleBuyNow}
+              />
+            </ErrorBoundary>
           }
         />
         <Route
           path="/checkout"
           element={
-            user ? (
-              <Checkout
-                onBackToHome={handleBackToShop}
-                onPlaceOrder={handlePlaceOrder}
-                onViewOrders={() => navigate('/myorders')}
-              />
-            ) : (
-              <HomePage onProductClick={handleProductClick} searchQuery={searchQuery} />
-            )
+            <ErrorBoundary>
+              {user ? (
+                <Checkout
+                  onBackToHome={handleBackToShop}
+                  onPlaceOrder={handlePlaceOrder}
+                  onViewOrders={() => navigate('/myorders')}
+                />
+              ) : (
+                <HomePage onProductClick={handleProductClick} searchQuery={searchQuery} />
+              )}
+            </ErrorBoundary>
           }
         />
         <Route
           path="/auth/google/callback"
           element={
-            <GoogleAuthCallbackPage
-              onSuccess={() => {}}
-              onError={(msg) => showError(msg)}
-            />
+            <ErrorBoundary>
+              <GoogleAuthCallbackPage
+                onSuccess={() => {}}
+                onError={(msg) => showError(msg)}
+              />
+            </ErrorBoundary>
           }
         />
         <Route
           path="/myorders"
           element={
-            <OrderHistory
-              orders={orders.filter((o) => o.customer.email === user?.email)}
-              onBackToShop={handleBackToShop}
-              onCancelOrder={async (orderId) => {
-                try {
-                  await cancelOrder(orderId);
-                } catch (error) {
-                  console.error('Cannot cancel order.', error);
-                  showError(error instanceof Error ? error.message : 'Cannot cancel order at this status.');
-                }
-              }}
-              onTrackOrder={(id) => alert(`Tracking Order #${id}`)}
-              onReorder={handleReorder}
-            />
+            <ErrorBoundary>
+              <OrderHistory
+                orders={orders.filter((o) => o.customer.email === user?.email)}
+                onBackToShop={handleBackToShop}
+                onCancelOrder={async (orderId) => {
+                  try {
+                    await cancelOrder(orderId);
+                  } catch (error) {
+                    console.error('Cannot cancel order.', error);
+                    showError(error instanceof Error ? error.message : 'Cannot cancel order at this status.');
+                  }
+                }}
+                onTrackOrder={(id) => alert(`Tracking Order #${id}`)}
+                onReorder={handleReorder}
+              />
+            </ErrorBoundary>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -275,13 +293,15 @@ const MainContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <ShopProvider>
-          <MainContent />
-        </ShopProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <HelmetProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <ShopProvider>
+            <MainContent />
+          </ShopProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </HelmetProvider>
   );
 };
 

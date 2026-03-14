@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* TailwindCSS v4: Override dark mode to use class-based (.dark on <html>) instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ========== Custom Theme ========== */
+@theme {
+  /* Primary - Warm Terracotta */
+  --color-primary-50: #fef3ec;
+  --color-primary-100: #fde4d0;
+  --color-primary-200: #fbc5a0;
+  --color-primary-300: #f8a06b;
+  --color-primary-400: #f57a3a;
+  --color-primary-500: #D4631D;
+  --color-primary-600: #b8521a;
+  --color-primary-700: #924118;
+  --color-primary-800: #6d3116;
+  --color-primary-900: #4a2212;
+  --color-primary-950: #2d1409;
+
+  /* Secondary - Forest Green */
+  --color-secondary-50: #edfaf2;
+  --color-secondary-100: #d1f2df;
+  --color-secondary-200: #a7e4c1;
+  --color-secondary-300: #6fd09e;
+  --color-secondary-400: #3fb87c;
+  --color-secondary-500: #2D6A4F;
+  --color-secondary-600: #245a42;
+  --color-secondary-700: #1d4836;
+  --color-secondary-800: #16372a;
+  --color-secondary-900: #0f261e;
+  --color-secondary-950: #081712;
+
+  /* Accent - Golden */
+  --color-accent-50: #fefae8;
+  --color-accent-100: #fcf3c3;
+  --color-accent-200: #f9e789;
+  --color-accent-300: #E9B949;
+  --color-accent-400: #e5a820;
+  --color-accent-500: #d19318;
+  --color-accent-600: #b07514;
+  --color-accent-700: #8b5614;
+  --color-accent-800: #644017;
+  --color-accent-900: #3e2a14;
+  --color-accent-950: #24180c;
+
+  /* Semantic */
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  /* Backward-compatible aliases */
+  --color-primary: #16a34a;
+  --color-primary-dark: #15803d;
+  --color-background-light: #f0fdf4;
+  --color-background-dark: #1c1917;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #292524;
+  --color-text-light: #1c1917;
+  --color-text-dark: #f5f5f4;
+  --color-subtext-light: #78716c;
+  --color-subtext-dark: #a8a29e;
+  --color-border-light: #e7e5e4;
+  --color-border-dark: #44403c;
+
+  /* Font */
+  --font-display: 'Manrope', sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px rgba(212, 99, 29, 0.3);
+
+  /* Animations */
+  --animate-shimmer: shimmer 1.5s infinite;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-bounce-gentle: bounce-gentle 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-down {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ========== Custom Base ========== */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: #ffffff;
+    color: #1c1917;
+  }
+  html.dark {
+    background-color: #171717;
+    color: #f5f5f5;
+  }
+}
+
+/* ========== Utility Classes ========== */
+@utility scrollbar-hide {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #d6d3d1;
+    border-radius: 20px;
+  }
+}

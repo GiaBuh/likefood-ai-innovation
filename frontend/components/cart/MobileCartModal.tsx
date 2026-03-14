@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CartItem } from '../../types';
 
 interface MobileCartModalProps {
@@ -10,6 +11,7 @@ interface MobileCartModalProps {
 }
 
 const MobileCartModal: React.FC<MobileCartModalProps> = ({ isOpen, onClose, cart, onCheckout, onRemoveItem }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -25,7 +27,7 @@ const MobileCartModal: React.FC<MobileCartModalProps> = ({ isOpen, onClose, cart
         <div className="flex-none px-4 pt-4 pb-2 text-center relative">
           <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300 dark:bg-stone-700 mb-4"></div>
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Giỏ hàng của bạn</h2>
+            <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white">{t('cart.title')}</h2>
             <button 
               onClick={onClose}
               className="p-2 -mr-2 text-stone-400 hover:text-stone-500 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800"
@@ -39,12 +41,12 @@ const MobileCartModal: React.FC<MobileCartModalProps> = ({ isOpen, onClose, cart
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-stone-500 dark:text-stone-400 space-y-4">
               <span className="material-symbols-outlined !text-6xl opacity-20">shopping_basket</span>
-              <p className="text-lg font-medium">Giỏ hàng đang trống</p>
+              <p className="text-lg font-medium">{t('cart.empty')}</p>
               <button 
                 onClick={onClose}
-                className="text-primary font-bold hover:underline"
+                className="text-primary-500 font-bold hover:underline"
               >
-                Bắt đầu mua sắm
+                {t('cart.continueShopping')}
               </button>
             </div>
           ) : (
@@ -95,14 +97,14 @@ const MobileCartModal: React.FC<MobileCartModalProps> = ({ isOpen, onClose, cart
         {cart.length > 0 && (
           <div className="flex-none p-6 pt-4 border-t border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 pb-8 sm:pb-6">
              <div className="flex justify-between items-center mb-4">
-                <span className="text-stone-500 dark:text-stone-400 font-medium">Tổng cộng</span>
+                <span className="text-neutral-500 dark:text-neutral-400 font-medium">{t('cart.total')}</span>
                 <span className="text-2xl font-black text-slate-900 dark:text-white">${totalPrice.toFixed(2)}</span>
              </div>
              <button 
                onClick={onCheckout}
                className="w-full py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-orange-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
              >
-               Thanh toán ngay
+               {t('cart.checkout')}
              </button>
           </div>
         )}

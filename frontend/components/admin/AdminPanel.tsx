@@ -38,7 +38,7 @@ interface AdminPanelProps {
   onCreateProduct: (product: Product) => Promise<void>;
   onImportProductsFromCsv?: (file: File) => Promise<{ successCount: number; failCount: number; errors: string[] }>;
   onUpdateProduct: (product: Product) => Promise<void>;
-  onDeleteProduct: (id: string) => Promise<void>;
+  onDeleteProduct: (id: string) => Promise<unknown>;
   onUpdateProducts: (products: Product[]) => void;
   onUpdateOrderStatus: (orderId: string, status: FulfillmentStatus) => Promise<void>;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product, ProductVariant } from '../../types';
 
 interface ProductDetailProps {
@@ -9,6 +10,7 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, onBuyNow }) => {
+  const { t } = useTranslation();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -77,7 +79,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           className="flex items-center gap-1 hover:text-primary transition-colors font-semibold"
         >
           <span className="material-symbols-outlined !text-lg">arrow_back</span>
-          Quay lại cửa hàng
+          {t('common.back')}
         </button>
         <span>/</span>
         <span className="text-stone-900 dark:text-stone-200 font-medium truncate">{product.name}</span>
@@ -93,6 +95,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             <img 
               src={images[activeImageIndex]} 
               alt={product.name}
+              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute top-4 right-4 bg-white/90 dark:bg-black/60 backdrop-blur text-stone-700 dark:text-white p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
@@ -101,7 +104,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             {product.isUsShip && (
               <div className="absolute top-4 left-4 px-3 py-1.5 bg-secondary/90 backdrop-blur-sm rounded-lg text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1 shadow-md">
                 <span className="material-symbols-outlined !text-sm">flight_takeoff</span>
-                Giao nhanh
+                {t('product.usShipping')}
               </div>
             )}
           </div>
@@ -119,7 +122,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                       : 'border-transparent hover:border-stone-300 dark:hover:border-stone-600 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`View ${idx + 1}`} onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -152,7 +155,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="space-y-6 mb-8">
              {/* Weight Options Selector */}
              <div>
-                <span className="block text-xs text-stone-500 dark:text-stone-400 uppercase font-bold mb-2">Chọn quy cách</span>
+                <span className="block text-xs text-neutral-500 dark:text-neutral-400 uppercase font-bold mb-2">{t('product.variants')}</span>
                 <div className="flex flex-wrap gap-2">
                   {product.variants && product.variants.length > 0 ? (
                     product.variants.map((variant) => (
@@ -220,14 +223,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                 className="flex-1 bg-primary hover:bg-primary-dark text-white font-bold text-lg py-3 px-8 rounded-xl shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
-                Thêm - ${(selectedVariant.price * quantity).toFixed(2)}
+                {t('product.addToCart')} - ${(selectedVariant.price * quantity).toFixed(2)}
               </button>
             </div>
             <button 
               onClick={handleBuyNow}
               className="w-full py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 font-bold text-slate-700 dark:text-white hover:border-primary hover:text-primary transition-colors"
             >
-              Mua ngay
+              {t('product.buyNow')}
             </button>
           </div>
           

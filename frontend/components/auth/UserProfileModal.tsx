@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import { validateProfile } from '../../utils/validation';
@@ -12,6 +13,7 @@ interface UserProfileModalProps {
 }
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, user, onUpdateUser }) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showError, showSuccess } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -139,7 +141,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
           {/* Body */}
           <div className="px-4 py-6 sm:p-6 space-y-5">
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Họ và tên</label>
+              <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.fullName')}</label>
               <input
                 type="text"
                 name="name"
@@ -154,7 +156,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email</label>
+              <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.email')}</label>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-200 font-medium opacity-70">
                 <span className="material-symbols-outlined text-stone-400">mail</span>
                 {user.email}
@@ -162,7 +164,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Số điện thoại</label>
+              <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.phone')}</label>
               <input
                 type="text"
                 name="phone"
@@ -177,7 +179,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Địa chỉ mặc định</label>
+              <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('checkout.shippingAddress')}</label>
               <textarea
                 name="address"
                 value={formData.address}
@@ -206,7 +208,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
               disabled={isSaving}
               className="inline-flex w-full justify-center rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-primary-dark sm:w-auto transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSaving ? 'Đang lưu...' : isEditing ? 'Lưu thay đổi' : 'Chỉnh sửa hồ sơ'}
+              {isSaving ? t('common.loading') : isEditing ? t('common.save') : t('common.edit')}
             </button>
             {isEditing && (
               <button 
@@ -222,7 +224,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
                   });
                 }}
               >
-                Hủy
+                {t('common.cancel')}
               </button>
             )}
             <button 
@@ -230,7 +232,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
               className="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-stone-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-stone-200 shadow-sm ring-1 ring-inset ring-stone-300 dark:ring-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 sm:mt-0 sm:w-auto transition-colors" 
               onClick={onClose}
             >
-              Đóng
+              {t('common.close')}
             </button>
           </div>
         </div>
