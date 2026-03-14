@@ -23,11 +23,11 @@ const Hero: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white leading-tight tracking-tight">
             {t('home.heroTitle')} <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-300">
-              {t('home.heroSubtitle').split(',')[0]}
+              {t('home.heroHighlight')}
             </span>
           </h1>
           <p className="text-neutral-200 text-base sm:text-lg md:text-xl font-medium max-w-lg leading-relaxed">
-            {t('home.heroSubtitle')}
+            {t('home.heroDescription')}
           </p>
           <div className="flex gap-4 mt-2">
             <Link
