@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useShop } from '../../contexts/ShopContext';
 import SEO from '../ui/SEO';
+import Hero from '../home/Hero';
+import CategoryGrid from '../home/CategoryGrid';
+import FlashSale from '../home/FlashSale';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -12,36 +15,15 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen">
       <SEO title={t('landing.heroTitle')} description={t('landing.heroSubtitle')} path="/" />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800 py-20 lg:py-32">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary-500/10 blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-secondary-500/10 blur-3xl"></div>
-        </div>
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center px-4 py-2 bg-primary-500/10 text-primary-600 dark:text-primary-400 rounded-full text-sm font-semibold mb-6">
-              <span className="material-symbols-outlined !text-base mr-1.5">local_shipping</span>
-              {t('landing.valueShipping')}
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-neutral-900 dark:text-white leading-tight mb-6">
-              {t('landing.heroTitle')}
-            </h1>
-            <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-300 mb-10 max-w-xl mx-auto">
-              {t('landing.heroSubtitle')}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/shop" className="inline-flex items-center justify-center px-8 py-4 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-all duration-200 shadow-button text-lg">
-                {t('landing.heroButton')}
-                <span className="material-symbols-outlined ml-2">arrow_forward</span>
-              </Link>
-              <Link to="/about" className="inline-flex items-center justify-center px-8 py-4 border-2 border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl hover:border-primary-500 hover:text-primary-500 transition-all duration-200 text-lg">
-                {t('about.storyTitle')}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Hero />
+
+      {/* Category Grid */}
+      <CategoryGrid />
+
+      {/* Flash Sale */}
+      <FlashSale />
 
       {/* Brand Values */}
       <section className="py-20 bg-white dark:bg-neutral-900">
