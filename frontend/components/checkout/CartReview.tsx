@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CartItem } from '../../types';
 import { getCartRecommendations } from '../../services/shopApi';
 import { useToast } from '../../contexts/ToastContext';
@@ -21,6 +22,7 @@ const CartReview: React.FC<CartReviewProps> = ({
   onNext,
   onAddToCartByVariantId
 }) => {
+  const { t } = useTranslation();
   const { showError } = useToast();
   const [showRecModal, setShowRecModal] = useState(false);
   const [recommendations, setRecommendations] = useState<Array<{
@@ -59,16 +61,16 @@ const CartReview: React.FC<CartReviewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Xem giỏ hàng</h2>
-        <span className="text-sm text-stone-500 dark:text-stone-400">{cart.length} sản phẩm</span>
+        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">{t('cart.title')}</h2>
+        <span className="text-sm text-neutral-500 dark:text-neutral-400">{cart.length} {t('cart.items')}</span>
       </div>
 
       {cart.length === 0 ? (
         <div className="text-center py-12 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-200 dark:border-stone-700">
           <span className="material-symbols-outlined !text-6xl text-stone-300 mb-4">remove_shopping_cart</span>
-          <p className="text-lg font-medium text-stone-600 dark:text-stone-300">Giỏ hàng trống</p>
-          <button onClick={onBackToHome} className="mt-4 text-primary font-bold hover:underline">
-            Quay lại cửa hàng
+          <p className="text-lg font-medium text-neutral-600 dark:text-neutral-300">{t('cart.empty')}</p>
+          <button onClick={onBackToHome} className="mt-4 text-primary-500 font-bold hover:underline">
+            {t('cart.continueShopping')}
           </button>
         </div>
       ) : (
@@ -123,7 +125,7 @@ const CartReview: React.FC<CartReviewProps> = ({
         <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-700 flex items-center justify-between">
           <div className="hidden sm:block">
              <div className="text-lg font-medium text-slate-900 dark:text-white">
-               Tổng cộng: <span className="font-black text-2xl ml-2">${total.toFixed(2)}</span>
+               {t('cart.total')}: <span className="font-black text-2xl ml-2">${total.toFixed(2)}</span>
              </div>
           </div>
 
@@ -132,7 +134,7 @@ const CartReview: React.FC<CartReviewProps> = ({
               onClick={handleCheckoutClick}
               className="flex-1 sm:flex-none px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
             >
-              Checkout
+              {t('cart.checkout')}
               <span className="material-symbols-outlined !text-lg">arrow_forward</span>
             </button>
           </div>

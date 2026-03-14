@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CartItem } from '../../types';
 
 interface FormData {
@@ -25,6 +26,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
   onBack,
   onPlaceOrder
 }) => {
+  const { t } = useTranslation();
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 50 ? 0 : 5;
   const total = subtotal + shipping;
@@ -33,11 +35,11 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Thông tin giao hàng</h2>
+          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">{t('checkout.shippingInfo')}</h2>
           <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-semibold text-stone-600 dark:text-stone-300">Full Name</label>
+                <label className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{t('checkout.receiverName')}</label>
                 <input 
                   type="text" 
                   name="name"
@@ -53,7 +55,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                 {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-semibold text-stone-600 dark:text-stone-300">Số điện thoại</label>
+                <label className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{t('checkout.receiverPhone')}</label>
                 <input 
                   type="tel" 
                   name="phone"
@@ -70,7 +72,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-stone-600 dark:text-stone-300">Địa chỉ giao hàng</label>
+              <label className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{t('checkout.shippingAddress')}</label>
               <textarea 
                 name="address"
                 value={formData.address}
@@ -86,7 +88,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
               {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
             </div>
             <div className="space-y-1">
-               <label className="text-sm font-semibold text-stone-600 dark:text-stone-300">Ghi chú đơn hàng (không bắt buộc)</label>
+               <label className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{t('checkout.note')}</label>
                <input 
                   type="text" 
                   name="note"
@@ -135,13 +137,13 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
           onClick={onBack}
           className="px-6 py-3 text-stone-600 dark:text-stone-300 font-bold hover:text-slate-900 dark:hover:text-white transition-colors"
         >
-          Quay lại
+          {t('common.back')}
         </button>
         <button 
           onClick={onPlaceOrder}
           className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
         >
-          Đặt hàng
+          {t('checkout.placeOrder')}
           <span className="material-symbols-outlined !text-lg">arrow_forward</span>
         </button>
       </div>

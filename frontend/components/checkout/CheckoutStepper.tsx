@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CheckoutStepperProps {
   step: number;
@@ -6,10 +7,11 @@ interface CheckoutStepperProps {
 }
 
 const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) => {
+  const { t } = useTranslation();
   const steps = [
-    { id: 1, label: 'Giỏ hàng' },
-    { id: 2, label: 'Thông tin' },
-    { id: 3, label: 'Hoàn tất' }
+    { id: 1, label: t('checkout.step1') },
+    { id: 2, label: t('checkout.step2') },
+    { id: 3, label: t('checkout.step3') }
   ];
 
   return (
@@ -30,7 +32,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 1 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '1'}
           </button>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 1 ? 'text-primary' : 'text-stone-400'}`}>
-            Giỏ hàng
+            {steps[0].label}
           </span>
         </div>
 
@@ -54,7 +56,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 2 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '2'}
           </div>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 2 ? 'text-primary' : 'text-stone-400'}`}>
-            Thông tin
+            {steps[1].label}
           </span>
         </div>
 
@@ -78,7 +80,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
             {step > 3 ? <span className="material-symbols-outlined !text-xl font-bold">check</span> : '3'}
           </div>
           <span className={`absolute top-full mt-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${step >= 3 ? 'text-primary' : 'text-stone-400'}`}>
-            Hoàn tất
+            {steps[2].label}
           </span>
         </div>
 

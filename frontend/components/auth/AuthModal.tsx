@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../contexts/ToastContext';
 import { validateLogin, validateRegister } from '../../utils/validation';
 
@@ -21,6 +22,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onLogin, onGoogleLoginUrl, onRegister }) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const { showError, showSuccess } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -156,8 +158,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
           
           {/* Header */}
           <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-stone-100 dark:border-stone-800">
-            <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-              {mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản'}
+            <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+              {mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}
             </h3>
             <button 
               onClick={onClose}
@@ -175,7 +177,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               {mode === 'register' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Tên đăng nhập</label>
+                    <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.fullName')}</label>
                     <input 
                       type="text" 
                       name="username"
@@ -193,7 +195,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
 
               {/* Common Fields */}
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Email</label>
+                <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.email')}</label>
                 <input 
                   type="email" 
                   name="email"
@@ -208,7 +210,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Mật khẩu</label>
+                <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.password')}</label>
                 <input 
                   type="password" 
                   name="password"
@@ -226,7 +228,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               {mode === 'register' && (
                 <>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Xác nhận mật khẩu</label>
+                    <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.confirmPassword')}</label>
                     <input 
                       type="password" 
                       name="confirmPassword"
@@ -243,7 +245,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                   {/* Phone and Gender Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-20">
                     <div>
-                      <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Số điện thoại</label>
+                      <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('auth.phone')}</label>
                       <input 
                         type="tel" 
                         name="phone"
@@ -319,7 +321,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
 
                   {/* Address Row (Full Width) */}
                   <div className="relative z-10">
-                    <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400 mb-1">Địa chỉ</label>
+                    <label className="block text-xs font-bold uppercase text-neutral-500 dark:text-neutral-400 mb-1">{t('checkout.shippingAddress')}</label>
                     <input 
                       type="text" 
                       name="address"
@@ -343,7 +345,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                 {isLoading ? (
                   <span className="inline-block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                  mode === 'login' ? 'Đăng nhập bằng Email' : 'Tạo tài khoản'
+                  mode === 'login' ? t('auth.loginButton') : t('auth.registerButton')
                 )}
               </button>
             </form>
@@ -354,7 +356,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                     <div className="w-full border-t border-stone-200 dark:border-stone-700"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
-                    <span className="bg-white dark:bg-stone-900 px-3 text-stone-400 dark:text-stone-500">Hoặc tiếp tục với</span>
+                    <span className="bg-white dark:bg-neutral-900 px-3 text-neutral-400 dark:text-neutral-500">{t('auth.orLoginWith')}</span>
                 </div>
             </div>
 
@@ -371,18 +373,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
-                Tiếp tục với Google
+                {t('auth.googleLogin')}
             </button>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-stone-500 dark:text-stone-400">
-                {mode === 'login' ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
+              <span className="text-neutral-500 dark:text-neutral-400">
+                {mode === 'login' ? t('auth.noAccount') + ' ' : t('auth.hasAccount') + ' '}
               </span>
               <button 
                 onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                className="font-bold text-primary hover:underline"
+                className="font-bold text-primary-500 hover:underline"
               >
-                {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
+                {mode === 'login' ? t('common.register') : t('common.login')}
               </button>
             </div>
             

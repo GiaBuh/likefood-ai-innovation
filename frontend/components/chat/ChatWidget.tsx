@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { User, Product, ProductVariant } from '../../types';
 import { useShop } from '../../contexts/ShopContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,6 +33,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   onGoToOrders,
   onOpenProduct,
 }) => {
+  const { t } = useTranslation();
   const { products, addToCart } = useShop();
   const { showError } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -102,7 +104,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         setActiveView('menu');
         setAdminMessages(createDefaultAdminMessages());
         setAiMessages(createDefaultAiMessages());
-        setChatLanguage(null);
         setAiContext({ awaiting: 'NONE' });
         hasHydratedChatRef.current = true;
         return;
@@ -222,9 +223,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const getHeaderTitle = () => {
     switch (activeView) {
-      case 'admin': return 'Hỗ trợ khách hàng';
-      case 'ai': return 'Trợ lý AI';
-      default: return 'Trung tâm trợ giúp';
+      case 'admin': return t('chat.adminSupport');
+      case 'ai': return t('chat.aiAssistant');
+      default: return t('chat.title');
     }
   };
 
@@ -307,15 +308,15 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 <div className="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-4xl text-stone-400">lock</span>
                 </div>
-                <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Yêu cầu đăng nhập</h4>
-                <p className="text-sm text-stone-500 dark:text-stone-400 mb-8">
-                  Vui lòng đăng nhập để chat với {activeView === 'ai' ? 'trợ lý AI' : 'hỗ trợ'}.
+                <h4 className="font-bold text-lg text-neutral-900 dark:text-white mb-2">{t('common.login')}</h4>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8">
+                  {t('chat.aiDescription')}
                 </p>
                 <button
                   onClick={onOpenLogin}
-                  className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark shadow-lg shadow-green-500/20 transition-all"
+                  className="w-full py-3 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 shadow-lg transition-all"
                 >
-                  Đăng nhập để chat
+                  {t('common.login')}
                 </button>
               </div>
             ))}
@@ -339,7 +340,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             isHovered && !isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
           }`}
         >
-          Chat với chúng tôi 👋
+          {t('chat.title')} 👋
         </div>
         {!isOpen && (
           <span className="absolute top-0 right-0 flex h-4 w-4">
