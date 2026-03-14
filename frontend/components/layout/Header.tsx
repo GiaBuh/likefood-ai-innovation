@@ -224,6 +224,20 @@ const Header: React.FC<HeaderProps> = ({
             {/* Language Switcher */}
             <LanguageSwitcher />
 
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => {
+                const html = document.documentElement;
+                html.classList.toggle('dark');
+                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+              }}
+              className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+              title={t('common.darkMode')}
+            >
+              <span className="material-symbols-outlined !text-lg dark:hidden">dark_mode</span>
+              <span className="material-symbols-outlined !text-lg hidden dark:inline">light_mode</span>
+            </button>
+
             {/* Action Area */}
             <div className="flex items-center gap-1.5">
               <button
