@@ -7,17 +7,17 @@ interface ProductFilterBarProps {
   onOpenMobileFilter: () => void;
 }
 
-const ProductFilterBar: React.FC<ProductFilterBarProps> = ({ 
-  currentSort, 
-  onSortChange, 
-  onOpenMobileFilter 
+const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
+  currentSort,
+  onSortChange,
+  onOpenMobileFilter
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
-  
+
   const sortOptions: SortOption[] = [
-    'Bán chạy nhất', 
-    'Mới nhất', 
-    'Giá thấp đến cao', 
+    'Bán chạy nhất',
+    'Mới nhất',
+    'Giá thấp đến cao',
     'Giá cao đến thấp'
   ];
 
@@ -27,9 +27,9 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
   };
 
   return (
-    <div 
+    <div
       id="product-filter-bar"
-      className="sticky top-20 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm py-3 mb-6 flex flex-wrap items-center justify-between gap-4 -mx-4 px-4 sm:mx-0 sm:px-0 transition-shadow duration-300"
+      className="sticky top-20 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm py-3 mb-6 flex flex-wrap items-center justify-between gap-4 px-4 rounded-xl transition-shadow duration-300"
     >
       <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
         Đặc sản nổi bật
@@ -38,17 +38,17 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
         </span>
       </h2>
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={onOpenMobileFilter}
           className="lg:hidden flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-stone-300 transition-colors"
         >
           <span className="material-symbols-outlined !text-lg">tune</span>
           <span className="hidden xs:inline">Bộ lọc</span>
         </button>
-        
+
         {/* Custom Sort Dropdown */}
         <div className="relative">
-          <button 
+          <button
             onClick={() => setIsSortOpen(!isSortOpen)}
             className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg shadow-sm hover:border-primary dark:hover:border-primary/50 transition-colors group"
           >
@@ -65,11 +65,10 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
                   <button
                     key={option}
                     onClick={() => handleSortSelect(option)}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between group ${
-                      currentSort === option 
-                        ? 'bg-orange-50 dark:bg-orange-900/20 text-primary' 
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between group ${currentSort === option
+                        ? 'bg-orange-50 dark:bg-orange-900/20 text-primary'
                         : 'text-slate-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 hover:text-primary'
-                    }`}
+                      }`}
                   >
                     {option}
                     {currentSort === option && (
