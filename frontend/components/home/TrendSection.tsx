@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 
 interface TrendData {
     desc: string;
@@ -117,6 +118,7 @@ const CACHE_KEY = "likefood_trend_analysis";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const TrendSection: React.FC = () => {
+    const { t } = useTranslation();
     const [data, setData] = useState<TrendResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [isUsingFallback, setIsUsingFallback] = useState(false);
@@ -230,10 +232,10 @@ const TrendSection: React.FC = () => {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                    Phân tích xu hướng AI
+                                    {t('home.trendTitle')}
                                 </h2>
                                 <p className="text-xs font-bold flex items-center gap-1 mt-1 text-stone-400">
-                                    Chưa phân tích
+                                    {t('home.trendNotAnalyzed')}
                                 </p>
                             </div>
                         </div>
@@ -251,10 +253,10 @@ const TrendSection: React.FC = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 dark:text-stone-100 mb-2">
-                                        Phân tích xu hướng TikTok bằng AI.
+                                        {t('home.trendCTA')}
                                     </h3>
                                     <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md">
-                                        Nhấn nút bên dưới để Gemini AI phân tích xu hướng TikTok hiện tại và gợi ý sản phẩm phù hợp.
+                                        {t('home.trendCTADesc')}
                                     </p>
                                 </div>
                                 <button
@@ -262,7 +264,7 @@ const TrendSection: React.FC = () => {
                                     className="mt-2 inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all hover:scale-[1.03] active:scale-[0.98]"
                                 >
                                     <span className="material-symbols-outlined !text-lg">rocket_launch</span>
-                                    Phân tích xu hướng
+                                    {t('home.trendAnalyzeButton')}
                                 </button>
                             </div>
                         </div>
@@ -292,7 +294,7 @@ const TrendSection: React.FC = () => {
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                Phân tích xu hướng AI
+                                {t('home.trendTitle')}
                             </h2>
                             <p
                                 className="text-xs font-bold flex items-center gap-1 mt-1 text-red-500"
@@ -320,7 +322,7 @@ const TrendSection: React.FC = () => {
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <span className="material-symbols-outlined !text-sm">refresh</span>
-                        Phân tích lại
+                        {t('home.trendReanalyze')}
                     </button>
                 </div>
 
@@ -354,7 +356,7 @@ const TrendSection: React.FC = () => {
                                         stars
                                     </span>
                                     <h4 className="font-bold text-sm uppercase text-slate-700 dark:text-stone-300 tracking-wide">
-                                        Sản phẩm phù hợp xu hướng
+                                        {t('home.trendMatchedProducts')}
                                     </h4>
                                     <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded">
                                         {data.recommendedProducts.length} SẢN PHẨM

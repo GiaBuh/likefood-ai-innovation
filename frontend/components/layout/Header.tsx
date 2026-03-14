@@ -234,8 +234,8 @@ const Header: React.FC<HeaderProps> = ({
               className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
               title={t('common.darkMode')}
             >
-              <span className="material-symbols-outlined !text-lg dark:hidden">dark_mode</span>
-              <span className="material-symbols-outlined !text-lg hidden dark:inline">light_mode</span>
+              <span className="material-symbols-outlined !text-lg block dark:hidden">dark_mode</span>
+              <span className="material-symbols-outlined !text-lg hidden dark:block">light_mode</span>
             </button>
 
             {/* Action Area */}
