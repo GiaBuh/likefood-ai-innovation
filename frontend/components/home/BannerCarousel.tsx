@@ -62,12 +62,14 @@ const BannerCarousel: React.FC = () => {
               to={banner.link}
               className="w-full flex-shrink-0"
             >
-              <img
-                src={banner.image}
-                alt={banner.alt}
-                className="w-full h-[180px] sm:h-[240px] md:h-[320px] lg:h-[400px] object-cover"
-                loading="lazy"
-              />
+              <div className="aspect-[24/7] w-full overflow-hidden">
+                <img
+                  src={banner.image}
+                  alt={banner.alt}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
             </Link>
           ))}
         </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import CheckoutStepper from './CheckoutStepper';
 import CartReview from './CartReview';
 import ShippingForm from './ShippingForm';
@@ -25,6 +25,7 @@ const Checkout: React.FC<CheckoutProps> = ({
   const { showError } = useToast();
 
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -32,8 +33,8 @@ const Checkout: React.FC<CheckoutProps> = ({
     note: ''
   });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'phone' | 'address', string>>>({});
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  // Ensure form updates if user data loads late or changes (optional safety)
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -45,8 +46,19 @@ const Checkout: React.FC<CheckoutProps> = ({
     }
   }, [user]);
 
+  // Scroll to top of content on step change
+  useEffect(() => {
+    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [step]);
+
   const handleNextStep = () => {
+    setDirection('forward');
     setStep(step + 1);
+  };
+
+  const handlePrevStep = (s: number) => {
+    setDirection('backward');
+    setStep(s);
   };
 
   const handlePlaceOrderClick = async () => {
@@ -67,6 +79,7 @@ const Checkout: React.FC<CheckoutProps> = ({
         address: formData.address,
         note: formData.note,
       });
+      setDirection('forward');
       setStep(3);
     } catch (error) {
       console.error('Cannot place order.', error);
@@ -85,43 +98,68 @@ const Checkout: React.FC<CheckoutProps> = ({
     }
   };
 
+  const slideClass = direction === 'forward'
+    ? 'animate-in fade-in slide-in-from-right-4 duration-300'
+    : 'animate-in fade-in slide-in-from-left-4 duration-300';
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8" ref={contentRef}>
+      {/* Stepper */}
       <CheckoutStepper step={step} onStepClick={(s) => {
-        // Only allow clicking back to previous steps, not forward to future steps (unless already completed, but keeping simple for now)
-        if (s < step && step !== 3) setStep(s);
+        if (s < step && step !== 3) handlePrevStep(s);
       }} />
 
-      <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-100 dark:border-stone-800 p-6 sm:p-8 mt-12">
-        {step === 1 && (
-          <CartReview 
-            cart={cart}
-            onUpdateQuantity={updateCartQuantity}
-            onRemoveItem={removeFromCart}
-            onBackToHome={onBackToHome}
-            onNext={handleNextStep}
-            onAddToCartByVariantId={addToCartByVariantId}
-          />
-        )}
-        
-        {step === 2 && (
-          <ShippingForm 
-            cart={cart}
-            formData={formData}
-            errors={fieldErrors}
-            onInputChange={handleInputChange}
-            onBack={() => setStep(1)}
-            onPlaceOrder={handlePlaceOrderClick}
-          />
-        )}
-        
-        {step === 3 && (
-          <OrderSuccess 
-            onBackToHome={onBackToHome}
-            onViewOrder={onViewOrders}
-          />
-        )}
+      {/* Content Card */}
+      <div className="bg-white dark:bg-neutral-900/80 rounded-2xl shadow-xl border border-neutral-100 dark:border-neutral-800/80 p-5 sm:p-8 mt-10 sm:mt-12 backdrop-blur-sm">
+        <div key={step} className={slideClass}>
+          {step === 1 && (
+            <CartReview 
+              cart={cart}
+              onUpdateQuantity={updateCartQuantity}
+              onRemoveItem={removeFromCart}
+              onBackToHome={onBackToHome}
+              onNext={handleNextStep}
+              onAddToCartByVariantId={addToCartByVariantId}
+            />
+          )}
+          
+          {step === 2 && (
+            <ShippingForm 
+              cart={cart}
+              formData={formData}
+              errors={fieldErrors}
+              onInputChange={handleInputChange}
+              onBack={() => handlePrevStep(1)}
+              onPlaceOrder={handlePlaceOrderClick}
+            />
+          )}
+          
+          {step === 3 && (
+            <OrderSuccess 
+              onBackToHome={onBackToHome}
+              onViewOrder={onViewOrders}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Trust badges */}
+      {step !== 3 && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-neutral-400 dark:text-neutral-500">
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined !text-sm">lock</span>
+            Thanh toán an toàn
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined !text-sm">local_shipping</span>
+            Giao hàng tận nơi
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined !text-sm">verified_user</span>
+            Bảo hành chất lượng
+          </span>
+        </div>
+      )}
     </div>
   );
 };
