@@ -478,12 +478,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       <AdminSidebar currentView={currentView} onNavigate={handleViewChange} onExit={onExit} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-neutral-50 dark:bg-neutral-950 relative">
         {/* Header */}
-        <header className="flex h-20 items-center justify-between border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-8">
+        <header className="flex h-20 items-center justify-between border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-8">
           <div>
-            <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{headerInfo.title}</h2>
-            <p className="text-sm text-subtext-light dark:text-subtext-dark">{headerInfo.subtitle}</p>
+            <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white">{headerInfo.title}</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{headerInfo.subtitle}</p>
           </div>
           <div className="flex items-center gap-4">
             {currentView === 'products' ? (
@@ -497,7 +497,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   />
                   <button 
                       onClick={() => setShowAddCategory(true)}
-                      className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-sm font-bold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                      className="flex h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 text-sm font-bold text-neutral-900 dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
                   >
                       <span className="material-symbols-outlined text-[20px]">category</span>
                       Thêm danh mục
@@ -514,14 +514,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   )}
                   <button 
                       onClick={handleAddProduct}
-                      className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
+                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20"
                   >
                       <span className="material-symbols-outlined text-[20px]">add</span>
                       Thêm sản phẩm
                   </button>
               </>
             ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'customers' && (
-                <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
+                <button className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20">
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}
                 </button>

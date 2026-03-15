@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import BannerCarousel from "./BannerCarousel";
 import Sidebar from "./Sidebar";
 import ProductCard from "../product/ProductCard";
@@ -25,7 +26,14 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
 
     // Filter States
     const [priceRange, setPriceRange] = useState<[number, number]>([1, 100]);
-    const [activeCategory, setActiveCategory] = useState<string>("all"); // 'all' means all categories
+    const [searchParams] = useSearchParams();
+    const categoryFromUrl = searchParams.get('categoryName');
+    const [activeCategory, setActiveCategory] = useState<string>(categoryFromUrl || "all");
+
+    // Sync URL categoryName changes to activeCategory
+    useEffect(() => {
+        setActiveCategory(categoryFromUrl || "all");
+    }, [categoryFromUrl]);
 
     // Pagination State
     const [visibleCount, setVisibleCount] = useState(20);

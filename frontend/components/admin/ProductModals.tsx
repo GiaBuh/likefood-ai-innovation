@@ -104,12 +104,12 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-surface-light dark:bg-surface-dark shadow-xl border border-border-light dark:border-border-dark">
-        <div className="flex-none flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Quản lý danh mục</h3>
+      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-neutral-900 shadow-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="flex-none flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
+          <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Quản lý danh mục</h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-subtext-light hover:text-text-light dark:text-subtext-dark dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark"
+            className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -122,7 +122,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="flex-1 h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 h-11 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 px-4 text-sm text-neutral-900 dark:text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Tên danh mục mới (vd: Đồ ăn vặt, Đồ uống)"
               disabled={isSubmitting}
             />
@@ -143,19 +143,19 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
 
           {/* Category list */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-text-light dark:text-text-dark">
+            <h4 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
               Danh sách ({categories.length})
             </h4>
             <div className="space-y-2">
               {categories.length === 0 ? (
-                <p className="py-8 text-center text-subtext-light dark:text-subtext-dark">
+                <p className="py-8 text-center text-neutral-500 dark:text-neutral-400">
                   Chưa có danh mục. Thêm danh mục mới ở trên.
                 </p>
               ) : (
                 categories.map((cat) => (
                   <div
                     key={cat.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800"
                   >
                     {editingId === cat.id ? (
                       <>
@@ -163,7 +163,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           type="text"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
-                          className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm"
+                          className="flex-1 h-10 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 text-sm"
                           placeholder="Tên danh mục"
                           autoFocus
                         />
@@ -179,19 +179,19 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           type="button"
                           onClick={handleCancelEdit}
                           disabled={isSubmitting}
-                          className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-sm hover:bg-background-light dark:hover:bg-background-dark"
+                          className="h-10 px-4 rounded-lg border border-neutral-200 dark:border-neutral-800 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
                         >
                           Hủy
                         </button>
                       </>
                     ) : (
                       <>
-                        <span className="flex-1 font-medium text-text-light dark:text-text-dark">{cat.name}</span>
+                        <span className="flex-1 font-medium text-neutral-900 dark:text-white">{cat.name}</span>
                         <button
                           type="button"
                           onClick={() => handleStartEdit(cat.id, cat.name)}
                           disabled={isSubmitting}
-                          className="p-2 rounded-lg text-subtext-light hover:text-primary hover:bg-primary/10"
+                          className="p-2 rounded-lg text-neutral-500 hover:text-primary hover:bg-primary/10"
                           title="Sửa"
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
@@ -200,7 +200,7 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
                           type="button"
                           onClick={() => handleDelete(cat.id)}
                           disabled={isSubmitting}
-                          className="p-2 rounded-lg text-subtext-light hover:text-red-500 hover:bg-red-500/10"
+                          className="p-2 rounded-lg text-neutral-500 hover:text-red-500 hover:bg-red-500/10"
                           title="Xóa"
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
@@ -399,12 +399,12 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl rounded-2xl bg-surface-light dark:bg-surface-dark p-6 shadow-xl border border-border-light dark:border-border-dark my-auto">
+      <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-neutral-900 p-6 shadow-xl border border-neutral-200 dark:border-neutral-800 my-auto">
         <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark">
+          <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
             {product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
           </h3>
-          <button onClick={onClose} className="text-subtext-light hover:text-text-light dark:text-subtext-dark dark:hover:text-text-dark">
+          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -416,9 +416,9 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
              <div className="flex flex-col md:flex-row gap-6">
                 {/* Thumbnail Upload - Increased width to ~33% (w-1/3) */}
                 <div className="w-full md:w-1/3 flex-shrink-0">
-                    <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark mb-2 block">Ảnh đại diện</label>
+                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 block">Ảnh đại diện</label>
                     <div 
-                      className="relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary transition-colors overflow-hidden group"
+                      className="relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 hover:border-primary transition-colors overflow-hidden group"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {imagePreview ? (
@@ -429,7 +429,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                           </div>
                         </>
                       ) : (
-                        <div className="flex flex-col items-center gap-1 text-subtext-light dark:text-subtext-dark p-4 text-center">
+                        <div className="flex flex-col items-center gap-1 text-neutral-500 dark:text-neutral-400 p-4 text-center">
                           <span className="material-symbols-outlined text-3xl">cloud_upload</span>
                           <span className="text-[10px] font-medium">Tải lên</span>
                         </div>
@@ -447,7 +447,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                 {/* Gallery Upload */}
                 <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-medium text-subtext-light dark:text-subtext-dark">Ảnh thư viện</label>
+                        <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Ảnh thư viện</label>
                         <button 
                             type="button" 
                             onClick={() => galleryInputRef.current?.click()}
@@ -468,7 +468,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                     
                     <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
                         {galleryImages.map((img, idx) => (
-                            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-border-light dark:border-border-dark group">
+                            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 group">
                                 <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
                                 <button 
                                     type="button"
@@ -482,7 +482,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                         {/* Empty State / Add Button for Grid */}
                         <div 
                             onClick={() => galleryInputRef.current?.click()}
-                            className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark hover:border-primary transition-colors text-subtext-light dark:text-subtext-dark"
+                            className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-primary transition-colors text-neutral-500 dark:text-neutral-400"
                         >
                             <span className="material-symbols-outlined text-xl">add</span>
                         </div>
@@ -491,16 +491,16 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
              </div>
           </div>
 
-          <div className="border-t border-border-light dark:border-border-dark my-2"></div>
+          <div className="border-t border-neutral-200 dark:border-neutral-800 my-2"></div>
 
           {/* Row 2: Product Name (Full Width) */}
           <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Tên sản phẩm</label>
+              <label className="mb-1.5 block text-sm font-medium text-neutral-900 dark:text-white">Tên sản phẩm</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-10 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" 
+                className="h-10 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 px-4 text-sm text-neutral-900 dark:text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" 
                 placeholder="vd. Gói Phở Bò" 
                 required 
               />
@@ -508,11 +508,11 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
 
           {/* Row 3: Category */}
           <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Danh mục</label>
+              <label className="mb-1.5 block text-sm font-medium text-neutral-900 dark:text-white">Danh mục</label>
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="h-10 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-10 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 px-4 text-sm text-neutral-900 dark:text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="">Chọn danh mục</option>
                 {categories.map((item) => (
@@ -525,19 +525,19 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
 
           {/* Row 4: Description */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-text-light dark:text-text-dark">Mô tả</label>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-900 dark:text-white">Mô tả</label>
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="h-24 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 text-sm text-text-light dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none" 
+              className="h-24 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 p-4 text-sm text-neutral-900 dark:text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none" 
               placeholder="Nhập mô tả sản phẩm..."
             ></textarea>
           </div>
 
           {/* Row 5: Variants */}
           <div>
-            <div className="flex items-center justify-between mb-3 border-b border-border-light dark:border-border-dark pb-2">
-              <h4 className="text-sm font-bold text-text-light dark:text-text-dark uppercase">Quy cách sản phẩm</h4>
+            <div className="flex items-center justify-between mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+              <h4 className="text-sm font-bold text-neutral-900 dark:text-white uppercase">Quy cách sản phẩm</h4>
               <button 
                   type="button"
                   onClick={addVariant}
@@ -550,32 +550,32 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
             
             <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
               {variants.map((variant, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 items-end p-3 rounded-xl bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark">
+                <div key={index} className="grid grid-cols-12 gap-3 items-end p-3 rounded-xl bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800">
                     <div className="col-span-3">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">SKU</label>
+                        <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">SKU</label>
                         <input 
                           type="text" 
                           value={variant.sku ?? ''}
                           onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
-                          className="h-9 w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm font-mono focus:border-primary focus:outline-none" 
+                          className="h-9 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 text-sm font-mono focus:border-primary focus:outline-none" 
                           placeholder="vd. PHO-500G" 
                           required 
                         />
                     </div>
                     <div className="col-span-3">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Khối lượng</label>
+                        <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Khối lượng</label>
                         <div className="flex">
                           <input 
                               type="number" 
                               value={variant.weightValue}
                               onChange={(e) => handleVariantChange(index, 'weightValue', Number(e.target.value))}
-                              className="h-9 w-full rounded-l-lg border border-r-0 border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm focus:border-primary focus:outline-none" 
+                              className="h-9 w-full rounded-l-lg border border-r-0 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 text-sm focus:border-primary focus:outline-none" 
                               placeholder="0" 
                           />
                           <select 
                               value={variant.weightUnit}
                               onChange={(e) => handleVariantChange(index, 'weightUnit', e.target.value)}
-                              className="h-9 w-20 rounded-r-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-2 text-sm focus:border-primary focus:outline-none bg-gray-50 dark:bg-gray-800"
+                              className="h-9 w-20 rounded-r-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-2 text-sm focus:border-primary focus:outline-none bg-gray-50 dark:bg-neutral-800"
                           >
                               <option value="g">g</option>
                               <option value="kg">kg</option>
@@ -585,23 +585,23 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                         </div>
                     </div>
                     <div className="col-span-2">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Giá ($)</label>
+                        <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Giá ($)</label>
                         <input 
                           type="number" 
                           step="0.01" 
                           value={variant.price}
                           onChange={(e) => handleVariantChange(index, 'price', Number(e.target.value))}
-                          className="h-9 w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm focus:border-primary focus:outline-none" 
+                          className="h-9 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 text-sm focus:border-primary focus:outline-none" 
                           placeholder="0.00" 
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="mb-1 block text-xs font-medium text-subtext-light dark:text-subtext-dark">Tồn kho</label>
+                        <label className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Tồn kho</label>
                         <input 
                           type="number" 
                           value={variant.quantity}
                           onChange={(e) => handleVariantChange(index, 'quantity', Number(e.target.value))}
-                          className="h-9 w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 text-sm focus:border-primary focus:outline-none" 
+                          className="h-9 w-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 text-sm focus:border-primary focus:outline-none" 
                           placeholder="0" 
                         />
                     </div>
@@ -610,7 +610,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                             <button 
                                 type="button" 
                                 onClick={() => removeVariant(index)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-subtext-light hover:bg-red-50 hover:text-red-600 dark:text-subtext-dark dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
                                 title="Remove Variant"
                             >
                                 <span className="material-symbols-outlined text-lg">delete</span>
@@ -622,11 +622,11 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
             </div>
           </div>
           
-          <div className="flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-6">
+          <div className="flex justify-end gap-3 border-t border-neutral-200 dark:border-neutral-800 pt-6">
             <button 
               type="button" 
               onClick={onClose}
-              className="rounded-lg px-6 py-2.5 text-sm font-medium text-subtext-light hover:bg-background-light dark:text-subtext-dark dark:hover:bg-background-dark transition-colors"
+              className="rounded-lg px-6 py-2.5 text-sm font-medium text-neutral-500 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800 transition-colors"
             >
 Hủy
               </button>

@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useShop } from '../../contexts/ShopContext';
-import { fetchProductsWithQuery } from '../../services/shopApi';
-import { Product } from '../../types';
+import { fetchProductsWithQuery, fetchCategories } from '../../services/shopApi';
+import { Product, Category } from '../../types';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 interface HeaderProps {
@@ -47,6 +47,10 @@ const Header: React.FC<HeaderProps> = ({
   const [searchProducts, setSearchProducts] = useState<Product[]>([]);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const megaMenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totalItems = cart.length;
@@ -98,6 +102,21 @@ const Header: React.FC<HeaderProps> = ({
       window.clearTimeout(timer);
     };
   }, [searchQuery]);
+
+  const handleMegaMenuEnter = () => {
+    if (megaMenuTimeout.current) clearTimeout(megaMenuTimeout.current);
+    setIsMegaMenuOpen(true);
+    if (!categoriesLoaded) {
+      fetchCategories().then(cats => {
+        setCategories(cats);
+        setCategoriesLoaded(true);
+      }).catch(() => setCategoriesLoaded(true));
+    }
+  };
+
+  const handleMegaMenuLeave = () => {
+    megaMenuTimeout.current = setTimeout(() => setIsMegaMenuOpen(false), 150);
+  };
 
   const SearchResultsDropdown = ({ products, loading }: { products: Product[]; loading: boolean }) => (
     <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-modal border border-neutral-100 dark:border-neutral-800 overflow-hidden max-h-80 overflow-y-auto">
@@ -188,9 +207,61 @@ const Header: React.FC<HeaderProps> = ({
               <Link to="/" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
                 {t('common.home')}
               </Link>
-              <Link to="/shop" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
-                {t('common.shop')}
-              </Link>
+              <div
+                className="relative"
+                onMouseEnter={handleMegaMenuEnter}
+                onMouseLeave={handleMegaMenuLeave}
+              >
+                <Link to="/shop" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors flex items-center gap-1">
+                  {t('common.shop')}
+                  <span className={`material-symbols-outlined !text-sm transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                </Link>
+
+                {/* Mega Menu Dropdown */}
+                {isMegaMenuOpen && (
+                  <div
+                    className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
+                    onMouseEnter={handleMegaMenuEnter}
+                    onMouseLeave={handleMegaMenuLeave}
+                  >
+                    <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-modal border border-neutral-100 dark:border-neutral-800 p-6 min-w-[480px] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+                        <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('common.categories', 'Danh mục sản phẩm')}</h3>
+                      </div>
+                      {categories.length === 0 ? (
+                        <div className="grid grid-cols-3 gap-3">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {categories.map(cat => (
+                            <Link
+                              key={cat.id}
+                              to={`/shop?categoryName=${encodeURIComponent(cat.name)}`}
+                              onClick={() => setIsMegaMenuOpen(false)}
+                              className="flex items-center px-3 py-2.5 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors group"
+                            >
+                              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-primary-500 transition-colors truncate">{cat.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                        <Link
+                          to="/shop"
+                          onClick={() => setIsMegaMenuOpen(false)}
+                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-500 text-sm font-bold hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors"
+                        >
+                          {t('common.viewAll', 'Xem tất cả sản phẩm')}
+                          <span className="material-symbols-outlined !text-base">arrow_forward</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <Link to="/about" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
                 {t('common.about')}
               </Link>

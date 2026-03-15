@@ -24,15 +24,17 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Section: KPI Cards */}
       <KPICards data={kpiData} isLoading={isLoading} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Middle Left: Revenue Chart (Simulated) */}
-        <div className="lg:col-span-2 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 shadow-sm">
+        {/* Revenue Chart */}
+        <div className="lg:col-span-2 rounded-2xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Tổng quan doanh thu</h3>
-            <select className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-1.5 text-xs font-medium text-text-light dark:text-text-dark focus:border-primary focus:outline-none">
+            <div>
+              <h3 className="text-lg font-extrabold text-neutral-900 dark:text-white">Tổng quan doanh thu</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Doanh thu gần đây</p>
+            </div>
+            <select className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-900 dark:text-white focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option>7 ngày qua</option>
               <option>30 ngày qua</option>
               <option>Năm nay</option>
@@ -41,140 +43,148 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
           
           {isLoading ? (
             <div className="flex h-64 items-end justify-between gap-4 px-2">
-                {[...Array(7)].map((_, i) => (
-                    <Skeleton key={i} className={`w-full rounded-t-md`} style={{ height: `${Math.random() * 60 + 20}%` }} />
-                ))}
+              {[...Array(7)].map((_, i) => (
+                <Skeleton key={i} className="w-full rounded-t-lg" style={{ height: `${Math.random() * 60 + 20}%` }} />
+              ))}
             </div>
           ) : chartData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-sm text-subtext-light dark:text-subtext-dark">
-              Chưa có dữ liệu doanh thu.
+            <div className="flex h-64 flex-col items-center justify-center text-neutral-400 dark:text-neutral-500">
+              <span className="material-symbols-outlined !text-5xl mb-3 opacity-40">bar_chart</span>
+              <p className="text-sm">Chưa có dữ liệu doanh thu.</p>
             </div>
           ) : (
             <div className="flex h-64 items-end justify-between gap-2 px-2">
-                {chartData.map((item, index) => (
+              {chartData.map((item, index) => (
                 <div key={index} className="flex flex-col items-center gap-2 w-full group">
-                    <div className="relative w-full max-w-[40px] rounded-t-md bg-primary/10 group-hover:bg-primary/20 transition-all duration-300" style={{ height: '100%' }}>
+                  <div className="relative w-full max-w-[40px] rounded-t-lg bg-primary-50 dark:bg-primary-950/20 group-hover:bg-primary-100 dark:group-hover:bg-primary-950/30 transition-all duration-300" style={{ height: '100%' }}>
                     <div 
-                        className="absolute bottom-0 w-full rounded-t-md bg-primary transition-all duration-500 ease-out group-hover:bg-blue-600"
-                        style={{ height: `${maxRevenue > 0 ? Math.max(8, (item.value / maxRevenue) * 100) : 8}%` }}
-                    ></div>
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark text-white text-xs py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10">
-                        ${item.value}
+                      className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-primary-600 to-primary-400 transition-all duration-500 ease-out group-hover:from-primary-700 group-hover:to-primary-500"
+                      style={{ height: `${maxRevenue > 0 ? Math.max(8, (item.value / maxRevenue) * 100) : 8}%` }}
+                    />
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-900 dark:bg-neutral-700 text-white text-xs py-1 px-2 rounded-lg pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                      ${item.value}
                     </div>
-                    </div>
-                    <span className="text-xs font-medium text-subtext-light dark:text-subtext-dark">{item.label}</span>
+                  </div>
+                  <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{item.label}</span>
                 </div>
-                ))}
+              ))}
             </div>
           )}
         </div>
 
-        {/* Middle Right: Top Products */}
-        <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 shadow-sm">
-           <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Top Products</h3>
-            <a href="#" className="text-xs font-bold text-primary hover:underline">Xem tất cả</a>
+        {/* Top Products */}
+        <div className="rounded-2xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <h3 className="text-lg font-extrabold text-neutral-900 dark:text-white">Top Products</h3>
+            <span className="text-xs font-bold text-primary-500 hover:text-primary-600 cursor-pointer">Xem tất cả</span>
           </div>
           
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {isLoading ? (
-                [...Array(4)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                        <Skeleton className="h-12 w-12 rounded-lg" />
-                        <div className="flex flex-1 flex-col gap-1">
-                            <Skeleton className="h-3 w-32" />
-                            <Skeleton className="h-2 w-20" />
-                        </div>
-                        <Skeleton className="h-4 w-12" />
-                    </div>
-                ))
-            ) : (
-                topProducts.slice(0, 4).map((product) => (
-                <div key={product.id} className="flex items-center gap-3">
-                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-                    <img src={product.thumbnail} alt={product.name} className="h-full w-full object-cover" />
-                    </div>
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="truncate text-sm font-bold text-text-light dark:text-text-dark">{product.name}</span>
-                    <span className="truncate text-xs text-subtext-light dark:text-subtext-dark">{product.variants.reduce((acc, v) => acc + v.quantity, 0)} còn hàng</span>
-                    </div>
-                    <div className="text-right">
-                    <span className="block text-sm font-bold text-text-light dark:text-text-dark">${product.variants[0]?.price.toFixed(2)}</span>
-                    </div>
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <Skeleton className="h-3.5 w-32" />
+                    <Skeleton className="h-2.5 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-14" />
                 </div>
-                ))
+              ))
+            ) : (
+              topProducts.slice(0, 4).map((product, i) => (
+                <div key={product.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer group">
+                  <div className="relative">
+                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl border border-neutral-100 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
+                      <img src={product.thumbnail} alt={product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[10px] font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <span className="truncate text-sm font-bold text-neutral-900 dark:text-white">{product.name}</span>
+                    <span className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                      {product.variants.reduce((acc, v) => acc + v.quantity, 0)} còn hàng
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-neutral-900 dark:text-white tabular-nums">
+                    ${product.variants[0]?.price.toFixed(2)}
+                  </span>
+                </div>
+              ))
             )}
           </div>
-          <button className="mt-6 w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark py-2 text-sm font-bold text-subtext-light dark:text-subtext-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <button className="mt-5 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 py-2.5 text-sm font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
             Xem tất cả sản phẩm
           </button>
         </div>
       </div>
 
-      {/* Bottom: Recent Orders */}
-      <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm">
-        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-           <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Recent Orders</h3>
-           <button className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-1.5 text-xs font-bold text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-             Lọc
-           </button>
+      {/* Recent Orders */}
+      <div className="rounded-2xl border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+        <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 px-6 py-4">
+          <h3 className="text-lg font-extrabold text-neutral-900 dark:text-white">Recent Orders</h3>
+          <button className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+            Lọc
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-background-light dark:bg-surface-dark text-xs uppercase text-subtext-light dark:text-subtext-dark font-semibold">
+            <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-xs uppercase text-neutral-500 dark:text-neutral-400 font-semibold">
               <tr>
-                <th className="px-6 py-3">Mã đơn</th>
-                <th className="px-6 py-3">Khách hàng</th>
-                <th className="px-6 py-3">Ngày</th>
-                <th className="px-6 py-3">Số tiền</th>
-                <th className="px-6 py-3">Trạng thái</th>
+                <th className="px-6 py-3.5">Mã đơn</th>
+                <th className="px-6 py-3.5">Khách hàng</th>
+                <th className="px-6 py-3.5">Ngày</th>
+                <th className="px-6 py-3.5">Số tiền</th>
+                <th className="px-6 py-3.5">Trạng thái</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-light dark:divide-border-dark">
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                    <tr key={i}>
-                        <td className="px-6 py-4"><Skeleton className="h-3 w-16" /></td>
-                        <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                                <Skeleton className="h-6 w-6 rounded-full" />
-                                <Skeleton className="h-3 w-24" />
-                            </div>
-                        </td>
-                        <td className="px-6 py-4"><Skeleton className="h-3 w-20" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-3 w-12" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                    </tr>
+                  <tr key={i}>
+                    <td className="px-6 py-4"><Skeleton className="h-3.5 w-16" /></td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-7 w-7 rounded-full" />
+                        <Skeleton className="h-3.5 w-24" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><Skeleton className="h-3.5 w-20" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-3.5 w-14" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                  </tr>
                 ))
               ) : (
-                  recentOrders.slice(0, 5).map((order) => (
-                    <tr key={order.id} className="hover:bg-background-light dark:hover:bg-background-dark/50 cursor-pointer transition-colors" onClick={() => onOrderClick(order)}>
-                    <td className="px-6 py-4 font-medium text-primary">{order.id}</td>
+                recentOrders.slice(0, 5).map((order) => (
+                  <tr key={order.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors" onClick={() => onOrderClick(order)}>
+                    <td className="px-6 py-4 font-bold text-primary-500">{order.id}</td>
                     <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         {order.customer.avatarUrl ? (
-                            <img src={order.customer.avatarUrl} className="h-6 w-6 rounded-full" alt="" />
+                          <img src={order.customer.avatarUrl} className="h-7 w-7 rounded-full" alt="" />
                         ) : (
-                            <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] ${order.customer.initialsBgColor} ${order.customer.initialsTextColor}`}>
-                                {order.customer.initials}
-                            </div>
+                          <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${order.customer.initialsBgColor} ${order.customer.initialsTextColor}`}>
+                            {order.customer.initials}
+                          </div>
                         )}
-                        <span className="text-text-light dark:text-text-dark">{order.customer.fullname}</span>
-                        </div>
+                        <span className="text-neutral-900 dark:text-white font-medium">{order.customer.fullname}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-subtext-light dark:text-subtext-dark">{order.createdAt}</td>
-                    <td className="px-6 py-4 font-medium text-text-light dark:text-text-dark">${order.totalAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-neutral-500 dark:text-neutral-400">{order.createdAt}</td>
+                    <td className="px-6 py-4 font-bold text-neutral-900 dark:text-white tabular-nums">${order.totalAmount.toFixed(2)}</td>
                     <td className="px-6 py-4">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium 
-                        ${order.fulfillmentStatus === 'Complete' ? 'bg-green-100 text-green-700' : 
-                            order.fulfillmentStatus === 'Processing' ? 'bg-yellow-100 text-yellow-800' : 
-                            order.fulfillmentStatus === 'Confirm' ? 'bg-indigo-100 text-indigo-700' :
-                            order.fulfillmentStatus === 'Shipped' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold 
+                        ${order.fulfillmentStatus === 'Complete' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
+                          order.fulfillmentStatus === 'Processing' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400' : 
+                          order.fulfillmentStatus === 'Confirm' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400' :
+                          order.fulfillmentStatus === 'Shipped' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 
+                          'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'}`}>
                         {order.fulfillmentStatus}
-                        </span>
+                      </span>
                     </td>
-                    </tr>
+                  </tr>
                 ))
               )}
             </tbody>

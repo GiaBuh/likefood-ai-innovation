@@ -67,27 +67,27 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Form */}
-        <div className="flex-1 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex-1 bg-white dark:bg-neutral-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-neutral-700">
           <div className="mb-6">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
               🤖 AI Trend Combo Generator
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">
               Nhập trend đang viral trên TikTok và để Gemini & Pollinations AI tự vẽ ra chiến dịch bán hàng!
             </p>
           </div>
 
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
                 Trending Hashtag <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">#</span>
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-neutral-400">#</span>
                 <input
                   type="text"
                   placeholder="championsleague, rapviet, blackpink..."
-                  className="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all dark:text-white"
+                  className="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all dark:text-white"
                   value={hashtag.replace('#', '')}
                   onChange={(e) => setHashtag('#' + e.target.value.replace('#', ''))}
                 />
@@ -95,23 +95,23 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">
                 Chọn kho hàng cần đẩy (Items) <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
                 {products.map(p => (
-                  <label key={p.id} className="flex items-center space-x-2 p-2 hover:bg-white dark:hover:bg-gray-800 rounded cursor-pointer transition-colors">
+                  <label key={p.id} className="flex items-center space-x-2 p-2 hover:bg-white dark:hover:bg-neutral-700 rounded cursor-pointer transition-colors">
                     <input 
                       type="checkbox" 
                       className="rounded text-purple-600 focus:ring-purple-500"
                       checked={selectedItems.includes(p.name)}
                       onChange={() => handleToggleItem(p.name)}
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{p.name}</span>
+                    <span className="text-sm text-gray-700 dark:text-neutral-300 truncate">{p.name}</span>
                   </label>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">Đã chọn: {selectedItems.length} món</p>
+              <p className="text-xs text-neutral-500 mt-2">Đã chọn: {selectedItems.length} món</p>
             </div>
 
             {error && (
@@ -150,22 +150,22 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                 <div className="absolute inset-0 border-4 border-purple-200 rounded-full animate-pulse" />
                 <div className="absolute inset-0 border-t-4 border-purple-600 rounded-full animate-spin" />
               </div>
-              <p className="text-gray-500 dark:text-gray-400 animate-pulse">
+              <p className="text-neutral-500 dark:text-neutral-400 animate-pulse">
                 Đang triệu hồi Giám đốc Marketing Gemini<br/>và Designer Pollinations AI...
               </p>
             </div>
           )}
 
           {!loading && !result && (
-             <div className="text-center p-12 text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl w-full h-full flex flex-col items-center justify-center">
+             <div className="text-center p-12 text-neutral-400 dark:text-neutral-500 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-2xl w-full h-full flex flex-col items-center justify-center">
                <span className="text-4xl mb-3">✨</span>
                <p>Combo Siêu Cấp Vô Địch sẽ xuất hiện ở đây!</p>
              </div>
           )}
 
           {result && (
-            <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 transform transition-all hover:scale-[1.02]">
-              <div className="relative h-64 bg-gray-200 dark:bg-gray-700 overflow-hidden group">
+            <div className="w-full bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-neutral-700 transform transition-all hover:scale-[1.02]">
+              <div className="relative h-64 bg-neutral-200 dark:bg-neutral-700 overflow-hidden group">
                 {result.imageUrl ? (
                   <img 
                     src={result.imageUrl} 
@@ -173,7 +173,7 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">Không tạo được ảnh</div>
+                  <div className="w-full h-full flex items-center justify-center text-neutral-400">Không tạo được ảnh</div>
                 )}
                 
                 {/* Discount Badge */}
@@ -200,7 +200,7 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                 </p>
                 
                 <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl relative">
-                  <div className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap italic">
+                  <div className="text-neutral-600 dark:text-neutral-300 text-sm whitespace-pre-wrap italic">
                     {result.description}
                   </div>
                   {/* Decorative quote marks */}
@@ -220,7 +220,7 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                       className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
                         isPublishing 
                           ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+                          : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-neutral-700 dark:hover:bg-neutral-100'
                       }`}
                     >
                       {isPublishing ? 'Đang xuất bản...' : 'Publish to Store (Sẵn sàng)'}

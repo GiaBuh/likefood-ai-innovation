@@ -82,13 +82,13 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
   };
 
   return (
-    <div className="flex flex-1 min-h-0 w-full rounded-tl-[16px] rounded-b-[16px] border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
+    <div className="flex flex-1 min-h-0 w-full rounded-tl-[16px] rounded-b-[16px] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
       {/* Conversation list - left sidebar */}
-      <div className="w-72 flex-shrink-0 border-r border-border-light dark:border-border-dark flex flex-col">
-        <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+      <div className="w-72 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-800 flex flex-col">
+        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-text-light dark:text-text-dark">Hội thoại</h3>
-            <p className="text-xs text-subtext-light dark:text-subtext-dark mt-1">
+            <h3 className="font-bold text-neutral-900 dark:text-white">Hội thoại</h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
               {conversations.length} khách hàng
             </p>
           </div>
@@ -96,7 +96,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
             <button
               type="button"
               onClick={() => onRefresh()}
-              className="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-subtext-light dark:text-subtext-dark hover:text-text-light dark:hover:text-text-dark transition-colors"
+              className="p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
               title="Làm mới danh sách"
             >
               <span className="material-symbols-outlined">refresh</span>
@@ -105,7 +105,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
-            <div className="p-6 text-center text-subtext-light dark:text-subtext-dark text-sm">
+            <div className="p-6 text-center text-neutral-500 dark:text-neutral-400 text-sm">
               <span className="material-symbols-outlined text-4xl mb-2 block opacity-50">chat_bubble_outline</span>
               <p>No conversations yet</p>
               <p className="text-xs mt-1">When customers chat with you via Help Center, they will appear here.</p>
@@ -115,7 +115,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
               <button
                 key={conv.userId}
                 onClick={() => setSelectedUserId(conv.userId)}
-                className={`w-full flex items-center gap-3 p-4 text-left hover:bg-background-light dark:hover:bg-background-dark transition-colors border-b border-border-light dark:border-border-dark ${
+                className={`w-full flex items-center gap-3 p-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-200 dark:border-neutral-800 ${
                   selectedUserId === conv.userId ? 'bg-primary/5 border-l-4 border-l-primary' : ''
                 }`}
               >
@@ -129,8 +129,8 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-text-light dark:text-text-dark truncate">{conv.fullname}</p>
-                  <p className="text-xs text-subtext-light dark:text-subtext-dark truncate">
+                  <p className="font-semibold text-neutral-900 dark:text-white truncate">{conv.fullname}</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                     {conv.lastMessage || conv.email}
                   </p>
                 </div>
@@ -150,7 +150,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
         {selectedUserId && selectedConversation ? (
           <>
             {/* Chat header */}
-            <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center gap-3">
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3">
               {selectedConversation.avatarUrl ? (
                 <img src={selectedConversation.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
               ) : (
@@ -161,8 +161,8 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
                 </div>
               )}
               <div>
-                <p className="font-semibold text-text-light dark:text-text-dark">{selectedConversation.fullname}</p>
-                <p className="text-xs text-subtext-light dark:text-subtext-dark">{selectedConversation.email}</p>
+                <p className="font-semibold text-neutral-900 dark:text-white">{selectedConversation.fullname}</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">{selectedConversation.email}</p>
               </div>
               <div className="ml-auto flex items-center gap-1 text-green-600 dark:text-green-400 text-xs">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -173,7 +173,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50 dark:bg-stone-950">
               {messages.length === 0 ? (
-                <div className="text-center py-12 text-subtext-light dark:text-subtext-dark text-sm">
+                <div className="text-center py-12 text-neutral-500 dark:text-neutral-400 text-sm">
                   <span className="material-symbols-outlined text-5xl mb-3 block opacity-30">chat</span>
                   <p>No messages yet. Say hello!</p>
                 </div>
@@ -206,14 +206,14 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="p-4 border-t border-border-light dark:border-border-dark">
+            <form onSubmit={handleSend} className="p-4 border-t border-neutral-200 dark:border-neutral-800">
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="Nhập tin nhắn..."
-                  className="flex-1 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3 text-sm text-text-light dark:text-text-dark placeholder-subtext-light dark:placeholder-subtext-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 px-4 py-3 text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-subtext-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                   disabled={isSending}
                 />
                 <button
@@ -228,7 +228,7 @@ const AdminChatView: React.FC<AdminChatViewProps> = ({
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-subtext-light dark:text-subtext-dark">
+          <div className="flex-1 flex items-center justify-center text-neutral-500 dark:text-neutral-400">
             <div className="text-center">
               <span className="material-symbols-outlined text-6xl mb-4 block opacity-30">forum</span>
               <p className="font-medium">Chọn hội thoại</p>
