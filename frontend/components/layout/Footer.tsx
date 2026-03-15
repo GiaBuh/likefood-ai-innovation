@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
             <h3 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">{t('footer.quickLinks')}</h3>
             <ul className="space-y-3 text-sm">
               <li><Link className="hover:text-primary-500 transition-colors" to="/shop">{t('common.shop')}</Link></li>
-              <li><Link className="hover:text-primary-500 transition-colors" to="/about">{t('common.about')}</Link></li>
+              <li><Link className="hover:text-primary-500 transition-colors" to="/combo">Combo</Link></li>
               <li><Link className="hover:text-primary-500 transition-colors" to="/blog">{t('common.blog')}</Link></li>
             </ul>
           </div>

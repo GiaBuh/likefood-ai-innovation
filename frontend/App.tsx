@@ -14,7 +14,7 @@ import GoogleAuthCallbackPage from './components/auth/GoogleAuthCallbackPage';
 import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
 import LandingPage from './components/pages/LandingPage';
-import AboutPage from './components/pages/AboutPage';
+import ComboPage from './components/pages/ComboPage';
 import BlogPage from './components/pages/BlogPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -206,7 +206,8 @@ const MainContent: React.FC = () => {
             </ErrorBoundary>
           }
         />
-        <Route path="/about" element={<ErrorBoundary><AboutPage /></ErrorBoundary>} />
+        <Route path="/combo" element={<ErrorBoundary><ComboPage /></ErrorBoundary>} />
+        <Route path="/about" element={<Navigate to="/combo" replace />} />
         <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
         <Route
           path="/product/:id"

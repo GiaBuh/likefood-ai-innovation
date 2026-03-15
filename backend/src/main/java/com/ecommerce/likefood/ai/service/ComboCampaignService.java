@@ -69,7 +69,10 @@ public class ComboCampaignService {
             var uploadResponse = storageService.uploadImageBytes(imageBytes, "image/png", "combo-ai.png", StorageObjectType.PRODUCT);
             String imageUrl = storageService.getPublicImageUrl(uploadResponse.getKey());
 
-            // 4. Save to Database
+            // 4. Save items as JSON array
+            String itemsJson = objectMapper.writeValueAsString(request.getItems());
+
+            // 5. Save to Database
             ComboCampaign campaign = ComboCampaign.builder()
                     .hashtag(request.getHashtag())
                     .comboName(geminiResponse.getComboName())
@@ -78,6 +81,7 @@ public class ComboCampaignService {
                     .discountPercentage(geminiResponse.getDiscountPercentage())
                     .imagePrompt(geminiResponse.getImagePrompt())
                     .imageUrl(imageUrl)
+                    .items(itemsJson)
                     .status("DRAFT")
                     .build();
                     
@@ -106,14 +110,46 @@ public class ComboCampaignService {
             return categoryRepository.save(newCategory);
         });
 
-        // 2. Extract image key from S3 URL
+        // 2. Calculate combo price from actual products
+        java.math.BigDecimal totalOriginalPrice = java.math.BigDecimal.ZERO;
+        try {
+            List<String> itemNames = objectMapper.readValue(
+                combo.getItems(), 
+                objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
+            );
+            if (!itemNames.isEmpty()) {
+                List<Product> comboProducts = productRepository.findByNameIn(itemNames);
+                for (Product p : comboProducts) {
+                    // Get the lowest variant price for each product
+                    java.math.BigDecimal minPrice = p.getVariants().stream()
+                        .map(ProductVariant::getPrice)
+                        .filter(price -> price != null && price.compareTo(java.math.BigDecimal.ZERO) > 0)
+                        .min(java.math.BigDecimal::compareTo)
+                        .orElse(java.math.BigDecimal.ZERO);
+                    totalOriginalPrice = totalOriginalPrice.add(minPrice);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse combo items for price calculation, using fallback", e);
+        }
+
+        // Apply discount: combo price = total * (1 - discount/100)
+        double discountFactor = 1.0 - (combo.getDiscountPercentage() / 100.0);
+        java.math.BigDecimal comboPrice = totalOriginalPrice.compareTo(java.math.BigDecimal.ZERO) > 0
+            ? totalOriginalPrice.multiply(java.math.BigDecimal.valueOf(discountFactor))
+                .setScale(0, java.math.RoundingMode.HALF_UP)
+            : java.math.BigDecimal.valueOf(99000); // fallback only if no products found
+
+        log.info("Combo price: original={} discount={}% final={}", totalOriginalPrice, combo.getDiscountPercentage(), comboPrice);
+
+        // 3. Extract image key from S3 URL
         String imageUrl = combo.getImageUrl();
         String thumbnailKey = null;
         if (imageUrl != null && imageUrl.contains("amazonaws.com/")) {
             thumbnailKey = imageUrl.substring(imageUrl.indexOf("amazonaws.com/") + 14);
         }
 
-        // 3. Create Product
+        // 4. Create Product
         Product product = Product.builder()
                 .name(combo.getComboName())
                 .slug("ai-combo-" + java.util.UUID.randomUUID().toString().substring(0, 8))
@@ -123,10 +159,10 @@ public class ComboCampaignService {
                 .category(aiCategory)
                 .build();
 
-        // 4. Create one default Variant
+        // 5. Create variant with real calculated price
         ProductVariant defaultVariant = ProductVariant.builder()
                 .sku("AI-COMBO-" + java.util.UUID.randomUUID().toString().substring(0, 8))
-                .price(java.math.BigDecimal.valueOf(99000.0)) // Placeholder price
+                .price(comboPrice)
                 .quantity(100)
                 .product(product)
                 .weightValue(java.math.BigDecimal.valueOf(1.0))
@@ -136,11 +172,20 @@ public class ComboCampaignService {
 
         productRepository.save(product);
 
-        // 5. Update Combo Status
+        // 6. Update Combo Status
         combo.setStatus("PUBLISHED");
         comboCampaignRepository.save(combo);
 
         return product;
+    }
+
+    public List<ComboCampaign> getPublishedCombos() {
+        return comboCampaignRepository.findByStatusOrderByCreatedAtDesc("PUBLISHED");
+    }
+
+    public ComboCampaign getComboById(String id) {
+        return comboCampaignRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Combo not found"));
     }
 
     private ComboGenerateResponseDto callGeminiForCombo(ComboGenerateRequestDto request) throws JsonProcessingException {

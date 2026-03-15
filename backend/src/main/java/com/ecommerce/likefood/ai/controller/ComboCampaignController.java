@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/ai/combos")
 @CrossOrigin(origins = "*")
@@ -33,5 +35,19 @@ public class ComboCampaignController {
         log.info("Received request to publish combo ID: {}", id);
         Product publishedProduct = comboCampaignService.publishCombo(id);
         return ResponseEntity.ok(publishedProduct);
+    }
+
+    @GetMapping("/published")
+    @ApiMessage("Get all published combo campaigns")
+    public ResponseEntity<List<ComboCampaign>> getPublishedCombos() {
+        List<ComboCampaign> combos = comboCampaignService.getPublishedCombos();
+        return ResponseEntity.ok(combos);
+    }
+
+    @GetMapping("/{id}")
+    @ApiMessage("Get combo campaign by ID")
+    public ResponseEntity<ComboCampaign> getComboById(@PathVariable String id) {
+        ComboCampaign combo = comboCampaignService.getComboById(id);
+        return ResponseEntity.ok(combo);
     }
 }

@@ -38,6 +38,9 @@ public class ComboCampaign extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String items; // JSON array of product names, e.g. ["Bún chả", "Phở Bò"]
+
     @Column(nullable = false)
     @Builder.Default
     private String status = "DRAFT"; // DRAFT, APPROVED, PUBLISHED

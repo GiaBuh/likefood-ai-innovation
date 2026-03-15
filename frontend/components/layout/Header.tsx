@@ -262,8 +262,8 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                 )}
               </div>
-              <Link to="/about" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
-                {t('common.about')}
+              <Link to="/combo" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
+                Combo
               </Link>
               <Link to="/blog" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
                 {t('common.blog')}
