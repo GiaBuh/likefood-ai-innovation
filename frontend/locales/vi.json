@@ -163,7 +163,12 @@
     "valueShipping": "Giao Hàng Nhanh",
     "valueShippingDesc": "Giao hàng tận nơi tại Mỹ, đóng gói cẩn thận",
     "testimonials": "Khách Hàng Nói Gì?",
-    "exploreProducts": "Khám Phá Sản Phẩm"
+    "exploreProducts": "Khám Phá Sản Phẩm",
+    "bestSellers": "BEST SELLERS",
+    "bestSellerBadge": "Best Seller",
+    "bestSellerOrder": "Đặt mua",
+    "bestSellerAll": "Tất cả",
+    "bestSellerSold": "Đã bán {{count}}"
   },
   "about": {
     "title": "Về LIKEFOOD",

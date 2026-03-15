@@ -33,6 +33,10 @@ public class ProductVariant extends BaseEntity {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean bestSeller = false;
+
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;

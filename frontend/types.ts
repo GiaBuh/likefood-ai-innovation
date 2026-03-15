@@ -7,6 +7,8 @@ export interface ProductVariant {
   weightValue?: number; // Added for admin edit
   weightUnit?: string; // Added for admin edit
   quantity?: number; // Stock quantity for admin
+  bestSeller?: boolean; // Best seller flag per variant
+  soldCount?: number; // Auto-calculated from completed orders
 }
 
 export type ProductStatus = 'Active' | 'Draft' | 'Archived';
@@ -32,6 +34,8 @@ export interface Product {
   sku?: string;
   status: ProductStatus;
   stock?: number;
+  bestSeller?: boolean; // Derived: true if any variant is bestSeller
+  totalSoldCount?: number; // Sum of all variant soldCounts
 }
 
 export interface CartItem extends Product {

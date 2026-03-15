@@ -163,7 +163,12 @@
     "valueShipping": "Fast Shipping",
     "valueShippingDesc": "Delivered to your door in the US with careful packaging",
     "testimonials": "What Our Customers Say",
-    "exploreProducts": "Explore Products"
+    "exploreProducts": "Explore Products",
+    "bestSellers": "BEST SELLERS",
+    "bestSellerBadge": "Best Seller",
+    "bestSellerOrder": "Order Now",
+    "bestSellerAll": "All",
+    "bestSellerSold": "{{count}} sold"
   },
   "about": {
     "title": "About LIKEFOOD",

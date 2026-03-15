@@ -32,6 +32,8 @@ type BackendProductVariant = {
   weightUnit?: string;
   price?: number;
   quantity?: number;
+  bestSeller?: boolean;
+  soldCount?: number;
 };
 
 type BackendProduct = {
@@ -46,6 +48,7 @@ type BackendProduct = {
   imageKeys?: string[];
   variants?: BackendProductVariant[];
   status?: string;
+  totalSoldCount?: number;
 };
 
 type BackendOrderItem = {
@@ -113,6 +116,7 @@ type ProductQuery = {
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
+  bestSeller?: boolean;
 };
 
 type OrderQuery = {
@@ -200,6 +204,8 @@ function toProductVariant(variant: BackendProductVariant): ProductVariant {
     weightValue: variant.weightValue,
     weightUnit: variant.weightUnit,
     quantity: variant.quantity,
+    bestSeller: variant.bestSeller ?? false,
+    soldCount: variant.soldCount ?? 0,
   };
 }
 
@@ -240,6 +246,8 @@ export function toProduct(product: BackendProduct): Product {
     sku: variants[0]?.sku,
     status: normalizedStatus,
     stock: variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0),
+    bestSeller: variants.some(v => v.bestSeller),
+    totalSoldCount: product.totalSoldCount ?? variants.reduce((sum, v) => sum + (v.soldCount || 0), 0),
   };
 }
 
@@ -300,6 +308,7 @@ export async function fetchProductsWithQuery(query: ProductQuery): Promise<Pagin
   if (query.minPrice !== undefined) params.set('minPrice', String(query.minPrice));
   if (query.maxPrice !== undefined) params.set('maxPrice', String(query.maxPrice));
   if (query.sort) params.set('sort', query.sort);
+  if (query.bestSeller !== undefined) params.set('bestSeller', String(query.bestSeller));
 
   const response = await apiFetch(`/products?${params.toString()}`, {
     method: 'GET',
@@ -556,6 +565,7 @@ async function buildProductPayload(product: Product, categoryId: string): Promis
     sku: string;
     price: number;
     quantity: number;
+    bestSeller: boolean;
   }>;
 }> {
   const thumbnailSource = product.thumbnail || product.image;
@@ -586,12 +596,13 @@ async function buildProductPayload(product: Product, categoryId: string): Promis
     if (!variantSku) {
       throw new Error(`SKU is required for variant ${index + 1} (e.g. ${parsed.value}${parsed.unit || 'g'})`);
     }
-    const out: { id?: string; weightValue: number; weightUnit: string; sku: string; price: number; quantity: number } = {
+    const out: { id?: string; weightValue: number; weightUnit: string; sku: string; price: number; quantity: number; bestSeller: boolean } = {
       weightValue: value > 0 ? value : 1,
       weightUnit: unit || 'g',
       sku: variantSku,
       price: Number(variant.price && variant.price > 0 ? variant.price : 1),
       quantity: Number(variant.quantity && variant.quantity > 0 ? variant.quantity : 1),
+      bestSeller: variant.bestSeller ?? false,
     };
     if (variant.id && String(variant.id).length > 0 && !String(variant.id).startsWith('variant-')) {
       out.id = String(variant.id);

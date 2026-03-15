@@ -16,4 +16,7 @@ public class ProductVariantResponse {
     private String sku;
     private BigDecimal price;
     private Integer quantity;
+    private boolean bestSeller;
+    @Builder.Default
+    private long soldCount = 0;
 }

@@ -21,6 +21,9 @@ public class ProductResponse {
     private CategoryResponse category;
 
     @Builder.Default
+    private long totalSoldCount = 0;
+
+    @Builder.Default
     private List<String> imageKeys = new ArrayList<>();
 
     @Builder.Default

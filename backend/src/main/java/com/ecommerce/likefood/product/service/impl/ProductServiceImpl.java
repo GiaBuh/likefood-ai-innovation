@@ -12,8 +12,10 @@ import com.ecommerce.likefood.product.domain.ProductVariant;
 import com.ecommerce.likefood.product.dto.req.ProductCreateRequest;
 import com.ecommerce.likefood.product.dto.req.ProductSpecRequest;
 import com.ecommerce.likefood.product.dto.res.ProductResponse;
+import com.ecommerce.likefood.product.dto.res.ProductVariantResponse;
 import com.ecommerce.likefood.product.mapper.ProductMapper;
 import com.ecommerce.likefood.cart.repository.CartItemRepository;
+import com.ecommerce.likefood.order.repository.OrderItemRepository;
 import com.ecommerce.likefood.product.repository.CategoryRepository;
 import com.ecommerce.likefood.product.repository.ProductRepository;
 import com.ecommerce.likefood.product.repository.ProductVariantRepository;
@@ -26,8 +28,10 @@ import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -40,6 +44,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -59,7 +64,8 @@ public class ProductServiceImpl implements ProductService {
         product.getVariants().addAll(mapVariantsForCreate(request.getVariants(), product));
         product.getImages().addAll(mapImages(request.getThumbnailKey(), request.getImageKeys(), product));
 
-        return productMapper.toResponse(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        return toResponseWithSoldCount(saved);
     }
 
     @Override
@@ -92,6 +98,7 @@ public class ProductServiceImpl implements ProductService {
                 existing.setSku(req.getSku());
                 existing.setPrice(req.getPrice());
                 existing.setQuantity(req.getQuantity());
+                existing.setBestSeller(req.getBestSeller() != null && req.getBestSeller());
                 toKeep.add(existing);
             } else {
                 if (productVariantRepository.existsBySku(req.getSku())) {
@@ -104,6 +111,7 @@ public class ProductServiceImpl implements ProductService {
                         .sku(req.getSku())
                         .price(req.getPrice())
                         .quantity(req.getQuantity())
+                        .bestSeller(req.getBestSeller() != null && req.getBestSeller())
                         .build());
             }
         }
@@ -127,7 +135,8 @@ public class ProductServiceImpl implements ProductService {
         product.getImages().clear();
         product.getImages().addAll(mapImages(request.getThumbnailKey(), request.getImageKeys(), product));
 
-        return productMapper.toResponse(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        return toResponseWithSoldCount(saved);
     }
 
     @Override
@@ -137,7 +146,7 @@ public class ProductServiceImpl implements ProductService {
 
         // Soft delete: set status to INACTIVE (product remains in DB, hidden from shop)
         product.setStatus(ProductStatus.INACTIVE);
-        return productMapper.toResponse(productRepository.save(product));
+        return toResponseWithSoldCount(productRepository.save(product));
     }
 
     @Override
@@ -149,6 +158,7 @@ public class ProductServiceImpl implements ProductService {
             requestForSpec.setStatus(productSpecRequest.getStatus());
             requestForSpec.setMinPrice(productSpecRequest.getMinPrice());
             requestForSpec.setMaxPrice(productSpecRequest.getMaxPrice());
+            requestForSpec.setBestSeller(productSpecRequest.getBestSeller());
         }
         Specification<Product> spec = GenericSpecification.filter(requestForSpec);
         if (productSpecRequest.getSearch() != null && !productSpecRequest.getSearch().isBlank()) {
@@ -164,6 +174,9 @@ public class ProductServiceImpl implements ProductService {
         }
         Page<Product> page = productRepository.findAll(spec, pageable);
 
+        // Batch load soldCounts for all variants in the page
+        Map<String, Long> soldCountMap = buildSoldCountMap();
+
         PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
                 .page(page.getNumber() + 1)
                 .pageSize(page.getSize())
@@ -171,7 +184,9 @@ public class ProductServiceImpl implements ProductService {
                 .total(page.getTotalElements())
                 .build();
 
-        List<ProductResponse> result = page.getContent().stream().map(productMapper::toResponse).toList();
+        List<ProductResponse> result = page.getContent().stream()
+                .map(p -> toResponseWithSoldCount(p, soldCountMap))
+                .toList();
 
         return PaginationResponse.builder()
                 .meta(meta)
@@ -183,8 +198,52 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse getById(String id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException("Product not found"));
-        return productMapper.toResponse(product);
+        return toResponseWithSoldCount(product);
     }
+
+    // ─── Sold Count Helpers ──────────────────────────────────────
+
+    /**
+     * Build a map of variantId → soldCount from all COMPLETED orders.
+     */
+    private Map<String, Long> buildSoldCountMap() {
+        Map<String, Long> map = new HashMap<>();
+        for (Object[] row : orderItemRepository.findSoldCountByVariant()) {
+            map.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        return map;
+    }
+
+    /**
+     * Convert Product to ProductResponse with soldCount injected (single product, queries DB).
+     */
+    private ProductResponse toResponseWithSoldCount(Product product) {
+        Map<String, Long> soldCountMap = new HashMap<>();
+        for (Object[] row : orderItemRepository.findSoldCountByProductId(product.getId())) {
+            soldCountMap.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        return toResponseWithSoldCount(product, soldCountMap);
+    }
+
+    /**
+     * Convert Product to ProductResponse with soldCount from pre-built map.
+     */
+    private ProductResponse toResponseWithSoldCount(Product product, Map<String, Long> soldCountMap) {
+        ProductResponse response = productMapper.toResponse(product);
+
+        // Inject soldCount into each variant
+        long totalSold = 0;
+        for (ProductVariantResponse vr : response.getVariants()) {
+            long sold = soldCountMap.getOrDefault(vr.getId(), 0L);
+            vr.setSoldCount(sold);
+            totalSold += sold;
+        }
+        response.setTotalSoldCount(totalSold);
+
+        return response;
+    }
+
+    // ─── Variant Mapping ─────────────────────────────────────────
 
     private List<ProductVariant> mapVariantsForCreate(List<com.ecommerce.likefood.product.dto.req.ProductVariantCreateRequest> variantRequests, Product product) {
         return variantRequests.stream()
@@ -200,6 +259,7 @@ public class ProductServiceImpl implements ProductService {
                         .sku(variantRequest.getSku())
                         .price(variantRequest.getPrice())
                         .quantity(variantRequest.getQuantity())
+                        .bestSeller(variantRequest.getBestSeller() != null && variantRequest.getBestSeller())
                         .build())
                 .toList();
     }
@@ -234,7 +294,7 @@ public class ProductServiceImpl implements ProductService {
         if (input == null || input.isBlank()) return "";
         // Normalize Vietnamese: đ/Đ → d
         String s = input.replace("đ", "d").replace("Đ", "d");
-        // NFD分解: ế → e + ̂, ư → u + ̛; remove combining marks
+        // NFD: ế → e + ̂, ư → u + ̛; remove combining marks
         s = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         return s.toLowerCase()
                 .trim()

@@ -28,4 +28,7 @@ public class ProductSpecRequest {
 
     @FilterField(column = "variants.price", operator = FilterOperator.LESS_THAN)
     private BigDecimal maxPrice;
+
+    @FilterField(column = "variants.bestSeller", operator = FilterOperator.EQUAL)
+    private Boolean bestSeller;
 }
