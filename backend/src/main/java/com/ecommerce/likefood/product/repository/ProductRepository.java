@@ -27,4 +27,7 @@ public interface ProductRepository extends JpaRepository<Product, String>, JpaSp
 
     @EntityGraph(attributePaths = {"variants", "category"})
     Page<Product> findByStatus(ProductStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"variants"})
+    List<Product> findByNameIn(List<String> names);
 }

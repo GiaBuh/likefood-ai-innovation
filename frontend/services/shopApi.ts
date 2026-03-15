@@ -891,7 +891,7 @@ export async function generateAiCombo(hashtag: string, items: string[]): Promise
   };
 }
 
-export async function publishAiCombo(id: string): Promise<Product> {
+export async function publishAiCombo(id: string): Promise<void> {
   const response = await apiFetch(`/ai/combos/${id}/publish`, {
     method: 'POST',
     requireAuth: true,
@@ -900,11 +900,45 @@ export async function publishAiCombo(id: string): Promise<Product> {
   if (!response.ok) {
     throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo AI (${response.status})`));
   }
-  
-  const payloadJson = await response.json();
-  return unwrapRestResponse(payloadJson as any) as any as Product;
+  // Don't parse response body — Product entity has circular refs
 }
 
+export type PublishedCombo = {
+  id: string;
+  hashtag: string;
+  comboName: string;
+  slogan: string;
+  description: string;
+  discountPercentage: number;
+  imageUrl?: string;
+  items?: string; // JSON array string of product names
+  createdAt?: string;
+};
+
+export async function getPublishedCombos(): Promise<PublishedCombo[]> {
+  const response = await apiFetch('/ai/combos/published', {
+    method: 'GET',
+    requireAuth: false,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch published combos (${response.status})`);
+  }
+  const payloadJson = await response.json();
+  const data = unwrapRestResponse(payloadJson as any) as any;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getComboById(id: string): Promise<PublishedCombo> {
+  const response = await apiFetch(`/ai/combos/${id}`, {
+    method: 'GET',
+    requireAuth: false,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch combo (${response.status})`);
+  }
+  const payloadJson = await response.json();
+  return unwrapRestResponse(payloadJson as any) as any as PublishedCombo;
+}
 export async function updateMyCartItem(itemId: string, quantity: number): Promise<BackendCart> {
   const response = await apiFetch(`/carts/me/items/${itemId}?quantity=${quantity}`, {
     method: 'PUT',
