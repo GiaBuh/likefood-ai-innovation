@@ -12,7 +12,7 @@ import { CategoryManagementModal, ProductFormModal } from './ProductModals';
 import AdminChatView, { ChatConversation, ChatMessage } from './AdminChatView';
 import TrendHistoryView from './TrendHistoryView';
 import AiComboGenerator from './AiComboGenerator';
-import { Product, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta } from '../../types';
+import { Product, ProductVariant, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta } from '../../types';
 import {
   getAdminConversations,
   getAdminMessages,
@@ -245,6 +245,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         console.error('Cannot delete product.', error);
         alert(error instanceof Error ? error.message : 'Không thể xóa sản phẩm.');
       }
+    }
+  };
+
+  const handleToggleVariantBestSeller = async (product: Product, variant: ProductVariant) => {
+    const updatedVariants = (product.variants || []).map(v =>
+      v.id === variant.id ? { ...v, bestSeller: !v.bestSeller } : v
+    );
+    const updatedProduct = { ...product, variants: updatedVariants };
+    try {
+      await onUpdateProduct(updatedProduct);
+    } catch (error) {
+      console.error('Cannot toggle best seller.', error);
+      alert(error instanceof Error ? error.message : 'Không thể cập nhật Best Seller.');
     }
   };
 
@@ -585,6 +598,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     products={paginatedProducts as any} 
                     onEdit={handleEditProduct} 
                     onDelete={handleDeleteProduct}
+                    onToggleVariantBestSeller={handleToggleVariantBestSeller}
                     pagination={{
                       ...productPagination,
                       page: productPage,

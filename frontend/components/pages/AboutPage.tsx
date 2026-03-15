@@ -9,10 +9,10 @@ const AboutPage: React.FC = () => {
     <div className="min-h-screen">
       <SEO title={t('about.title')} description={t('about.storyText')} path="/about" />
       {/* Hero */}
-      <section className="relative py-20 lg:py-28 bg-gradient-to-br from-secondary-50 via-white to-primary-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800">
+      <section className="relative py-12 sm:py-16 lg:py-28 bg-gradient-to-br from-secondary-50 via-white to-primary-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-neutral-900 dark:text-white mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 dark:text-white mb-4 sm:mb-6">
               {t('about.title')}
             </h1>
             <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-6"></div>
@@ -24,17 +24,17 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Mission & Vision */}
-      <section className="py-20 bg-white dark:bg-neutral-900">
+      <section className="py-10 sm:py-16 lg:py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-            <div className="p-8 rounded-2xl bg-primary-50 dark:bg-primary-950/30 border border-primary-100 dark:border-primary-900">
+            <div className="p-6 sm:p-8 rounded-2xl bg-primary-50 dark:bg-primary-950/30 border border-primary-100 dark:border-primary-900">
               <div className="w-14 h-14 rounded-xl bg-primary-500 flex items-center justify-center mb-6">
                 <span className="material-symbols-outlined !text-2xl text-white">flag</span>
               </div>
               <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-4">{t('about.missionTitle')}</h2>
               <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">{t('about.missionText')}</p>
             </div>
-            <div className="p-8 rounded-2xl bg-secondary-50 dark:bg-secondary-950/30 border border-secondary-100 dark:border-secondary-900">
+            <div className="p-6 sm:p-8 rounded-2xl bg-secondary-50 dark:bg-secondary-950/30 border border-secondary-100 dark:border-secondary-900">
               <div className="w-14 h-14 rounded-xl bg-secondary-500 flex items-center justify-center mb-6">
                 <span className="material-symbols-outlined !text-2xl text-white">visibility</span>
               </div>
@@ -46,10 +46,10 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Team / Story */}
-      <section className="py-20 bg-neutral-50 dark:bg-neutral-800/50">
+      <section className="py-10 sm:py-16 lg:py-20 bg-neutral-50 dark:bg-neutral-800/50">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-extrabold text-neutral-900 dark:text-white mb-4">{t('about.storyTitle')}</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white mb-4">{t('about.storyTitle')}</h2>
             <div className="w-12 h-1 bg-primary-500 mx-auto rounded-full mb-8"></div>
             <div className="prose prose-lg dark:prose-invert mx-auto text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-4">
               <p>{t('about.storyText')}</p>
@@ -60,7 +60,7 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Contact */}
-      <section className="py-20 bg-white dark:bg-neutral-900">
+      <section className="py-10 sm:py-16 lg:py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl font-extrabold text-neutral-900 dark:text-white mb-4">{t('about.contactTitle')}</h2>

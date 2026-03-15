@@ -6,6 +6,8 @@ import SEO from '../ui/SEO';
 import Hero from '../home/Hero';
 import CategoryGrid from '../home/CategoryGrid';
 import FlashSale from '../home/FlashSale';
+import BestSellers from '../home/BestSellers';
+import TodaySuggestions from '../home/TodaySuggestions';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -25,13 +27,16 @@ const LandingPage: React.FC = () => {
       {/* Flash Sale */}
       <FlashSale />
 
+      {/* Best Sellers */}
+      <BestSellers />
+
       {/* Brand Values */}
-      <section className="py-20 bg-white dark:bg-neutral-900">
+      <section className="py-10 sm:py-16 lg:py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-center text-neutral-900 dark:text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-center text-neutral-900 dark:text-white mb-4">
             {t('landing.brandValues')}
           </h2>
-          <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-12"></div>
+          <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-8 sm:mb-12"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { icon: 'verified', title: t('landing.valueAuthentic'), desc: t('landing.valueAuthenticDesc'), color: 'primary' },
@@ -52,11 +57,11 @@ const LandingPage: React.FC = () => {
 
       {/* Featured Products Preview */}
       {featuredProducts.length > 0 && (
-        <section className="py-20 bg-neutral-50 dark:bg-neutral-800/50">
+        <section className="py-10 sm:py-16 lg:py-20 bg-neutral-50 dark:bg-neutral-800/50">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-10">
               <div>
-                <h2 className="text-3xl font-extrabold text-neutral-900 dark:text-white">{t('home.featuredProducts')}</h2>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">{t('home.featuredProducts')}</h2>
                 <div className="w-12 h-1 bg-primary-500 rounded-full mt-3"></div>
               </div>
               <Link to="/shop" className="text-primary-500 hover:text-primary-600 font-semibold flex items-center gap-1 transition-colors">
@@ -88,12 +93,12 @@ const LandingPage: React.FC = () => {
       )}
 
       {/* Testimonials */}
-      <section className="py-20 bg-white dark:bg-neutral-900">
+      <section className="py-10 sm:py-16 lg:py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-center text-neutral-900 dark:text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-center text-neutral-900 dark:text-white mb-4">
             {t('landing.testimonials')}
           </h2>
-          <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-12"></div>
+          <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-8 sm:mb-12"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { name: 'Nguyễn Thị Mai', location: 'California, US', text: 'Sản phẩm rất tươi ngon, đóng gói cẩn thận. Nhận được đúng như mong đợi!', rating: 5 },
@@ -118,16 +123,19 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary-500 to-primary-600">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-primary-500 to-primary-600">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6">{t('landing.exploreProducts')}</h2>
-          <p className="text-primary-100 text-lg mb-8">{t('landing.heroSubtitle')}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-4 sm:mb-6">{t('landing.exploreProducts')}</h2>
+          <p className="text-primary-100 text-base sm:text-lg mb-6 sm:mb-8">{t('landing.heroSubtitle')}</p>
           <Link to="/shop" className="inline-flex items-center px-8 py-4 bg-white text-primary-500 font-bold rounded-xl hover:bg-primary-50 transition-colors shadow-button text-lg">
             {t('common.shop')}
             <span className="material-symbols-outlined ml-2">storefront</span>
           </Link>
         </div>
       </section>
+
+      {/* Today Suggestions */}
+      <TodaySuggestions />
     </div>
   );
 };

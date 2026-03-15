@@ -46,6 +46,7 @@ const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [searchProducts, setSearchProducts] = useState<Product[]>([]);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totalItems = cart.length;
@@ -227,15 +228,34 @@ const Header: React.FC<HeaderProps> = ({
             {/* Dark Mode Toggle */}
             <button
               onClick={() => {
+                // Remove any leftover overlay (handles rapid clicks)
+                document.getElementById('theme-fade-overlay')?.remove();
+
                 const html = document.documentElement;
+                const wasDark = html.classList.contains('dark');
+
+                // 1. Create overlay with CURRENT theme background (covers the page)
+                const overlay = document.createElement('div');
+                overlay.id = 'theme-fade-overlay';
+                overlay.style.background = wasDark ? '#171717' : '#ffffff';
+                document.body.appendChild(overlay);
+
+                // 2. Toggle theme INSTANTLY (user can't see — overlay is on top)
                 html.classList.toggle('dark');
-                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+                const nowDark = !wasDark;
+                setIsDark(nowDark);
+                localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+
+                // 3. Overlay fades out via CSS animation (0.3s) → reveals new theme
+                // 4. Clean up overlay after animation
+                setTimeout(() => overlay.remove(), 350);
               }}
-              className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+              className="relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors overflow-hidden"
               title={t('common.darkMode')}
             >
-              <span className="material-symbols-outlined !text-lg block dark:hidden">dark_mode</span>
-              <span className="material-symbols-outlined !text-lg hidden dark:block">light_mode</span>
+              <span className={`material-symbols-outlined !text-lg transition-transform duration-500 ${isDark ? 'rotate-[360deg]' : ''}`}>
+                {isDark ? 'dark_mode' : 'light_mode'}
+              </span>
             </button>
 
             {/* Action Area */}
@@ -357,7 +377,7 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={toggleUserMenu}
                       className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors flex items-center gap-2"
                     >
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 hidden sm:block ring-2 ring-transparent group-hover:ring-primary-500/20 transition-all">
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 ring-2 ring-transparent group-hover:ring-primary-500/20 transition-all">
                         <img
                           src={user.avatar}
                           alt="User"
@@ -370,7 +390,6 @@ const Header: React.FC<HeaderProps> = ({
                           }}
                         />
                       </div>
-                      <span className="material-symbols-outlined sm:hidden">account_circle</span>
                     </button>
 
                     <div

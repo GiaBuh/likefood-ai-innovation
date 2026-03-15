@@ -13,5 +13,7 @@ public interface ProductService {
 
     PaginationResponse getAll(ProductSpecRequest productSpecRequest, Pageable pageable);
 
+    PaginationResponse getSuggestions(String userEmail, Pageable pageable);
+
     ProductResponse getById(String id);
 }

@@ -66,4 +66,14 @@ public class ProductController {
     public ResponseEntity<ProductImportResult> importFromCsv(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(productImportService.importFromCsv(file));
     }
+
+    @GetMapping("/products/suggestions")
+    @ApiMessage("Get product suggestions")
+    public ResponseEntity<PaginationResponse> getSuggestions(
+            Pageable pageable,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(productService.getSuggestions(email, pageable));
+    }
 }

@@ -70,9 +70,9 @@ const BlogPage: React.FC = () => {
     <div className="min-h-screen">
       <SEO title={t('blog.title')} description={t('landing.heroSubtitle')} path="/blog" />
       {/* Header */}
-      <section className="py-16 lg:py-20 bg-gradient-to-br from-accent-50 via-white to-primary-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800">
+      <section className="py-10 sm:py-16 lg:py-20 bg-gradient-to-br from-accent-50 via-white to-primary-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-neutral-900 dark:text-white mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 dark:text-white mb-4">
             {t('blog.title')}
           </h1>
           <div className="w-16 h-1 bg-primary-500 mx-auto rounded-full mb-6"></div>
