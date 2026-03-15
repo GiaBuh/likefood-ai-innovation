@@ -2,6 +2,8 @@ package com.ecommerce.likefood.product.repository;
 
 import com.ecommerce.likefood.product.domain.Product;
 import com.ecommerce.likefood.product.domain.ProductStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +21,10 @@ public interface ProductRepository extends JpaRepository<Product, String>, JpaSp
     default List<Product> findActiveProducts(int limit) {
         return findByStatusOrderByCreatedAtDesc(ProductStatus.ACTIVE, PageRequest.of(0, limit));
     }
+
+    @EntityGraph(attributePaths = {"variants", "category"})
+    Page<Product> findByStatusAndCategory_IdIn(ProductStatus status, List<String> categoryIds, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"variants", "category"})
+    Page<Product> findByStatus(ProductStatus status, Pageable pageable);
 }

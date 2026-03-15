@@ -3,6 +3,21 @@
 /* TailwindCSS v4: Override dark mode to use class-based (.dark on <html>) instead of media query */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ===== Dark Mode Overlay Fade ===== */
+#theme-fade-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 1;
+  animation: theme-fade-out 0.3s ease forwards;
+}
+
+@keyframes theme-fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ========== Custom Theme ========== */
 @theme {
   /* Primary - Warm Terracotta */
@@ -85,27 +100,67 @@
 }
 
 @keyframes shimmer {
-  100% { transform: translateX(100%); }
+  100% {
+    transform: translateX(100%);
+  }
 }
+
 @keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
+
 @keyframes slide-up {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes slide-down {
-  0% { opacity: 0; transform: translateY(-10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes scale-in {
-  0% { opacity: 0; transform: scale(0.95); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 @keyframes bounce-gentle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 /* ========== Custom Base ========== */
@@ -115,6 +170,7 @@
     background-color: #ffffff;
     color: #1c1917;
   }
+
   html.dark {
     background-color: #171717;
     color: #f5f5f5;
@@ -126,6 +182,7 @@
   &::-webkit-scrollbar {
     display: none;
   }
+
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -134,9 +191,11 @@
   &::-webkit-scrollbar {
     width: 4px;
   }
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
+
   &::-webkit-scrollbar-thumb {
     background-color: #d6d3d1;
     border-radius: 20px;

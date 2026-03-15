@@ -343,6 +343,35 @@ export async function fetchProductsWithQuery(query: ProductQuery): Promise<Pagin
   };
 }
 
+export async function fetchSuggestions(page = 1, size = 10): Promise<PaginatedResult<Product>> {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('size', String(size));
+
+  const response = await apiFetch(`/products/suggestions?${params.toString()}`, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch suggestions (${response.status})`);
+  }
+
+  const payload = (await response.json()) as any;
+  const data = unwrapRestResponse(payload) || [];
+  if (Array.isArray((data as any).result)) {
+    return {
+      items: ((data as any).result as BackendProduct[]).map(toProduct),
+      meta: (data as any).meta as PaginationMeta,
+    };
+  }
+
+  const products = data as BackendProduct[];
+  return {
+    items: products.map(toProduct),
+    meta: { page, pageSize: size, totalPages: 1, total: products.length },
+  };
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   const response = await apiFetch('/categories', {
     method: 'GET',

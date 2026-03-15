@@ -22,4 +22,10 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
      */
     @Query("SELECT oi.variant.id, SUM(oi.quantity) FROM OrderItem oi WHERE oi.order.status = 'COMPLETED' AND oi.variant.product.id = :productId GROUP BY oi.variant.id")
     List<Object[]> findSoldCountByProductId(String productId);
+
+    /**
+     * Get distinct category IDs from a user's COMPLETED orders (for suggestions).
+     */
+    @Query("SELECT DISTINCT oi.variant.product.category.id FROM OrderItem oi WHERE oi.order.user.email = :email AND oi.order.status = 'COMPLETED'")
+    List<String> findCategoryIdsByUserEmail(String email);
 }

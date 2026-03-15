@@ -168,7 +168,10 @@
     "bestSellerBadge": "Best Seller",
     "bestSellerOrder": "Order Now",
     "bestSellerAll": "All",
-    "bestSellerSold": "{{count}} sold"
+    "bestSellerSold": "{{count}} sold",
+    "todaySuggestions": "TODAY'S SUGGESTIONS",
+    "todaySuggestionsDesc": "Products picked for you",
+    "loadMore": "Load More"
   },
   "about": {
     "title": "About LIKEFOOD",

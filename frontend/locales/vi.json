@@ -168,7 +168,10 @@
     "bestSellerBadge": "Best Seller",
     "bestSellerOrder": "Đặt mua",
     "bestSellerAll": "Tất cả",
-    "bestSellerSold": "Đã bán {{count}}"
+    "bestSellerSold": "Đã bán {{count}}",
+    "todaySuggestions": "GỢI Ý HÔM NAY",
+    "todaySuggestionsDesc": "Sản phẩm dành riêng cho bạn",
+    "loadMore": "Xem thêm"
   },
   "about": {
     "title": "Về LIKEFOOD",

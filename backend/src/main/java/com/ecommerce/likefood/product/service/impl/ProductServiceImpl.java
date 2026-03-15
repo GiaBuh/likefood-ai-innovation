@@ -195,6 +195,43 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public PaginationResponse getSuggestions(String userEmail, Pageable pageable) {
+        Page<Product> page;
+
+        if (userEmail != null && !userEmail.isBlank()) {
+            List<String> categoryIds = orderItemRepository.findCategoryIdsByUserEmail(userEmail);
+            if (!categoryIds.isEmpty()) {
+                // User has purchase history → prioritize products from those categories
+                page = productRepository.findByStatusAndCategory_IdIn(ProductStatus.ACTIVE, categoryIds, pageable);
+            } else {
+                // User has no orders → random active products
+                page = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+            }
+        } else {
+            // Anonymous user → random active products
+            page = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        }
+
+        Map<String, Long> soldCountMap = buildSoldCountMap();
+
+        PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
+                .page(page.getNumber() + 1)
+                .pageSize(page.getSize())
+                .totalPages(page.getTotalPages())
+                .total(page.getTotalElements())
+                .build();
+
+        List<ProductResponse> result = page.getContent().stream()
+                .map(p -> toResponseWithSoldCount(p, soldCountMap))
+                .toList();
+
+        return PaginationResponse.builder()
+                .meta(meta)
+                .result(result)
+                .build();
+    }
+
+    @Override
     public ProductResponse getById(String id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException("Product not found"));

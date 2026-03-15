@@ -7,6 +7,7 @@ import Hero from '../home/Hero';
 import CategoryGrid from '../home/CategoryGrid';
 import FlashSale from '../home/FlashSale';
 import BestSellers from '../home/BestSellers';
+import TodaySuggestions from '../home/TodaySuggestions';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -132,6 +133,9 @@ const LandingPage: React.FC = () => {
           </Link>
         </div>
       </section>
+
+      {/* Today Suggestions */}
+      <TodaySuggestions />
     </div>
   );
 };
