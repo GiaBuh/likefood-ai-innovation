@@ -198,62 +198,54 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
         <>
             <BannerCarousel />
             <TrendSection />
-            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-                    <Sidebar
+            <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="flex flex-col gap-6" ref={productsRef}>
+                    <ProductFilterBar
+                        currentSort={currentSort}
+                        onSortChange={setCurrentSort}
                         categories={availableCategories}
                         activeCategory={activeCategory}
                         onCategoryChange={setActiveCategory}
                         priceRange={priceRange}
                         onPriceChange={setPriceRange}
+                        onOpenMobileFilter={() => setIsMobileFilterOpen(true)}
                     />
 
-                    <div className="flex-1" ref={productsRef}>
-                        <ProductFilterBar
-                            currentSort={currentSort}
-                            onSortChange={setCurrentSort}
-                            onOpenMobileFilter={() =>
-                                setIsMobileFilterOpen(true)
-                            }
-                        />
-
-                        {isLoadingProducts || isFilteringProducts ? (
-                            // Shimmer / Skeleton Loading State
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                {Array.from({ length: 10 }).map((_, index) => (
-                                    <ProductCardSkeleton key={index} />
-                                ))}
-                            </div>
-                        ) : visibleProducts.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-300">
-                                <span className="material-symbols-outlined !text-6xl text-stone-200 dark:text-stone-700 mb-4">
-                                    search_off
-                                </span>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                                    Không tìm thấy sản phẩm
-                                </h3>
-                                <p className="text-stone-500 dark:text-stone-400 max-w-md">
-                                    Thử điều chỉnh tìm kiếm, khoảng giá hoặc danh mục
-                                    để tìm sản phẩm phù hợp.
-                                </p>
-                                <button
-                                    onClick={handleResetFilters}
-                                    className="mt-6 px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark transition-colors"
-                                >
-                                    Xóa bộ lọc
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {visibleProducts.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        onClick={onProductClick}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                    {isLoadingProducts || isFilteringProducts ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
+                            {Array.from({ length: 14 }).map((_, index) => (
+                                <ProductCardSkeleton key={index} />
+                            ))}
+                        </div>
+                    ) : visibleProducts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-24 text-center animate-in fade-in zoom-in-95 duration-300 bg-stone-50/50 dark:bg-stone-900/20 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800">
+                            <span className="material-symbols-outlined !text-6xl text-stone-300 dark:text-stone-700 mb-4">
+                                search_off
+                            </span>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                                Không tìm thấy sản phẩm
+                            </h3>
+                            <p className="text-stone-500 dark:text-stone-400 max-w-md">
+                                Thử điều chỉnh tìm kiếm, khoảng giá hoặc danh mục để tìm sản phẩm phù hợp.
+                            </p>
+                            <button
+                                onClick={handleResetFilters}
+                                className="mt-6 px-6 py-2.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-600 transition-colors shadow-sm"
+                            >
+                                Xóa bộ lọc
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {visibleProducts.map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onClick={onProductClick}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                         {/* Load More Button - Only show if there are more products to load AND not loading */}
                         {!isLoadingProducts &&
@@ -278,10 +270,9 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                                 </p>
                             </div>
                         )}
-                    </div>
                 </div>
             </div>
-            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="border-t border-stone-100 dark:border-stone-800"></div>
             </div>
             <SocialMediaSection />
