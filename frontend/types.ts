@@ -2,6 +2,8 @@
 export interface ProductVariant {
   weight: string;
   price: number;
+  originalPrice?: number;
+  discountPercent?: number;
   id: string; // unique identifier for the variant, e.g. "500g"
   sku?: string;
   weightValue?: number; // Added for admin edit
@@ -16,6 +18,7 @@ export type ProductStatus = 'Active' | 'Draft' | 'Archived';
 export interface Product {
   id: number | string; // Allow string IDs for new products
   name: string;
+  slug?: string;
   price: number;
   image: string; // Keep for backward compatibility/thumbnail
   images: string[]; // New: Array of images for gallery
@@ -36,6 +39,8 @@ export interface Product {
   stock?: number;
   bestSeller?: boolean; // Derived: true if any variant is bestSeller
   totalSoldCount?: number; // Sum of all variant soldCounts
+  averageRating?: number; // Average review rating (1-5)
+  totalReviews?: number; // Total number of reviews
 }
 
 export interface CartItem extends Product {
@@ -43,6 +48,8 @@ export interface CartItem extends Product {
   cartId: string; // Unique ID for cart management (combination of productID + variant)
   backendCartItemId?: string;
   maxQuantity?: number; // Max allowed from product variant stock
+  comboCampaignId?: string; // Combo campaign ID for COMBO items
+  itemType?: 'PRODUCT' | 'COMBO'; // Type of cart item
 }
 
 export interface Category {
@@ -51,7 +58,7 @@ export interface Category {
   icon?: string;
 }
 
-export type SortOption = 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
+export type SortOption = 'Phổ biến' | 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
 
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Refunded';
 export type FulfillmentStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';
@@ -97,6 +104,10 @@ export interface Order {
   total: number; // Shop legacy
   totalAmount: number; // Admin view
   shippingAddress: string;
+  shopVoucher?: Voucher;
+  shippingVoucher?: Voucher;
+  shopDiscountAmount?: number;
+  shippingDiscountAmount?: number;
 }
 
 export type OrderStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';
@@ -127,3 +138,28 @@ export interface PaginationMeta {
   totalPages: number;
   total: number;
 }
+
+export interface Voucher {
+  id: string;
+  code: string;
+  type: 'SHOP_DISCOUNT' | 'SHIPPING_DISCOUNT';
+  discountType: 'PERCENT' | 'FIXED_AMOUNT';
+  discountValue: number;
+  maxDiscountAmount?: number;
+  minOrderValue: number;
+  usageLimit: number;
+  usageCount: number;
+  startTime?: string;
+  endTime?: string;
+  isActive: boolean;
+}
+
+export interface UserVoucher {
+  id: string;
+  userId: string;
+  voucher: Voucher;
+  status: 'SAVED' | 'USED' | 'EXPIRED';
+  collectedAt: string;
+  usedAt?: string;
+}
+

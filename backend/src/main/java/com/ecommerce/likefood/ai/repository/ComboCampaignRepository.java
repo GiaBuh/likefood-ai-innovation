@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ComboCampaignRepository extends JpaRepository<ComboCampaign, String> {
     List<ComboCampaign> findByStatusOrderByCreatedAtDesc(String status);
+    List<ComboCampaign> findAllByOrderByCreatedAtDesc();
 }

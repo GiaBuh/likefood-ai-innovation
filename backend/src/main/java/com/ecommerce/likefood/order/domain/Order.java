@@ -54,4 +54,20 @@ public class Order extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_voucher_id")
+    private com.ecommerce.likefood.voucher.domain.Voucher shopVoucher;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shipping_voucher_id")
+    private com.ecommerce.likefood.voucher.domain.Voucher shippingVoucher;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal shopDiscountAmount = BigDecimal.ZERO;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingDiscountAmount = BigDecimal.ZERO;
 }

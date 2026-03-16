@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Product, ProductVariant } from '../../types';
+import { useFlyToCart } from '../../contexts/FlyToCartContext';
 
 interface ProductDetailProps {
   product: Product;
@@ -11,6 +12,7 @@ interface ProductDetailProps {
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, onBuyNow }) => {
   const { t } = useTranslation();
+  const { triggerFly } = useFlyToCart();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -49,7 +51,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
     setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e?: React.MouseEvent) => {
     // Create a product object that represents this specific selected variant
     const productToAdd = {
       ...product,
@@ -57,6 +59,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
       weight: selectedVariant.weight,
       variantId: selectedVariant.id,
     };
+    // Trigger fly animation
+    if (e) {
+      const btn = e.currentTarget as HTMLElement;
+      const rect = btn.getBoundingClientRect();
+      triggerFly(images[activeImageIndex] || product.image || '', rect);
+    }
     onAddToCart(productToAdd, quantity);
   };
 
@@ -219,7 +227,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                 </button>
               </div>
               <button 
-                onClick={handleAddToCart}
+                onClick={(e) => handleAddToCart(e)}
                 className="flex-1 bg-primary hover:bg-primary-dark text-white font-bold text-lg py-3 px-8 rounded-xl shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">shopping_cart</span>

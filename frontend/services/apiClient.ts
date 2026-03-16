@@ -133,6 +133,14 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
         ...requestHeaders,
         Authorization: `Bearer ${newToken}`,
       });
+    } else {
+      // Refresh token is also invalid/expired — force logout
+      clearAccessToken();
+      clearStoredAuthUser();
+      // Redirect to home page to trigger re-login
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+        window.location.replace('/');
+      }
     }
   }
 

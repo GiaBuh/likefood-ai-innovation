@@ -45,6 +45,14 @@ public class StorageController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping(value = "/upload-review-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    @ApiMessage("Upload review image successfully")
+    public ResponseEntity<UploadImageResponse> uploadReviewImage(@RequestPart("file") MultipartFile file) {
+        UploadImageResponse response = this.storageService.uploadImage(file, StorageObjectType.REVIEW);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @DeleteMapping("/delete-image")
     @PreAuthorize("hasRole('ADMIN')")
     @ApiMessage("Delete image successfully")

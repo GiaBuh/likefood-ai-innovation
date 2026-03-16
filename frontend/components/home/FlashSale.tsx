@@ -138,7 +138,7 @@ const FlashSale: React.FC = () => {
               return (
                 <Link
                   key={product.id}
-                  to={`/product/${product.id}`}
+                  to={`/product/${product.slug || product.id}`}
                   className="flex-shrink-0 w-[140px] sm:w-[170px] md:w-[190px] lg:w-[200px] bg-white dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group/card"
                 >
                   {/* Image + Badge */}

@@ -36,10 +36,25 @@ const StatusSelect: React.FC<{ status: FulfillmentStatus, onChange: (s: Fulfillm
     Confirm: 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
     Shipped: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
     Complete: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-    Cancelled: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700',
+    Cancelled: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
   };
-  const options: FulfillmentStatus[] = ['Processing', 'Confirm', 'Shipped', 'Complete', 'Cancelled'];
+  const labels: Record<string, string> = {
+    Processing: 'Chờ xử lý',
+    Confirm: 'Đã xác nhận',
+    Shipped: 'Đang giao',
+    Complete: 'Hoàn thành',
+    Cancelled: 'Đã huỷ',
+  };
+  // Valid next states per current status (matches backend isAdminStatusTransitionAllowed)
+  const validTransitions: Record<string, FulfillmentStatus[]> = {
+    Processing: ['Confirm', 'Complete', 'Cancelled'],
+    Confirm: ['Shipped', 'Complete', 'Cancelled'],
+    Shipped: ['Complete'],
+    Complete: [],
+    Cancelled: [],
+  };
   const isLocked = status === 'Complete' || status === 'Cancelled';
+  const nextOptions = validTransitions[status] || [];
 
   return (
     <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
@@ -51,15 +66,20 @@ const StatusSelect: React.FC<{ status: FulfillmentStatus, onChange: (s: Fulfillm
           disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary-500/30 
           transition-all ${styles[status] || styles.Processing}`}
       >
-        {options.map((opt) => (
-          <option key={opt} value={opt} disabled={opt === 'Cancelled'} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">
-            {opt}
+        <option value={status} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">
+          {labels[status] || status}
+        </option>
+        {nextOptions.map((opt) => (
+          <option key={opt} value={opt} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">
+            → {labels[opt] || opt}
           </option>
         ))}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
-        <span className="material-symbols-outlined !text-sm">expand_more</span>
-      </div>
+      {!isLocked && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
+          <span className="material-symbols-outlined !text-sm">expand_more</span>
+        </div>
+      )}
     </div>
   );
 };

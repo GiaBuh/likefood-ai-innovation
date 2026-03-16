@@ -1,86 +1,103 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SortOption } from '../../types';
 
 interface ProductFilterBarProps {
   currentSort: SortOption;
   onSortChange: (option: SortOption) => void;
-  onOpenMobileFilter: () => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalProducts: number;
 }
 
 const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
   currentSort,
   onSortChange,
-  onOpenMobileFilter
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalProducts,
 }) => {
-  const [isSortOpen, setIsSortOpen] = useState(false);
+  const { t } = useTranslation();
+  const [priceDirection, setPriceDirection] = useState<'asc' | 'desc'>('asc');
 
-  const sortOptions: SortOption[] = [
-    'Bán chạy nhất',
-    'Mới nhất',
-    'Giá thấp đến cao',
-    'Giá cao đến thấp'
+  const sortTabs: { label: string; value: SortOption }[] = [
+    { label: t('shop.sortPopular'), value: 'Phổ biến' },
+    { label: t('shop.sortNewest'), value: 'Mới nhất' },
+    { label: t('shop.sortBestSelling'), value: 'Bán chạy nhất' },
   ];
 
-  const handleSortSelect = (option: SortOption) => {
-    onSortChange(option);
-    setIsSortOpen(false);
+  const isPriceSort = currentSort === 'Giá thấp đến cao' || currentSort === 'Giá cao đến thấp';
+
+  const handlePriceClick = () => {
+    if (isPriceSort) {
+      // Toggle direction
+      const newDir = priceDirection === 'asc' ? 'desc' : 'asc';
+      setPriceDirection(newDir);
+      onSortChange(newDir === 'asc' ? 'Giá thấp đến cao' : 'Giá cao đến thấp');
+    } else {
+      onSortChange(priceDirection === 'asc' ? 'Giá thấp đến cao' : 'Giá cao đến thấp');
+    }
   };
 
   return (
-    <div
-      id="product-filter-bar"
-      className="sticky top-20 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm py-3 mb-6 flex flex-wrap items-center justify-between gap-4 px-4 rounded-xl transition-shadow duration-300"
-    >
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        Đặc sản nổi bật
-        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold uppercase hidden sm:inline-block">
-          Còn hàng
-        </span>
-      </h2>
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onOpenMobileFilter}
-          className="lg:hidden flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-stone-300 transition-colors"
-        >
-          <span className="material-symbols-outlined !text-lg">tune</span>
-          <span className="hidden xs:inline">Bộ lọc</span>
-        </button>
-
-        {/* Custom Sort Dropdown */}
-        <div className="relative">
+    <div className="bg-neutral-50/80 dark:bg-neutral-800/50 rounded-sm px-4 py-3 flex items-center justify-between gap-4 border border-neutral-100 dark:border-neutral-700">
+      {/* Left: Sort tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:inline mr-1">{t('shop.sortBy')}</span>
+        {sortTabs.map((tab) => (
           <button
-            onClick={() => setIsSortOpen(!isSortOpen)}
-            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg shadow-sm hover:border-primary dark:hover:border-primary/50 transition-colors group"
+            key={tab.label}
+            onClick={() => onSortChange(tab.value)}
+            className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all ${currentSort === tab.value && !isPriceSort
+                ? 'bg-primary text-white'
+                : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-primary border border-neutral-200 dark:border-neutral-600'
+              }`}
           >
-            <span className="text-sm text-slate-500 dark:text-stone-400">Sắp xếp:</span>
-            <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{currentSort}</span>
-            <span className={`material-symbols-outlined !text-lg text-slate-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`}>expand_more</span>
+            {tab.label}
           </button>
+        ))}
 
-          {isSortOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setIsSortOpen(false)}></div>
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-100 dark:border-stone-700 py-1 z-30 animate-in fade-in zoom-in-95 duration-100">
-                {sortOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => handleSortSelect(option)}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between group ${currentSort === option
-                        ? 'bg-orange-50 dark:bg-orange-900/20 text-primary'
-                        : 'text-slate-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 hover:text-primary'
-                      }`}
-                  >
-                    {option}
-                    {currentSort === option && (
-                      <span className="material-symbols-outlined !text-lg text-primary">check</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {/* Price button */}
+        <button
+          onClick={handlePriceClick}
+          className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all flex items-center gap-1 ${isPriceSort
+              ? 'bg-primary text-white'
+              : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-primary border border-neutral-200 dark:border-neutral-600'
+            }`}
+        >
+          {t('shop.sortPrice')}
+          <span className="material-symbols-outlined !text-sm">
+            {isPriceSort && priceDirection === 'desc' ? 'arrow_downward' : 'arrow_upward'}
+          </span>
+        </button>
       </div>
+
+      {/* Right: Pagination */}
+      {totalPages > 0 && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-neutral-500 dark:text-neutral-400 hidden md:inline">
+            {currentPage + 1}/{totalPages}
+          </span>
+          <div className="flex">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 0}
+              className="px-2.5 py-1.5 bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 rounded-l-sm hover:bg-neutral-50 dark:hover:bg-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="material-symbols-outlined !text-lg">chevron_left</span>
+            </button>
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="px-2.5 py-1.5 bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 border-l-0 text-neutral-600 dark:text-neutral-300 rounded-r-sm hover:bg-neutral-50 dark:hover:bg-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="material-symbols-outlined !text-lg">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

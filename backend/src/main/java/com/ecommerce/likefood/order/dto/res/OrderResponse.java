@@ -30,6 +30,11 @@ public class OrderResponse {
     private Instant paidAt;
     private CustomerResponse customer;
 
+    private com.ecommerce.likefood.voucher.dto.res.VoucherResponse shopVoucher;
+    private com.ecommerce.likefood.voucher.dto.res.VoucherResponse shippingVoucher;
+    private BigDecimal shopDiscountAmount;
+    private BigDecimal shippingDiscountAmount;
+
     @Builder.Default
     private List<OrderItemResponse> items = new ArrayList<>();
 

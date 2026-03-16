@@ -1,5 +1,5 @@
-import { Category, Order, PaginationMeta, Product, ProductVariant } from '../types';
-import { apiFetch, getAccessToken, getErrorMessageFromResponse } from './apiClient';
+import { Category, FulfillmentStatus, Order, PaginationMeta, Product, ProductVariant } from '../types';
+import { apiFetch, getAccessToken, getApiBaseUrl, getErrorMessageFromResponse } from './apiClient';
 
 type RestResponse<T> = {
   statusCode: number;
@@ -31,6 +31,8 @@ type BackendProductVariant = {
   weightValue?: number;
   weightUnit?: string;
   price?: number;
+  originalPrice?: number;
+  discountPercent?: number;
   quantity?: number;
   bestSeller?: boolean;
   soldCount?: number;
@@ -49,6 +51,8 @@ type BackendProduct = {
   variants?: BackendProductVariant[];
   status?: string;
   totalSoldCount?: number;
+  averageRating?: number;
+  totalReviews?: number;
 };
 
 type BackendOrderItem = {
@@ -86,11 +90,17 @@ type BackendOrder = {
 
 type BackendCartItem = {
   id: string;
-  variantId: string;
-  productId: string;
+  itemType: 'PRODUCT' | 'COMBO';
+  variantId?: string;
+  productId?: string;
+  comboCampaignId?: string;
+  name?: string;
+  imageUrl?: string;
+  variantLabel?: string;
   quantity: number;
   availableQuantity?: number;
   price: number;
+  lineTotal?: number;
 };
 
 type BackendCart = {
@@ -135,6 +145,8 @@ type CreateOrderPayload = {
   shippingAddress: string;
   note?: string;
   paymentMethod?: 'COD' | 'BANK_TRANSFER' | 'E_WALLET';
+  shopVoucherId?: string;
+  shippingVoucherId?: string;
 };
 
 export type AiChatTurn = {
@@ -201,6 +213,8 @@ function toProductVariant(variant: BackendProductVariant): ProductVariant {
     sku: variant.sku,
     weight: weight || 'Default',
     price: Number(variant.price ?? 0),
+    originalPrice: variant.originalPrice ? Number(variant.originalPrice) : undefined,
+    discountPercent: variant.discountPercent ?? undefined,
     weightValue: variant.weightValue,
     weightUnit: variant.weightUnit,
     quantity: variant.quantity,
@@ -229,6 +243,7 @@ export function toProduct(product: BackendProduct): Product {
   return {
     id: product.id || `p-${Math.random().toString(36).slice(2)}`,
     name: product.name || 'Untitled Product',
+    slug: product.slug || undefined,
     price: Number(product.price ?? fallbackPrice),
     image: finalImage,
     images: finalImages,
@@ -248,10 +263,12 @@ export function toProduct(product: BackendProduct): Product {
     stock: variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0),
     bestSeller: variants.some(v => v.bestSeller),
     totalSoldCount: product.totalSoldCount ?? variants.reduce((sum, v) => sum + (v.soldCount || 0), 0),
+    averageRating: product.averageRating ?? undefined,
+    totalReviews: product.totalReviews ?? 0,
   };
 }
 
-function resolveImageUrl(keyOrUrl: string): string {
+export function resolveImageUrl(keyOrUrl: string): string {
   if (!keyOrUrl) return '';
   if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
     return keyOrUrl;
@@ -291,6 +308,19 @@ export async function fetchProductById(id: string): Promise<Product | null> {
   if (!response.ok) {
     if (response.status === 404) return null;
     throw new Error(`Failed to fetch product (${response.status})`);
+  }
+  const payload = (await response.json()) as RestResponse<BackendProduct> | BackendProduct;
+  const data = unwrapRestResponse(payload);
+  return data ? toProduct(data as BackendProduct) : null;
+}
+
+export async function fetchProductBySlug(slug: string): Promise<Product | null> {
+  const response = await apiFetch(`/products/slug/${encodeURIComponent(slug)}`, {
+    method: 'GET',
+  });
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Failed to fetch product by slug (${response.status})`);
   }
   const payload = (await response.json()) as RestResponse<BackendProduct> | BackendProduct;
   const data = unwrapRestResponse(payload);
@@ -584,6 +614,7 @@ export async function deleteProduct(id: string): Promise<Product> {
 
 async function buildProductPayload(product: Product, categoryId: string): Promise<{
   name: string;
+  slug?: string;
   description: string;
   categoryId: string;
   thumbnailKey: string;
@@ -641,6 +672,7 @@ async function buildProductPayload(product: Product, categoryId: string): Promis
 
   return {
     name: product.name,
+    slug: product.slug || undefined,
     description: product.description,
     categoryId,
     thumbnailKey: uploadedKeys[0],
@@ -718,10 +750,11 @@ function mapOrderStatusToFulfillment(status?: string): string {
   return 'Processing';
 }
 
-function mapFulfillmentToOrderStatus(status: 'Processing' | 'Confirm' | 'Shipped' | 'Complete'): string {
+function mapFulfillmentToOrderStatus(status: string): string {
   if (status === 'Processing') return 'PENDING';
   if (status === 'Confirm') return 'CONFIRMED';
   if (status === 'Shipped') return 'SHIPPED';
+  if (status === 'Cancelled') return 'CANCELED';
   return 'COMPLETED';
 }
 
@@ -797,11 +830,17 @@ export async function fetchMyOrders(): Promise<Order[]> {
   return (data as BackendOrder[]).map(toOrder);
 }
 
-export async function addItemToMyCart(variantId: string, quantity: number): Promise<BackendCart> {
+export async function addItemToMyCart(variantId: string, quantity: number, comboCampaignId?: string): Promise<BackendCart> {
+  const body: Record<string, any> = { quantity };
+  if (comboCampaignId) {
+    body.comboCampaignId = comboCampaignId;
+  } else {
+    body.variantId = variantId;
+  }
   const response = await apiFetch('/carts/me/items', {
     method: 'POST',
     requireAuth: true,
-    body: JSON.stringify({ variantId, quantity }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     throw new Error(`Failed to add item to cart (${response.status})`);
@@ -856,6 +895,12 @@ export async function getMyCart(): Promise<BackendCart> {
   return unwrapRestResponse(payload);
 }
 
+export type ComboItemInput = {
+  productId: string;
+  variantId?: string;
+  quantity?: number;
+};
+
 export type AiComboResponse = {
   id: string;
   combo_name: string;
@@ -864,9 +909,11 @@ export type AiComboResponse = {
   discount_percentage: number;
   image_prompt: string;
   imageUrl?: string;
+  comboPrice?: number;
+  source?: string;
 };
 
-export async function generateAiCombo(hashtag: string, items: string[]): Promise<AiComboResponse> {
+export async function generateAiCombo(hashtag: string, items: ComboItemInput[]): Promise<AiComboResponse> {
   const response = await apiFetch('/ai/combos/generate', {
     method: 'POST',
     requireAuth: true,
@@ -887,8 +934,63 @@ export async function generateAiCombo(hashtag: string, items: string[]): Promise
     description: data.description,
     discount_percentage: data.discountPercentage || data.discount_percentage,
     image_prompt: data.imagePrompt || data.image_prompt,
-    imageUrl: data.imageUrl
+    imageUrl: data.imageUrl,
+    comboPrice: data.comboPrice,
+    source: data.source,
   };
+}
+
+export async function createManualCombo(data: {
+  hashtag: string;
+  comboName: string;
+  description: string;
+  discountPercentage: number;
+  imageUrl: string;
+  items: ComboItemInput[];
+}): Promise<AiComboResponse> {
+  const response = await apiFetch('/ai/combos/manual', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi tạo Combo thủ công (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  const resData = unwrapRestResponse(payloadJson as any) as any;
+  
+  return {
+    id: resData.id,
+    combo_name: resData.comboName || resData.combo_name,
+    slogan: resData.slogan,
+    description: resData.description,
+    discount_percentage: resData.discountPercentage || resData.discount_percentage,
+    image_prompt: resData.imagePrompt || resData.image_prompt,
+    imageUrl: resData.imageUrl,
+    comboPrice: resData.comboPrice,
+    source: resData.source,
+  };
+}
+
+export async function uploadComboImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiFetch('/ai/combos/upload-image', {
+    method: 'POST',
+    requireAuth: true,
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi upload ảnh combo (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  const data = unwrapRestResponse(payloadJson as any) as any;
+  return data.imageUrl;
 }
 
 export async function publishAiCombo(id: string): Promise<void> {
@@ -898,9 +1000,8 @@ export async function publishAiCombo(id: string): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo AI (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo (${response.status})`));
   }
-  // Don't parse response body — Product entity has circular refs
 }
 
 export type PublishedCombo = {
@@ -911,8 +1012,25 @@ export type PublishedCombo = {
   description: string;
   discountPercentage: number;
   imageUrl?: string;
-  items?: string; // JSON array string of product names
+  items?: string;
+  comboPrice?: number;
+  source?: string;
   createdAt?: string;
+  comboItems?: Array<{
+    id: string;
+    quantity: number;
+    product?: {
+      id: string;
+      name: string;
+      thumbnailKey?: string;
+    };
+    variant?: {
+      id: string;
+      weightValue?: number;
+      weightUnit?: string;
+      price?: number;
+    };
+  }>;
 };
 
 export async function getPublishedCombos(): Promise<PublishedCombo[]> {
@@ -1020,7 +1138,7 @@ export async function createOrderFromMyCart(payload: CreateOrderPayload): Promis
 
 export async function updateOrderStatusByAdmin(
   orderId: string,
-  status: 'Processing' | 'Confirm' | 'Shipped' | 'Complete'
+  status: FulfillmentStatus
 ): Promise<Order> {
   const response = await apiFetch(`/orders/${orderId}/status`, {
     method: 'PATCH',
@@ -1122,3 +1240,124 @@ export async function sendAdminMessage(userId: string, content: string): Promise
   return unwrapRestResponse(payload);
 }
 
+// ==================== PRODUCT REVIEWS ====================
+
+export type ReviewResponse = {
+  id: string;
+  productId: string;
+  productName: string;
+  userId: string;
+  username: string;
+  userAvatarUrl?: string;
+  orderId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  imageKeys: string[];
+  replyText?: string;
+  repliedAt?: string;
+};
+
+export type ReviewStatsResponse = {
+  productId: string;
+  averageRating: number;
+  totalReviews: number;
+  ratingCounts: Record<number, number>;
+  reviewsWithComments: number;
+  reviewsWithImages: number;
+};
+
+export type ReviewCreatePayload = {
+  productId: string;
+  orderId: string;
+  rating: number;
+  comment?: string;
+  imageKeys?: string[];
+};
+
+export async function fetchProductReviews(
+  productId: string,
+  page: number = 0,
+  size: number = 5,
+  rating?: number,
+  filter?: string,
+): Promise<{ content: ReviewResponse[]; totalElements: number; totalPages: number }> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (rating) params.set('rating', String(rating));
+  if (filter) params.set('filter', filter);
+  const response = await apiFetch(`/products/${productId}/reviews?${params.toString()}`, { method: 'GET' });
+  if (!response.ok) throw new Error('Failed to fetch reviews');
+  const payload = await response.json();
+  const data = unwrapRestResponse(payload);
+  return data as any;
+}
+
+export async function fetchProductReviewStats(productId: string): Promise<ReviewStatsResponse> {
+  const response = await apiFetch(`/products/${productId}/reviews/stats`, { method: 'GET' });
+  if (!response.ok) throw new Error('Failed to fetch review stats');
+  const payload = await response.json();
+  return unwrapRestResponse(payload) as ReviewStatsResponse;
+}
+
+export async function checkCanReview(productId: string): Promise<boolean> {
+  try {
+    const response = await apiFetch(`/products/${productId}/reviews/can-review`, { method: 'GET', requireAuth: true });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    const data = unwrapRestResponse(payload) as any;
+    return data?.canReview === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function createReview(payload: ReviewCreatePayload): Promise<ReviewResponse> {
+  const response = await apiFetch('/reviews', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, 'Không thể gửi đánh giá'));
+  }
+  const data = await response.json();
+  return unwrapRestResponse(data) as ReviewResponse;
+}
+
+export async function uploadReviewImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getAccessToken();
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/storage/upload-review-image`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!response.ok) throw new Error('Upload failed');
+  const payload = await response.json();
+  const data = unwrapRestResponse(payload) as any;
+  return data?.key || data?.imageKey || '';
+}
+
+export async function adminReplyToReview(reviewId: string, replyText: string): Promise<ReviewResponse> {
+  const response = await apiFetch(`/admin/reviews/${reviewId}/reply`, {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify({ replyText }),
+  });
+  if (!response.ok) throw new Error('Không thể trả lời đánh giá');
+  const data = await response.json();
+  return unwrapRestResponse(data) as ReviewResponse;
+}
+
+export async function fetchAdminReviews(
+  page: number = 0,
+  size: number = 10,
+): Promise<{ content: ReviewResponse[]; totalElements: number; totalPages: number }> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const response = await apiFetch(`/admin/reviews?${params.toString()}`, { method: 'GET', requireAuth: true });
+  if (!response.ok) throw new Error('Không thể tải đánh giá');
+  const payload = await response.json();
+  return unwrapRestResponse(payload) as any;
+}

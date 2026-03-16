@@ -13,5 +13,5 @@ import java.util.List;
 @AllArgsConstructor
 public class ComboGenerateRequestDto {
     private String hashtag;
-    private List<String> items;
+    private List<ComboItemInput> items; // productId + variantId
 }

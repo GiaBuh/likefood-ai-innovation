@@ -16,4 +16,5 @@ public interface ProductService {
     PaginationResponse getSuggestions(String userEmail, Pageable pageable);
 
     ProductResponse getById(String id);
+    ProductResponse getBySlug(String slug);
 }

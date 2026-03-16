@@ -230,6 +230,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
   
   // Form State
   const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   
@@ -241,6 +242,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
     if (isOpen) {
       if (product) {
         setName(product.name);
+        setSlug(product.slug || '');
         setCategory(product.categoryName || '');
         setDescription(product.description);
         
@@ -259,6 +261,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
       } else {
         // Reset for new product
         setName('');
+        setSlug('');
         setCategory('');
         setDescription('');
         setImagePreview(null);
@@ -282,6 +285,7 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
       const productData: Product = {
         id: product?.id || '',
         name,
+        slug,
         categoryName: category,
         category: category,
         categoryId: selectedCategory?.id,
@@ -504,6 +508,39 @@ export const ProductFormModal: React.FC<ProductModalProps> = ({ isOpen, onClose,
                 placeholder="vd. Gói Phở Bò" 
                 required 
               />
+          </div>
+
+          {/* Slug Field */}
+          <div>
+              <label className="mb-1.5 block text-sm font-medium text-neutral-900 dark:text-white">Slug (SEO URL)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-'))}
+                  className="h-10 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 px-4 text-sm text-neutral-900 dark:text-white font-mono focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" 
+                  placeholder="vd. goi-pho-bo" 
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const generated = name
+                      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                      .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+                      .toLowerCase()
+                      .replace(/[^a-z0-9\s-]/g, '')
+                      .trim()
+                      .replace(/\s+/g, '-')
+                      .replace(/--+/g, '-');
+                    setSlug(generated);
+                  }}
+                  className="h-10 px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-primary hover:bg-primary/10 transition-colors whitespace-nowrap"
+                  title="Tạo tự động từ tên sản phẩm"
+                >
+                  <span className="material-symbols-outlined text-sm">auto_fix_high</span>
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-neutral-400">URL: /product/{slug || '...'}</p>
           </div>
 
           {/* Row 3: Category */}

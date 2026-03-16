@@ -20,6 +20,7 @@ import com.ecommerce.likefood.product.repository.CategoryRepository;
 import com.ecommerce.likefood.product.repository.ProductRepository;
 import com.ecommerce.likefood.product.repository.ProductVariantRepository;
 import com.ecommerce.likefood.product.service.ProductService;
+import com.ecommerce.likefood.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final CartItemRepository cartItemRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ReviewRepository reviewRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -238,6 +240,13 @@ public class ProductServiceImpl implements ProductService {
         return toResponseWithSoldCount(product);
     }
 
+    @Override
+    public ProductResponse getBySlug(String slug) {
+        Product product = productRepository.findBySlug(slug)
+                .orElseThrow(() -> new AppException("Product not found"));
+        return toResponseWithSoldCount(product);
+    }
+
     // ─── Sold Count Helpers ──────────────────────────────────────
 
     /**
@@ -276,6 +285,14 @@ public class ProductServiceImpl implements ProductService {
             totalSold += sold;
         }
         response.setTotalSoldCount(totalSold);
+
+        // Inject review stats
+        Double avgRating = reviewRepository.getAverageRatingByProductId(product.getId());
+        long totalReviews = reviewRepository.countByProduct_Id(product.getId());
+        if (avgRating != null) {
+            response.setAverageRating(Math.round(avgRating * 10.0) / 10.0);
+        }
+        response.setTotalReviews(totalReviews);
 
         return response;
     }

@@ -1,9 +1,15 @@
-import React, { useState, useMemo } from 'react';
-import { generateAiCombo, AiComboResponse, publishAiCombo } from '../../services/shopApi';
+import React, { useState, useMemo, useRef } from 'react';
+import { generateAiCombo, createManualCombo, uploadComboImage, AiComboResponse, publishAiCombo, ComboItemInput } from '../../services/shopApi';
 import { Product } from '../../types';
 
 interface AiComboGeneratorProps {
   products: Product[];
+}
+
+interface SelectedProduct {
+  productId: string;
+  variantId: string;
+  quantity: number;
 }
 
 interface ScoredProduct {
@@ -15,15 +21,23 @@ interface ScoredProduct {
 
 const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
   const [hashtag, setHashtag] = useState('');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiComboResponse | null>(null);
   const [error, setError] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'smart' | 'manual'>('smart');
+  const [activeTab, setActiveTab] = useState<'ai-smart' | 'ai-manual' | 'manual'>('ai-smart');
 
-  // Smart scoring: score = stock / (soldCount + 1)
+  // Manual combo fields
+  const [manualName, setManualName] = useState('');
+  const [manualDesc, setManualDesc] = useState('');
+  const [manualDiscount, setManualDiscount] = useState(10);
+  const [manualImageUrl, setManualImageUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Smart scoring
   const scoredProducts = useMemo<ScoredProduct[]>(() => {
     return products
       .map(p => {
@@ -36,38 +50,89 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
   }, [products]);
 
   // Auto-select top 3 when switching to smart tab
-  const handleTabSwitch = (tab: 'smart' | 'manual') => {
+  const handleTabSwitch = (tab: typeof activeTab) => {
     setActiveTab(tab);
-    if (tab === 'smart') {
-      const top3 = scoredProducts.slice(0, 3).map(sp => sp.product.name);
-      setSelectedItems(top3);
+    setResult(null);
+    setPublishSuccess(false);
+    setError('');
+    if (tab === 'ai-smart') {
+      const top3 = scoredProducts.slice(0, 3).map(sp => ({
+        productId: String(sp.product.id),
+        variantId: sp.product.variants?.[0]?.id || '',
+        quantity: 1,
+      }));
+      setSelectedProducts(top3);
     } else {
-      setSelectedItems([]);
+      setSelectedProducts([]);
     }
   };
 
   // Initialize smart tab auto-select on first render
   React.useEffect(() => {
-    if (activeTab === 'smart' && selectedItems.length === 0 && scoredProducts.length > 0) {
-      const top3 = scoredProducts.slice(0, 3).map(sp => sp.product.name);
-      setSelectedItems(top3);
+    if (activeTab === 'ai-smart' && selectedProducts.length === 0 && scoredProducts.length > 0) {
+      const top3 = scoredProducts.slice(0, 3).map(sp => ({
+        productId: String(sp.product.id),
+        variantId: sp.product.variants?.[0]?.id || '',
+        quantity: 1,
+      }));
+      setSelectedProducts(top3);
     }
   }, [scoredProducts]);
 
-  const handleToggleItem = (productName: string) => {
-    setSelectedItems(prev =>
-      prev.includes(productName)
-        ? prev.filter(item => item !== productName)
-        : [...prev, productName]
+  const handleToggleProduct = (productId: string) => {
+    setSelectedProducts(prev => {
+      const exists = prev.find(p => p.productId === productId);
+      if (exists) {
+        return prev.filter(p => p.productId !== productId);
+      }
+      const product = products.find(p => String(p.id) === productId);
+      const defaultVariantId = product?.variants?.[0]?.id || '';
+      return [...prev, { productId, variantId: defaultVariantId, quantity: 1 }];
+    });
+  };
+
+  const handleVariantChange = (productId: string, variantId: string) => {
+    setSelectedProducts(prev =>
+      prev.map(p => p.productId === productId ? { ...p, variantId } : p)
     );
   };
 
+  const handleQuantityChange = (productId: string, quantity: number) => {
+    setSelectedProducts(prev =>
+      prev.map(p => p.productId === productId ? { ...p, quantity: Math.max(1, quantity) } : p)
+    );
+  };
+
+  const getComboItems = (): ComboItemInput[] => {
+    return selectedProducts.map(sp => ({
+      productId: sp.productId,
+      variantId: sp.variantId || undefined,
+      quantity: sp.quantity,
+    }));
+  };
+
+  // Calculate combo price in realtime
+  const comboPricePreview = useMemo(() => {
+    let total = 0;
+    for (const sp of selectedProducts) {
+      const product = products.find(p => String(p.id) === sp.productId);
+      if (!product) continue;
+      const variant = product.variants?.find(v => v.id === sp.variantId);
+      const price = variant?.price ?? product.price ?? 0;
+      total += price * sp.quantity;
+    }
+    const discount = activeTab === 'manual' ? manualDiscount : 15; // AI default ~15%
+    const discounted = total * (1 - discount / 100);
+    return { original: total, discounted, discount };
+  }, [selectedProducts, products, manualDiscount, activeTab]);
+
+  // Generate AI Combo
   const handleGenerate = async () => {
     if (!hashtag.trim()) {
       setError('Vui lòng nhập Hashtag (VD: #championsleague)');
       return;
     }
-    if (selectedItems.length === 0) {
+    if (selectedProducts.length === 0) {
       setError('Vui lòng chọn ít nhất 1 sản phẩm cho Combo!');
       return;
     }
@@ -77,12 +142,64 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
     setPublishSuccess(false);
 
     try {
-      const data = await generateAiCombo(hashtag, selectedItems);
+      const data = await generateAiCombo(hashtag, getComboItems());
       setResult(data);
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra khi gọi AI.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Create Manual Combo
+  const handleCreateManual = async () => {
+    if (!manualName.trim()) {
+      setError('Vui lòng nhập tên Combo');
+      return;
+    }
+    if (selectedProducts.length === 0) {
+      setError('Vui lòng chọn ít nhất 1 sản phẩm!');
+      return;
+    }
+    if (!manualImageUrl) {
+      setError('Vui lòng upload ảnh cho Combo!');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setResult(null);
+    setPublishSuccess(false);
+
+    try {
+      const data = await createManualCombo({
+        hashtag: hashtag.trim() || '#combo',
+        comboName: manualName,
+        description: manualDesc,
+        discountPercentage: manualDiscount,
+        imageUrl: manualImageUrl,
+        items: getComboItems(),
+      });
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra khi tạo Combo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Upload image
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    setError('');
+    try {
+      const url = await uploadComboImage(file);
+      setManualImageUrl(url);
+    } catch (err: any) {
+      setError(err.message || 'Lỗi upload ảnh');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -112,6 +229,80 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
     return 'Ổn định';
   };
 
+  const isProductSelected = (productId: string) => selectedProducts.some(p => p.productId === productId);
+  const getSelectedVariant = (productId: string) => selectedProducts.find(p => p.productId === productId)?.variantId || '';
+  const getSelectedQty = (productId: string) => selectedProducts.find(p => p.productId === productId)?.quantity || 1;
+
+  // ─── Product Selector with Variant ───────────────────────────────
+
+  const renderProductSelector = (productList: { product: Product; score?: number; stock?: number; sold?: number }[], showScore: boolean) => (
+    <div className="max-h-72 overflow-y-auto space-y-1.5 p-1">
+      {productList.map((item, idx) => {
+        const p = item.product;
+        const pid = String(p.id);
+        const selected = isProductSelected(pid);
+        return (
+          <div key={pid} className={`rounded-xl border transition-all ${selected ? 'border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20' : 'border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>
+            {/* Product Row */}
+            <label className="flex items-center gap-3 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                checked={selected}
+                onChange={() => handleToggleProduct(pid)}
+              />
+              {showScore && <span className="text-xs font-bold text-neutral-400 w-5">#{idx + 1}</span>}
+              <div className="h-8 w-8 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
+                <img src={p.thumbnail || p.image} alt={p.name} className="h-full w-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-bold text-neutral-900 dark:text-white block truncate">{p.name}</span>
+                {showScore && (
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Kho: {item.stock} · Đã bán: {item.sold}
+                  </span>
+                )}
+              </div>
+              {showScore && item.score !== undefined && (
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${getScoreColor(item.score)}`}>
+                  <span>{item.score.toFixed(1)}</span>
+                  <span className="hidden sm:inline text-[10px] opacity-75">({getScoreLabel(item.score)})</span>
+                </div>
+              )}
+            </label>
+
+            {/* Variant Selector (shown when product is selected) */}
+            {selected && p.variants && p.variants.length > 0 && (
+              <div className="px-3 pb-3 ml-10 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">Loại:</span>
+                <select
+                  value={getSelectedVariant(pid)}
+                  onChange={e => handleVariantChange(pid, e.target.value)}
+                  className="text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500/50 outline-none dark:text-white"
+                >
+                  {p.variants.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.weightValue}{v.weightUnit} — {Number(v.price).toLocaleString('vi-VN')}đ
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">SL:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={getSelectedQty(pid)}
+                  onChange={e => handleQuantityChange(pid, parseInt(e.target.value) || 1)}
+                  className="w-14 text-xs text-center bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-1 py-1.5 focus:ring-2 focus:ring-purple-500/50 outline-none dark:text-white"
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex flex-col lg:flex-row gap-8">
@@ -119,18 +310,55 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
         <div className="flex-1 bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-sm border border-neutral-100 dark:border-neutral-800">
           <div className="mb-6">
             <h2 className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-              🤖 Smart Combo Generator
+              🤖 Combo Generator
             </h2>
             <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">
-              Ghép sản phẩm tồn kho cao + bán ít thành combo AI để tăng doanh thu
+              Tạo combo bằng AI hoặc thủ công — chọn sản phẩm + loại cụ thể
             </p>
           </div>
 
           <div className="space-y-5">
-            {/* Hashtag Input */}
+            {/* Tab Switcher — 3 tabs */}
+            <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1 gap-1">
+              <button
+                onClick={() => handleTabSwitch('ai-smart')}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'ai-smart'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700'
+                }`}
+              >
+                <span className="material-symbols-outlined !text-base">auto_awesome</span>
+                AI Thông minh
+              </button>
+              <button
+                onClick={() => handleTabSwitch('ai-manual')}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'ai-manual'
+                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-md'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700'
+                }`}
+              >
+                <span className="material-symbols-outlined !text-base">checklist</span>
+                AI Chọn tay
+              </button>
+              <button
+                onClick={() => handleTabSwitch('manual')}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'manual'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700'
+                }`}
+              >
+                <span className="material-symbols-outlined !text-base">edit_note</span>
+                Tạo thủ công
+              </button>
+            </div>
+
+            {/* Hashtag Input — shared for AI tabs and manual */}
             <div>
               <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Trending Hashtag <span className="text-red-500">*</span>
+                Trending Hashtag {activeTab !== 'manual' && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-neutral-400">#</span>
@@ -144,99 +372,120 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
               </div>
             </div>
 
-            {/* Tab Switcher */}
+            {/* Manual-only fields */}
+            {activeTab === 'manual' && (
+              <>
+                <div>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Tên Combo <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Combo Siêu Tiết Kiệm Mùa Hè"
+                    className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-green-500/50 focus:border-green-500 outline-none transition-all dark:text-white"
+                    value={manualName}
+                    onChange={e => setManualName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Mô tả
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Mô tả combo..."
+                    className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-green-500/50 focus:border-green-500 outline-none transition-all dark:text-white resize-none"
+                    value={manualDesc}
+                    onChange={e => setManualDesc(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Giảm giá (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    className="w-32 px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:ring-2 focus:ring-green-500/50 focus:border-green-500 outline-none transition-all dark:text-white"
+                    value={manualDiscount}
+                    onChange={e => setManualDiscount(Number(e.target.value))}
+                  />
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                    Ảnh Combo <span className="text-red-500">*</span>
+                  </label>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  {manualImageUrl ? (
+                    <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700">
+                      <img src={manualImageUrl} alt="Combo" className="w-full h-40 object-cover" />
+                      <button
+                        onClick={() => { setManualImageUrl(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        <span className="material-symbols-outlined !text-sm">close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="w-full h-32 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                    >
+                      {isUploadingImage ? (
+                        <span className="text-sm text-neutral-500 animate-pulse">Đang upload...</span>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined !text-2xl text-neutral-400">cloud_upload</span>
+                          <span className="text-sm text-neutral-500">Nhấn để chọn ảnh</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Product Selector */}
             <div>
               <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-2">
-                Chọn sản phẩm cho Combo <span className="text-red-500">*</span>
+                Chọn sản phẩm + loại <span className="text-red-500">*</span>
               </label>
-              <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1 mb-3">
-                <button
-                  onClick={() => handleTabSwitch('smart')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
-                    activeTab === 'smart'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
-                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
-                  }`}
-                >
-                  <span className="material-symbols-outlined !text-lg">auto_awesome</span>
-                  Đề xuất thông minh
-                </button>
-                <button
-                  onClick={() => handleTabSwitch('manual')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
-                    activeTab === 'manual'
-                      ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-md'
-                      : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
-                  }`}
-                >
-                  <span className="material-symbols-outlined !text-lg">checklist</span>
-                  Chọn thủ công
-                </button>
-              </div>
 
-              {/* Smart Tab */}
-              {activeTab === 'smart' && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 p-2.5 bg-purple-50 dark:bg-purple-950/30 rounded-xl text-xs text-purple-600 dark:text-purple-400 font-medium">
+              {activeTab === 'ai-smart' && (
+                <>
+                  <div className="flex items-center gap-2 p-2.5 bg-purple-50 dark:bg-purple-950/30 rounded-xl text-xs text-purple-600 dark:text-purple-400 font-medium mb-2">
                     <span className="material-symbols-outlined !text-sm">lightbulb</span>
-                    Nên chọn 2-3 sản phẩm. Score cao = tồn nhiều, bán ít → ưu tiên đẩy.
+                    Score cao = tồn nhiều, bán ít → ưu tiên đẩy. Chọn loại cụ thể cho mỗi SP.
                   </div>
-                  <div className="max-h-64 overflow-y-auto space-y-1.5 p-1">
-                    {scoredProducts.map((sp, idx) => (
-                      <label
-                        key={sp.product.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
-                          selectedItems.includes(sp.product.name)
-                            ? 'border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20'
-                            : 'border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
-                          checked={selectedItems.includes(sp.product.name)}
-                          onChange={() => handleToggleItem(sp.product.name)}
-                        />
-                        <span className="text-xs font-bold text-neutral-400 w-5">#{idx + 1}</span>
-                        <div className="h-8 w-8 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
-                          <img src={sp.product.thumbnail} alt={sp.product.name} className="h-full w-full object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-bold text-neutral-900 dark:text-white block truncate">{sp.product.name}</span>
-                          <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                            Kho: {sp.stock} · Đã bán: {sp.sold}
-                          </span>
-                        </div>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${getScoreColor(sp.score)}`}>
-                          <span>{sp.score.toFixed(1)}</span>
-                          <span className="hidden sm:inline text-[10px] opacity-75">({getScoreLabel(sp.score)})</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                  {renderProductSelector(scoredProducts.map(sp => ({ product: sp.product, score: sp.score, stock: sp.stock, sold: sp.sold })), true)}
+                </>
               )}
 
-              {/* Manual Tab */}
+              {activeTab === 'ai-manual' && (
+                renderProductSelector(products.map(p => ({ product: p })), false)
+              )}
+
               {activeTab === 'manual' && (
-                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-100 dark:border-neutral-700">
-                  {products.map(p => (
-                    <label key={p.id} className="flex items-center space-x-2 p-2.5 hover:bg-white dark:hover:bg-neutral-700 rounded-lg cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        className="rounded text-purple-600 focus:ring-purple-500"
-                        checked={selectedItems.includes(p.name)}
-                        onChange={() => handleToggleItem(p.name)}
-                      />
-                      <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">{p.name}</span>
-                    </label>
-                  ))}
-                </div>
+                renderProductSelector(products.map(p => ({ product: p })), false)
               )}
 
-              <p className="text-xs text-neutral-500 mt-2">
-                Đã chọn: <span className="font-bold text-purple-500">{selectedItems.length}</span> sản phẩm
-              </p>
+              {/* Selected summary + price preview */}
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-neutral-500">
+                  Đã chọn: <span className="font-bold text-purple-500">{selectedProducts.length}</span> sản phẩm
+                </p>
+                {selectedProducts.length > 0 && (
+                  <div className="text-xs text-right">
+                    <span className="text-neutral-400 line-through mr-2">{comboPricePreview.original.toLocaleString('vi-VN')}đ</span>
+                    <span className="font-bold text-green-500">{comboPricePreview.discounted.toLocaleString('vi-VN')}đ</span>
+                    <span className="text-red-500 ml-1 font-bold">(-{comboPricePreview.discount}%)</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {error && (
@@ -246,25 +495,48 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
               </div>
             )}
 
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className={`w-full py-3 px-4 rounded-xl font-bold text-white shadow-lg transition-all
-                ${loading
-                  ? 'bg-neutral-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 hover:shadow-xl hover:-translate-y-0.5'
+            {/* Action Button */}
+            {activeTab === 'manual' ? (
+              <button
+                onClick={handleCreateManual}
+                disabled={loading}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-white shadow-lg transition-all ${
+                  loading
+                    ? 'bg-neutral-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 hover:shadow-xl hover:-translate-y-0.5'
                 }`}
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Đang vận dụng não bộ AI...
-                </span>
-              ) : '🚀 Bắt AI Tạo Combo!'}
-            </button>
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Đang tạo Combo...
+                  </span>
+                ) : '📦 Tạo Combo Thủ Công'}
+              </button>
+            ) : (
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-white shadow-lg transition-all ${
+                  loading
+                    ? 'bg-neutral-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 hover:shadow-xl hover:-translate-y-0.5'
+                }`}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Đang vận dụng não bộ AI...
+                  </span>
+                ) : '🚀 Bắt AI Tạo Combo!'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -277,7 +549,7 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                 <div className="absolute inset-0 border-t-4 border-purple-600 rounded-full animate-spin" />
               </div>
               <p className="text-neutral-500 dark:text-neutral-400 animate-pulse">
-                Đang triệu hồi Giám đốc Marketing Gemini<br/>và Designer AI...
+                {activeTab === 'manual' ? 'Đang tạo Combo thủ công...' : 'Đang triệu hồi Giám đốc Marketing Gemini\nvà Designer AI...'}
               </p>
             </div>
           )}
@@ -293,16 +565,23 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
             <div className="w-full bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl overflow-hidden border border-neutral-100 dark:border-neutral-800 transform transition-all hover:scale-[1.01]">
               <div className="relative h-64 bg-neutral-200 dark:bg-neutral-800 overflow-hidden group">
                 {result.imageUrl ? (
-                  <img src={result.imageUrl} alt="AI Generated Banner" className="w-full h-full object-cover" />
+                  <img src={result.imageUrl} alt="Combo Banner" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-400">Không tạo được ảnh</div>
+                  <div className="w-full h-full flex items-center justify-center text-neutral-400">Không có ảnh</div>
                 )}
                 <div className="absolute top-4 right-4 bg-red-500 text-white font-black text-xl px-4 py-2 rounded-full transform rotate-12 shadow-lg border-2 border-white">
                   -{result.discount_percentage}%
                 </div>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-white/80 text-xs italic line-clamp-2">Prompt: {result.image_prompt}</p>
-                </div>
+                {result.source && (
+                  <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg ${result.source === 'AI' ? 'bg-purple-500' : 'bg-green-500'}`}>
+                    {result.source === 'AI' ? '🤖 AI Generated' : '✏️ Manual'}
+                  </div>
+                )}
+                {result.image_prompt && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-white/80 text-xs italic line-clamp-2">Prompt: {result.image_prompt}</p>
+                  </div>
+                )}
               </div>
 
               <div className="p-6">
@@ -312,25 +591,41 @@ const AiComboGenerator: React.FC<AiComboGeneratorProps> = ({ products }) => {
                 <h3 className="text-2xl font-black text-neutral-900 dark:text-white mb-1 leading-tight">
                   {result.combo_name}
                 </h3>
-                <p className="text-pink-500 font-bold mb-3">
-                  "{result.slogan}"
-                </p>
+                {result.slogan && (
+                  <p className="text-pink-500 font-bold mb-3">
+                    "{result.slogan}"
+                  </p>
+                )}
 
-                {/* Items in combo */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {selectedItems.map(item => (
-                    <span key={item} className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-medium">
-                      {item}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="bg-neutral-50 dark:bg-neutral-800 p-4 rounded-xl relative">
-                  <div className="text-neutral-600 dark:text-neutral-300 text-sm whitespace-pre-wrap italic">
-                    {result.description}
+                {/* Combo Price */}
+                {result.comboPrice != null && (
+                  <div className="mb-3 flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-primary-500">{Number(result.comboPrice).toLocaleString('vi-VN')}đ</span>
+                    <span className="text-sm text-neutral-400 line-through">{comboPricePreview.original.toLocaleString('vi-VN')}đ</span>
                   </div>
-                  <span className="absolute top-2 left-2 text-4xl text-neutral-200 dark:text-neutral-700 opacity-50 block leading-none font-serif -z-10">"</span>
+                )}
+
+                {/* Items in combo as chips */}
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {selectedProducts.map(sp => {
+                    const p = products.find(pr => String(pr.id) === sp.productId);
+                    const v = p?.variants?.find(vr => vr.id === sp.variantId);
+                    return (
+                      <span key={sp.productId} className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-xs font-medium">
+                        {p?.name} {v ? `(${v.weightValue}${v.weightUnit})` : ''} x{sp.quantity}
+                      </span>
+                    );
+                  })}
                 </div>
+
+                {result.description && (
+                  <div className="bg-neutral-50 dark:bg-neutral-800 p-4 rounded-xl relative">
+                    <div className="text-neutral-600 dark:text-neutral-300 text-sm whitespace-pre-wrap italic">
+                      {result.description}
+                    </div>
+                    <span className="absolute top-2 left-2 text-4xl text-neutral-200 dark:text-neutral-700 opacity-50 block leading-none font-serif -z-10">"</span>
+                  </div>
+                )}
 
                 <div className="mt-6">
                   {publishSuccess ? (

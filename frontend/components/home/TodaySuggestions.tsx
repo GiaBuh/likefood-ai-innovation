@@ -96,7 +96,7 @@ const TodaySuggestions: React.FC = () => {
             return (
               <Link
                 key={product.id}
-                to={`/product/${product.id}`}
+                to={`/product/${product.slug || product.id}`}
                 className="group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 border border-neutral-100 dark:border-neutral-700 hover:-translate-y-1"
               >
                 <div className="aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-700 relative">

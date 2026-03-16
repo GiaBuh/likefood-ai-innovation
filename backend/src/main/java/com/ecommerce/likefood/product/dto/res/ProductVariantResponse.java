@@ -15,6 +15,8 @@ public class ProductVariantResponse {
     private String weightUnit;
     private String sku;
     private BigDecimal price;
+    private BigDecimal originalPrice;
+    private Integer discountPercent; // calculated from originalPrice vs price
     private Integer quantity;
     private boolean bestSeller;
     @Builder.Default

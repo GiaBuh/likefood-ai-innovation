@@ -47,7 +47,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers("/ai/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
-                                        "/storage/public-url")
+                                        "/storage/public-url", "/vouchers/active")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-avatar").authenticated()
                                 .requestMatchers(HttpMethod.POST, "/products", "/products/import", "/categories",

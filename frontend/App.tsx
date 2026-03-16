@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ShopProvider, useShop } from './contexts/ShopContext';
+import { FlyToCartProvider } from './contexts/FlyToCartContext';
 import Layout from './components/layout/Layout';
 import HomePage from './components/home/HomePage';
 import ProductPage from './components/product/ProductPage';
@@ -16,6 +17,7 @@ import NotFound from './components/admin/NotFound';
 import LandingPage from './components/pages/LandingPage';
 import ComboPage from './components/pages/ComboPage';
 import BlogPage from './components/pages/BlogPage';
+import VouchersPage from './components/pages/VouchersPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
@@ -81,7 +83,7 @@ const MainContent: React.FC = () => {
   }, [user, loadOrdersForRole, loadCartForCurrentUser, clearCart, clearOrders]);
 
   const handleProductClick = (product: Product) => {
-    navigate(`/product/${product.id}`);
+    navigate(`/product/${product.slug || product.id}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -91,7 +93,9 @@ const MainContent: React.FC = () => {
   };
 
   const handleOpenProductFromChat = (productId: string) => {
-    navigate(`/product/${productId}`);
+    // Try to find product by ID and navigate by slug
+    const p = products.find(pr => String(pr.id) === productId);
+    navigate(`/product/${p?.slug || productId}`);
   };
 
   const handleCheckoutStart = () => {
@@ -154,7 +158,7 @@ const MainContent: React.FC = () => {
   };
 
   // Admin route - full screen, no Layout (RBAC: only admin role)
-  if (location.pathname === '/admin') {
+  if (location.pathname.startsWith('/admin')) {
     if (!user || user.role !== 'admin') {
       return <NotFound onGoHome={() => navigate('/')} />;
     }
@@ -209,8 +213,9 @@ const MainContent: React.FC = () => {
         <Route path="/combo" element={<ErrorBoundary><ComboPage /></ErrorBoundary>} />
         <Route path="/about" element={<Navigate to="/combo" replace />} />
         <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
+        <Route path="/vouchers" element={<ErrorBoundary><VouchersPage /></ErrorBoundary>} />
         <Route
-          path="/product/:id"
+          path="/product/:slug"
           element={
             <ErrorBoundary>
               <ProductPage
@@ -298,7 +303,9 @@ const App: React.FC = () => {
       <ToastProvider>
         <AuthProvider>
           <ShopProvider>
-            <MainContent />
+            <FlyToCartProvider>
+              <MainContent />
+            </FlyToCartProvider>
           </ShopProvider>
         </AuthProvider>
       </ToastProvider>

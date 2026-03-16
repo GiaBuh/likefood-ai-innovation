@@ -62,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({
         onSearchQueryChange={onSearchQueryChange}
       />
       
-      <main className="w-full min-h-screen pt-20 pb-16 lg:pb-0">
+      <main className="w-full min-h-screen pt-16 lg:pt-[6.75rem] pb-16 lg:pb-0">
         {children}
       </main>
 
