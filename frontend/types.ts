@@ -44,6 +44,8 @@ export interface CartItem extends Product {
   cartId: string; // Unique ID for cart management (combination of productID + variant)
   backendCartItemId?: string;
   maxQuantity?: number; // Max allowed from product variant stock
+  comboCampaignId?: string; // Combo campaign ID for COMBO items
+  itemType?: 'PRODUCT' | 'COMBO'; // Type of cart item
 }
 
 export interface Category {

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ShopProvider, useShop } from './contexts/ShopContext';
+import { FlyToCartProvider } from './contexts/FlyToCartContext';
 import Layout from './components/layout/Layout';
 import HomePage from './components/home/HomePage';
 import ProductPage from './components/product/ProductPage';
@@ -300,7 +301,9 @@ const App: React.FC = () => {
       <ToastProvider>
         <AuthProvider>
           <ShopProvider>
-            <MainContent />
+            <FlyToCartProvider>
+              <MainContent />
+            </FlyToCartProvider>
           </ShopProvider>
         </AuthProvider>
       </ToastProvider>

@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getPublishedCombos, PublishedCombo } from '../../services/shopApi';
+import { getPublishedCombos, PublishedCombo, resolveImageUrl } from '../../services/shopApi';
 import { Link, useNavigate } from 'react-router-dom';
 import { useShop } from '../../contexts/ShopContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFlyToCart } from '../../contexts/FlyToCartContext';
 import SEO from '../ui/SEO';
 import Skeleton from '../ui/Skeleton';
 
 const ComboPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { products, addToCartByVariantId } = useShop();
+  const { addComboToCart } = useShop();
   const { isAuthenticated } = useAuth();
+  const { triggerFly } = useFlyToCart();
   const [combos, setCombos] = useState<PublishedCombo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCombo, setSelectedCombo] = useState<PublishedCombo | null>(null);
@@ -32,9 +34,20 @@ const ComboPage: React.FC = () => {
     fetchCombos();
   }, []);
 
-  const parseItems = (itemsStr?: string): string[] => {
-    if (!itemsStr) return [];
-    try { return JSON.parse(itemsStr); } catch { return []; }
+  const getComboItemNames = (combo: PublishedCombo): string[] => {
+    // Use comboItems if available (new structure)
+    if (combo.comboItems && combo.comboItems.length > 0) {
+      return combo.comboItems.map(ci => ci.product?.name || 'Sản phẩm');
+    }
+    // Fallback to legacy items JSON string
+    if (combo.items) {
+      try { return JSON.parse(combo.items); } catch { return []; }
+    }
+    return [];
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
   return (
@@ -97,7 +110,7 @@ const ComboPage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {combos.map((combo) => {
-                const items = parseItems(combo.items);
+                const itemNames = getComboItemNames(combo);
                 return (
                   <div
                     key={combo.id}
@@ -133,19 +146,26 @@ const ComboPage: React.FC = () => {
                       <p className="text-pink-500 text-sm font-bold mb-3">"{combo.slogan}"</p>
 
                       {/* Items Pills */}
-                      {items.length > 0 && (
+                      {itemNames.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-3">
-                          {items.slice(0, 3).map((item, idx) => (
+                          {itemNames.slice(0, 3).map((item, idx) => (
                             <span key={idx} className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-md text-xs">
                               {item}
                             </span>
                           ))}
-                          {items.length > 3 && (
+                          {itemNames.length > 3 && (
                             <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-md text-xs">
-                              +{items.length - 3}
+                              +{itemNames.length - 3}
                             </span>
                           )}
                         </div>
+                      )}
+
+                      {/* Price */}
+                      {combo.comboPrice != null && combo.comboPrice > 0 && (
+                        <p className="text-lg font-black text-purple-600 dark:text-purple-400 mb-2">
+                          {formatPrice(combo.comboPrice)}
+                        </p>
                       )}
 
                       <p className="text-neutral-500 dark:text-neutral-400 text-sm line-clamp-2">{combo.description}</p>
@@ -173,7 +193,7 @@ const ComboPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => setSelectedCombo(null)}
         >
-          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800"
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Banner */}
@@ -202,32 +222,64 @@ const ComboPage: React.FC = () => {
                 <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-full uppercase">
                   {selectedCombo.hashtag}
                 </span>
+                {selectedCombo.source && (
+                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full">
+                    {selectedCombo.source === 'AI' ? '🤖 AI' : '✋ Thủ công'}
+                  </span>
+                )}
               </div>
               <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-1">{selectedCombo.comboName}</h2>
               <p className="text-pink-500 font-bold mb-4">"{selectedCombo.slogan}"</p>
+
+              {/* Combo Price */}
+              {selectedCombo.comboPrice != null && selectedCombo.comboPrice > 0 && (
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl mb-6">
+                  <span className="material-symbols-outlined !text-2xl text-purple-600 dark:text-purple-400">local_offer</span>
+                  <div>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Giá combo</p>
+                    <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{formatPrice(selectedCombo.comboPrice)}</p>
+                  </div>
+                </div>
+              )}
+
               <p className="text-neutral-600 dark:text-neutral-300 text-sm whitespace-pre-wrap mb-6">{selectedCombo.description}</p>
 
               {/* Products in Combo */}
               <h4 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
-                Sản phẩm trong Combo
+                Sản phẩm trong Combo ({getComboItemNames(selectedCombo).length})
               </h4>
               <div className="space-y-2 mb-6">
-                {parseItems(selectedCombo.items).map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-lg">🍜</span>
+                {selectedCombo.comboItems && selectedCombo.comboItems.length > 0 ? (
+                  selectedCombo.comboItems.map((ci, idx) => (
+                    <div key={ci.id || idx} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-700 flex-shrink-0">
+                        {ci.product?.thumbnailKey ? (
+                          <img src={resolveImageUrl(ci.product.thumbnailKey)} alt={ci.product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-lg">🍜</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-neutral-900 dark:text-white text-sm truncate">{ci.product?.name || 'Sản phẩm'}</p>
+                        {ci.variant && (
+                          <p className="text-xs text-neutral-500">{ci.variant.weightValue} {ci.variant.weightUnit} • {ci.variant.price ? formatPrice(ci.variant.price) : ''}</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-neutral-400">x{ci.quantity}</span>
                     </div>
-                    <span className="font-bold text-neutral-900 dark:text-white text-sm">{item}</span>
-                    <Link
-                      to="/shop"
-                      className="ml-auto text-xs text-purple-500 hover:text-purple-600 font-bold flex items-center gap-0.5"
-                      onClick={() => setSelectedCombo(null)}
-                    >
-                      Xem SP
-                      <span className="material-symbols-outlined !text-sm">arrow_forward</span>
-                    </Link>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  getComboItemNames(selectedCombo).map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg">🍜</span>
+                      </div>
+                      <span className="font-bold text-neutral-900 dark:text-white text-sm">{item}</span>
+                    </div>
+                  ))
+                )}
               </div>
 
               {addedToCart ? (
@@ -237,23 +289,20 @@ const ComboPage: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
                     if (!isAuthenticated) {
                       setSelectedCombo(null);
                       navigate('/shop?auth=login');
                       return;
                     }
                     if (!selectedCombo) return;
-                    // Find the combo product by name
-                    const comboProduct = products.find(p => p.name === selectedCombo.comboName);
-                    if (!comboProduct || !comboProduct.variants || comboProduct.variants.length === 0) {
-                      setSelectedCombo(null);
-                      navigate('/shop');
-                      return;
-                    }
+                    // Trigger fly animation
+                    const btn = e.currentTarget as HTMLElement;
+                    const rect = btn.getBoundingClientRect();
+                    triggerFly(selectedCombo.imageUrl || '', rect);
                     setAddingToCart(true);
                     try {
-                      await addToCartByVariantId(comboProduct.variants[0].id, 1);
+                      await addComboToCart(selectedCombo.id, 1);
                       setAddedToCart(true);
                       setTimeout(() => {
                         setAddedToCart(false);

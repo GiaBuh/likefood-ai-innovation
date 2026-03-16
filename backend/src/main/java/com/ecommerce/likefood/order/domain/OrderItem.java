@@ -24,8 +24,14 @@ public class OrderItem extends BaseEntity {
     private Order order;
 
     @ManyToOne
-    @JoinColumn(name = "variant_id", nullable = false)
-    private ProductVariant variant;
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant; // nullable for COMBO items
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String itemType = "PRODUCT"; // "PRODUCT" or "COMBO"
+
+    private String comboCampaignId; // combo ID for COMBO items
 
     @Column(nullable = false)
     private Integer quantity;

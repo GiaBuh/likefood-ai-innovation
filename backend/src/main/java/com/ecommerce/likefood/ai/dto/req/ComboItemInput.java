@@ -5,13 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ComboGenerateRequestDto {
-    private String hashtag;
-    private List<ComboItemInput> items; // productId + variantId
+public class ComboItemInput {
+    private String productId;
+    private String variantId;
+    @Builder.Default
+    private Integer quantity = 1;
 }

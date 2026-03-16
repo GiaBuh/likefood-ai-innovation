@@ -33,7 +33,7 @@ interface ShopContextType {
   productPagination: PaginationMeta;
   orderPagination: PaginationMeta;
   isLoadingProducts: boolean;
-  
+
   // Product Actions (Admin)
   updateProducts: (products: Product[]) => void;
   addCategory: (name: string) => Promise<void>;
@@ -44,15 +44,17 @@ interface ShopContextType {
   importProductsFromCsv: (file: File) => Promise<{ successCount: number; failCount: number; errors: string[] }>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<Product>;
-  
+
   // Cart Actions
   addToCart: (product: Product, quantity: number) => void;
   addToCartByVariantId: (variantId: string, quantity: number) => Promise<void>;
+  addComboToCart: (comboId: string, quantity: number) => Promise<void>;
   removeFromCart: (id: number | string) => void;
   updateCartQuantity: (id: number | string, delta: number) => void;
   clearCart: () => void;
   loadCartForCurrentUser: () => Promise<void>;
-  
+  cartBounce: boolean;
+
   // Order Actions
   placeOrder: (order: Order) => void;
   submitOrder: (payload: { name: string; phone: string; address: string; note?: string }) => Promise<void>;
@@ -65,7 +67,7 @@ interface ShopContextType {
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -84,6 +86,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
   const cartRevisionRef = useRef(0);
+  const [cartBounce, setCartBounce] = useState(false);
+
+  const triggerCartBounce = useCallback(() => {
+    setCartBounce(true);
+    setTimeout(() => setCartBounce(false), 600);
+  }, []);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -115,18 +123,50 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const mapBackendCartToLocalItems = useCallback(
     (backendCart: Awaited<ReturnType<typeof getMyCart>>): CartItem[] => {
       return backendCart.items.map((item) => {
+        const isCombo = item.itemType === 'COMBO';
+
+        if (isCombo) {
+          // COMBO item — use data from backend response
+          return {
+            id: item.comboCampaignId || item.id,
+            name: item.name || 'Combo',
+            price: Number(item.price ?? 0),
+            image: item.imageUrl || '',
+            images: item.imageUrl ? [item.imageUrl] : [],
+            location: 'Viet Nam',
+            category: 'Combo',
+            categoryName: 'Combo',
+            isUsShip: true,
+            description: '',
+            weight: item.variantLabel || 'Combo',
+            packaging: 'Combo Pack',
+            variants: [],
+            thumbnail: item.imageUrl || '',
+            status: 'Active' as const,
+            quantity: item.quantity,
+            cartId: `combo-${item.comboCampaignId}`,
+            backendCartItemId: item.id,
+            maxQuantity: 999,
+            comboCampaignId: item.comboCampaignId,
+            itemType: 'COMBO' as const,
+          };
+        }
+
+        // PRODUCT item — match with local product data, fallback to backend data
         const product = products.find((p) => String(p.id) === String(item.productId));
         const variant = product?.variants?.find((v) => v.id === item.variantId);
-        const fallbackWeight = variant?.weight || product?.weight || 'Default';
+        const fallbackWeight = item.variantLabel || variant?.weight || product?.weight || 'Default';
         const fallbackPrice = Number(item.price ?? variant?.price ?? product?.price ?? 0);
+        const fallbackName = item.name || product?.name || 'Unknown product';
+        const fallbackImage = item.imageUrl || product?.image || '';
 
         const maxQty = item.availableQuantity ?? variant?.quantity ?? product?.stock ?? 999;
         return {
           id: product?.id || item.productId,
-          name: product?.name || 'Unknown product',
+          name: fallbackName,
           price: fallbackPrice,
-          image: product?.image || '',
-          images: product?.images || (product?.image ? [product.image] : []),
+          image: fallbackImage,
+          images: product?.images || (fallbackImage ? [fallbackImage] : []),
           location: product?.location || 'Viet Nam',
           category: product?.category || 'Uncategorized',
           categoryName: product?.categoryName || product?.category || 'Uncategorized',
@@ -136,7 +176,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           weight: fallbackWeight,
           packaging: product?.packaging || 'Standard Pack',
           variants: product?.variants || [],
-          thumbnail: product?.thumbnail || product?.image || '',
+          thumbnail: fallbackImage,
           variantId: item.variantId,
           status: product?.status || 'Active',
           stock: product?.stock,
@@ -144,6 +184,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           cartId: `${item.productId}-${item.variantId}`,
           backendCartItemId: item.id,
           maxQuantity: maxQty,
+          itemType: 'PRODUCT' as const,
         };
       });
     },
@@ -262,6 +303,9 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
+    showSuccess(`Đã thêm "${product.name}" vào giỏ hàng! 🛒`);
+    triggerCartBounce();
+
     if (getAccessToken() && product.variantId) {
       void addItemToMyCart(product.variantId, toAdd)
         .then((backendCart) => {
@@ -279,8 +323,21 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!getAccessToken()) return;
       await addItemToMyCart(variantId, quantity);
       await loadCartForCurrentUser();
+      showSuccess('Đã thêm vào giỏ hàng! 🛒');
+      triggerCartBounce();
     },
-    [loadCartForCurrentUser]
+    [loadCartForCurrentUser, showSuccess, triggerCartBounce]
+  );
+
+  const addComboToCart = useCallback(
+    async (comboId: string, quantity: number) => {
+      if (!getAccessToken()) return;
+      await addItemToMyCart('', quantity, comboId);
+      await loadCartForCurrentUser();
+      showSuccess('Đã thêm Combo vào giỏ hàng! 🛒');
+      triggerCartBounce();
+    },
+    [loadCartForCurrentUser, showSuccess, triggerCartBounce]
   );
 
   const removeFromCart = useCallback((id: number | string) => {
@@ -462,9 +519,6 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateOrderStatus = async (orderId: string, status: FulfillmentStatus) => {
-    if (status === 'Cancelled') {
-      throw new Error('Cancelled status is only for customer cancellation flow.');
-    }
     const updated = await updateOrderStatusByAdmin(orderId, status);
     setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
   };
@@ -522,10 +576,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       deleteProduct: deleteProductAction,
       addToCart,
       addToCartByVariantId,
+      addComboToCart,
       removeFromCart,
       updateCartQuantity,
       clearCart,
       loadCartForCurrentUser,
+      cartBounce,
       placeOrder,
       submitOrder,
       updateOrderStatus,

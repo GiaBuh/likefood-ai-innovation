@@ -11,7 +11,11 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ComboGenerateRequestDto {
+public class ManualComboRequestDto {
     private String hashtag;
-    private List<ComboItemInput> items; // productId + variantId
+    private String comboName;
+    private String description;
+    private Double discountPercentage;
+    private String imageUrl; // URL from uploaded image or external link
+    private List<ComboItemInput> items;
 }

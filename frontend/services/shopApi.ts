@@ -1,4 +1,4 @@
-import { Category, Order, PaginationMeta, Product, ProductVariant } from '../types';
+import { Category, FulfillmentStatus, Order, PaginationMeta, Product, ProductVariant } from '../types';
 import { apiFetch, getAccessToken, getErrorMessageFromResponse } from './apiClient';
 
 type RestResponse<T> = {
@@ -86,11 +86,17 @@ type BackendOrder = {
 
 type BackendCartItem = {
   id: string;
-  variantId: string;
-  productId: string;
+  itemType: 'PRODUCT' | 'COMBO';
+  variantId?: string;
+  productId?: string;
+  comboCampaignId?: string;
+  name?: string;
+  imageUrl?: string;
+  variantLabel?: string;
   quantity: number;
   availableQuantity?: number;
   price: number;
+  lineTotal?: number;
 };
 
 type BackendCart = {
@@ -252,7 +258,7 @@ export function toProduct(product: BackendProduct): Product {
   };
 }
 
-function resolveImageUrl(keyOrUrl: string): string {
+export function resolveImageUrl(keyOrUrl: string): string {
   if (!keyOrUrl) return '';
   if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
     return keyOrUrl;
@@ -734,10 +740,11 @@ function mapOrderStatusToFulfillment(status?: string): string {
   return 'Processing';
 }
 
-function mapFulfillmentToOrderStatus(status: 'Processing' | 'Confirm' | 'Shipped' | 'Complete'): string {
+function mapFulfillmentToOrderStatus(status: string): string {
   if (status === 'Processing') return 'PENDING';
   if (status === 'Confirm') return 'CONFIRMED';
   if (status === 'Shipped') return 'SHIPPED';
+  if (status === 'Cancelled') return 'CANCELED';
   return 'COMPLETED';
 }
 
@@ -813,11 +820,17 @@ export async function fetchMyOrders(): Promise<Order[]> {
   return (data as BackendOrder[]).map(toOrder);
 }
 
-export async function addItemToMyCart(variantId: string, quantity: number): Promise<BackendCart> {
+export async function addItemToMyCart(variantId: string, quantity: number, comboCampaignId?: string): Promise<BackendCart> {
+  const body: Record<string, any> = { quantity };
+  if (comboCampaignId) {
+    body.comboCampaignId = comboCampaignId;
+  } else {
+    body.variantId = variantId;
+  }
   const response = await apiFetch('/carts/me/items', {
     method: 'POST',
     requireAuth: true,
-    body: JSON.stringify({ variantId, quantity }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     throw new Error(`Failed to add item to cart (${response.status})`);
@@ -872,6 +885,12 @@ export async function getMyCart(): Promise<BackendCart> {
   return unwrapRestResponse(payload);
 }
 
+export type ComboItemInput = {
+  productId: string;
+  variantId?: string;
+  quantity?: number;
+};
+
 export type AiComboResponse = {
   id: string;
   combo_name: string;
@@ -880,9 +899,11 @@ export type AiComboResponse = {
   discount_percentage: number;
   image_prompt: string;
   imageUrl?: string;
+  comboPrice?: number;
+  source?: string;
 };
 
-export async function generateAiCombo(hashtag: string, items: string[]): Promise<AiComboResponse> {
+export async function generateAiCombo(hashtag: string, items: ComboItemInput[]): Promise<AiComboResponse> {
   const response = await apiFetch('/ai/combos/generate', {
     method: 'POST',
     requireAuth: true,
@@ -903,8 +924,63 @@ export async function generateAiCombo(hashtag: string, items: string[]): Promise
     description: data.description,
     discount_percentage: data.discountPercentage || data.discount_percentage,
     image_prompt: data.imagePrompt || data.image_prompt,
-    imageUrl: data.imageUrl
+    imageUrl: data.imageUrl,
+    comboPrice: data.comboPrice,
+    source: data.source,
   };
+}
+
+export async function createManualCombo(data: {
+  hashtag: string;
+  comboName: string;
+  description: string;
+  discountPercentage: number;
+  imageUrl: string;
+  items: ComboItemInput[];
+}): Promise<AiComboResponse> {
+  const response = await apiFetch('/ai/combos/manual', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi tạo Combo thủ công (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  const resData = unwrapRestResponse(payloadJson as any) as any;
+  
+  return {
+    id: resData.id,
+    combo_name: resData.comboName || resData.combo_name,
+    slogan: resData.slogan,
+    description: resData.description,
+    discount_percentage: resData.discountPercentage || resData.discount_percentage,
+    image_prompt: resData.imagePrompt || resData.image_prompt,
+    imageUrl: resData.imageUrl,
+    comboPrice: resData.comboPrice,
+    source: resData.source,
+  };
+}
+
+export async function uploadComboImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await apiFetch('/ai/combos/upload-image', {
+    method: 'POST',
+    requireAuth: true,
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi upload ảnh combo (${response.status})`));
+  }
+  
+  const payloadJson = await response.json();
+  const data = unwrapRestResponse(payloadJson as any) as any;
+  return data.imageUrl;
 }
 
 export async function publishAiCombo(id: string): Promise<void> {
@@ -914,9 +990,8 @@ export async function publishAiCombo(id: string): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo AI (${response.status})`));
+    throw new Error(await getErrorMessageFromResponse(response, `Lỗi xuất bản Combo (${response.status})`));
   }
-  // Don't parse response body — Product entity has circular refs
 }
 
 export type PublishedCombo = {
@@ -927,8 +1002,25 @@ export type PublishedCombo = {
   description: string;
   discountPercentage: number;
   imageUrl?: string;
-  items?: string; // JSON array string of product names
+  items?: string;
+  comboPrice?: number;
+  source?: string;
   createdAt?: string;
+  comboItems?: Array<{
+    id: string;
+    quantity: number;
+    product?: {
+      id: string;
+      name: string;
+      thumbnailKey?: string;
+    };
+    variant?: {
+      id: string;
+      weightValue?: number;
+      weightUnit?: string;
+      price?: number;
+    };
+  }>;
 };
 
 export async function getPublishedCombos(): Promise<PublishedCombo[]> {
@@ -1036,7 +1128,7 @@ export async function createOrderFromMyCart(payload: CreateOrderPayload): Promis
 
 export async function updateOrderStatusByAdmin(
   orderId: string,
-  status: 'Processing' | 'Confirm' | 'Shipped' | 'Complete'
+  status: FulfillmentStatus
 ): Promise<Order> {
   const response = await apiFetch(`/orders/${orderId}/status`, {
     method: 'PATCH',

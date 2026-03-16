@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useShop } from '../../contexts/ShopContext';
+import { useFlyToCart } from '../../contexts/FlyToCartContext';
 import { fetchProductsWithQuery, fetchCategories } from '../../services/shopApi';
 import { Product, Category } from '../../types';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
@@ -36,11 +37,13 @@ const Header: React.FC<HeaderProps> = ({
   onSearchQueryChange
 }) => {
   const { t } = useTranslation();
+  const location = useLocation();
   const defaultAvatarUrl =
     ((import.meta as any).env?.VITE_DEFAULT_AVATAR_URL as string) ||
     `${(((import.meta as any).env?.VITE_S3_PUBLIC_BASE_URL as string) || '').replace(/\/+$/, '')}/avatars/avatar-default.svg`;
   const { user, logout } = useAuth();
-  const { cart, removeFromCart } = useShop();
+  const { cart, removeFromCart, cartBounce } = useShop();
+  const { cartIconRef } = useFlyToCart();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -118,6 +121,18 @@ const Header: React.FC<HeaderProps> = ({
     megaMenuTimeout.current = setTimeout(() => setIsMegaMenuOpen(false), 150);
   };
 
+  const navLinks = [
+    { to: '/', label: t('common.home'), key: 'home' },
+    { to: '/shop', label: t('common.shop'), key: 'shop', hasMega: true },
+    { to: '/combo', label: 'Combo', key: 'combo' },
+    { to: '/blog', label: t('common.blog'), key: 'blog' },
+  ];
+
+  const isNavActive = (to: string, key: string) => {
+    if (key === 'home') return location.pathname === '/';
+    return location.pathname.startsWith(to);
+  };
+
   const SearchResultsDropdown = ({ products, loading }: { products: Product[]; loading: boolean }) => (
     <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-modal border border-neutral-100 dark:border-neutral-800 overflow-hidden max-h-80 overflow-y-auto">
       <div className="p-3 border-b border-neutral-100 dark:border-neutral-800">
@@ -156,130 +171,62 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 w-full bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 shadow-card transition-all duration-300"
+      className="fixed top-0 left-0 right-0 z-40 w-full bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md shadow-card transition-all duration-300"
     >
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ═══ Row 1: Logo + Search + Actions ═══ */}
+      <div className="border-b border-neutral-200 dark:border-neutral-800">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Mobile Search Overlay Mode */}
-        <div className={`h-20 items-center gap-2 ${isMobileSearchOpen ? 'flex md:hidden' : 'hidden'}`}>
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary-500">
-              <span className="material-symbols-outlined">search</span>
-            </div>
-            <input
-              ref={searchInputRef}
-              className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:ring-2 focus:ring-primary-500 transition-all"
-              placeholder={t('common.search')}
-              type="text"
-              value={searchQuery}
-              onChange={(event) => onSearchQueryChange(event.target.value)}
-            />
-            {searchQuery.trim() && (
-              <div className="absolute left-0 right-0 top-full pt-2 z-50 mt-1">
-                <SearchResultsDropdown products={searchProducts} loading={isLoadingSearch} />
+          {/* Mobile Search Overlay Mode */}
+          <div className={`h-16 items-center gap-2 ${isMobileSearchOpen ? 'flex md:hidden' : 'hidden'}`}>
+            <div className="relative w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary-500">
+                <span className="material-symbols-outlined">search</span>
               </div>
-            )}
+              <input
+                ref={searchInputRef}
+                className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:ring-2 focus:ring-primary-500 transition-all"
+                placeholder={t('common.search')}
+                type="text"
+                value={searchQuery}
+                onChange={(event) => onSearchQueryChange(event.target.value)}
+              />
+              {searchQuery.trim() && (
+                <div className="absolute left-0 right-0 top-full pt-2 z-50 mt-1">
+                  <SearchResultsDropdown products={searchProducts} loading={isLoadingSearch} />
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setIsMobileSearchOpen(false)}
+              className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white font-medium whitespace-nowrap"
+            >
+              {t('common.cancel')}
+            </button>
           </div>
-          <button
-            onClick={() => setIsMobileSearchOpen(false)}
-            className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white font-medium whitespace-nowrap"
-          >
-            {t('common.cancel')}
-          </button>
-        </div>
 
-        {/* Standard Header View */}
-        <div className={`h-20 items-center justify-between gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
-          <div className="flex items-center gap-2 md:gap-8">
+          {/* Standard Row 1 */}
+          <div className={`h-16 items-center justify-between gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
+            {/* Left: Logo */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 group hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2.5 group hover:opacity-90 transition-opacity flex-shrink-0"
               aria-label="Go to Home"
             >
-              <img src="/logo_likefood.png" alt="LikeFood Logo" className="h-11 w-11 rounded-full object-cover shadow-sm" />
-              <span className="font-display font-extrabold text-2xl tracking-tight text-primary-500">
+              <img src="/logo_likefood.png" alt="LikeFood Logo" className="h-10 w-10 rounded-full object-cover shadow-sm" />
+              <span className="font-display font-extrabold text-xl tracking-tight text-primary-500">
                 LIKEFOOD
               </span>
             </Link>
 
-            {/* Desktop Nav Links */}
-            <nav className="hidden lg:flex items-center gap-1">
-              <Link to="/" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
-                {t('common.home')}
-              </Link>
-              <div
-                className="relative"
-                onMouseEnter={handleMegaMenuEnter}
-                onMouseLeave={handleMegaMenuLeave}
-              >
-                <Link to="/shop" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors flex items-center gap-1">
-                  {t('common.shop')}
-                  <span className={`material-symbols-outlined !text-sm transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180' : ''}`}>expand_more</span>
-                </Link>
-
-                {/* Mega Menu Dropdown */}
-                {isMegaMenuOpen && (
-                  <div
-                    className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
-                    onMouseEnter={handleMegaMenuEnter}
-                    onMouseLeave={handleMegaMenuLeave}
-                  >
-                    <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-modal border border-neutral-100 dark:border-neutral-800 p-6 min-w-[480px] animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-neutral-100 dark:border-neutral-800">
-                        <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('common.categories', 'Danh mục sản phẩm')}</h3>
-                      </div>
-                      {categories.length === 0 ? (
-                        <div className="grid grid-cols-3 gap-3">
-                          {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {categories.map(cat => (
-                            <Link
-                              key={cat.id}
-                              to={`/shop?categoryName=${encodeURIComponent(cat.name)}`}
-                              onClick={() => setIsMegaMenuOpen(false)}
-                              className="flex items-center px-3 py-2.5 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors group"
-                            >
-                              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-primary-500 transition-colors truncate">{cat.name}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                        <Link
-                          to="/shop"
-                          onClick={() => setIsMegaMenuOpen(false)}
-                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-500 text-sm font-bold hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors"
-                        >
-                          {t('common.viewAll', 'Xem tất cả sản phẩm')}
-                          <span className="material-symbols-outlined !text-base">arrow_forward</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <Link to="/combo" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
-                Combo
-              </Link>
-              <Link to="/blog" className="px-3 py-2 rounded-lg text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors">
-                {t('common.blog')}
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex flex-1 justify-end gap-2 md:gap-3 items-center">
-            {/* Desktop Search */}
-            <div className="hidden sm:flex max-w-md flex-1">
+            {/* Center: Search Bar */}
+            <div className="hidden sm:flex flex-1 max-w-lg mx-4">
               <div className="relative w-full group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400 group-focus-within:text-primary-500 transition-colors">
-                  <span className="material-symbols-outlined">search</span>
+                  <span className="material-symbols-outlined !text-xl">search</span>
                 </div>
                 <input
-                  className="block w-full pl-10 pr-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2 border border-neutral-200 dark:border-neutral-700 rounded-full bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all sm:text-sm"
                   placeholder={t('common.search')}
                   type="text"
                   value={searchQuery}
@@ -293,44 +240,36 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Language Switcher */}
-            <LanguageSwitcher />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Language Switcher */}
+              <LanguageSwitcher />
 
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={() => {
-                // Remove any leftover overlay (handles rapid clicks)
-                document.getElementById('theme-fade-overlay')?.remove();
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={() => {
+                  document.getElementById('theme-fade-overlay')?.remove();
+                  const html = document.documentElement;
+                  const wasDark = html.classList.contains('dark');
+                  const overlay = document.createElement('div');
+                  overlay.id = 'theme-fade-overlay';
+                  overlay.style.background = wasDark ? '#171717' : '#ffffff';
+                  document.body.appendChild(overlay);
+                  html.classList.toggle('dark');
+                  const nowDark = !wasDark;
+                  setIsDark(nowDark);
+                  localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+                  setTimeout(() => overlay.remove(), 350);
+                }}
+                className="relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors overflow-hidden"
+                title={t('common.darkMode')}
+              >
+                <span className={`material-symbols-outlined !text-lg transition-transform duration-500 ${isDark ? 'rotate-[360deg]' : ''}`}>
+                  {isDark ? 'dark_mode' : 'light_mode'}
+                </span>
+              </button>
 
-                const html = document.documentElement;
-                const wasDark = html.classList.contains('dark');
-
-                // 1. Create overlay with CURRENT theme background (covers the page)
-                const overlay = document.createElement('div');
-                overlay.id = 'theme-fade-overlay';
-                overlay.style.background = wasDark ? '#171717' : '#ffffff';
-                document.body.appendChild(overlay);
-
-                // 2. Toggle theme INSTANTLY (user can't see — overlay is on top)
-                html.classList.toggle('dark');
-                const nowDark = !wasDark;
-                setIsDark(nowDark);
-                localStorage.setItem('theme', nowDark ? 'dark' : 'light');
-
-                // 3. Overlay fades out via CSS animation (0.3s) → reveals new theme
-                // 4. Clean up overlay after animation
-                setTimeout(() => overlay.remove(), 350);
-              }}
-              className="relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors overflow-hidden"
-              title={t('common.darkMode')}
-            >
-              <span className={`material-symbols-outlined !text-lg transition-transform duration-500 ${isDark ? 'rotate-[360deg]' : ''}`}>
-                {isDark ? 'dark_mode' : 'light_mode'}
-              </span>
-            </button>
-
-            {/* Action Area */}
-            <div className="flex items-center gap-1.5">
+              {/* Mobile Search Button */}
               <button
                 onClick={() => setIsMobileSearchOpen(true)}
                 className="p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors sm:hidden"
@@ -358,12 +297,13 @@ const Header: React.FC<HeaderProps> = ({
                   {/* Cart Button & Dropdown */}
                   <div className="relative group">
                     <button
+                      ref={cartIconRef as React.RefObject<HTMLButtonElement>}
                       onClick={onOpenMobileCart}
-                      className="relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+                      className={`relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-all duration-300 ${cartBounce ? 'animate-[cartBounce_0.5s_ease]' : ''}`}
                     >
                       <span className="material-symbols-outlined">shopping_basket</span>
                       {totalItems > 0 && (
-                        <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-500 text-[10px] font-bold text-white shadow-sm">
+                        <span className={`absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-500 text-[10px] font-bold text-white shadow-sm transition-transform duration-300 ${cartBounce ? 'animate-[badgePulse_0.4s_ease]' : ''}`}>
                           {totalItems > 9 ? '9+' : totalItems}
                         </span>
                       )}
@@ -537,6 +477,109 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ═══ Row 2: Centered Navigation Links (Desktop only) ═══ */}
+      <div className="hidden lg:block bg-white/80 dark:bg-neutral-900/80">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center justify-center gap-0">
+            {navLinks.map((link) => {
+              const active = isNavActive(link.to, link.key);
+
+              if (link.hasMega) {
+                return (
+                  <div
+                    key={link.key}
+                    className="relative"
+                    onMouseEnter={handleMegaMenuEnter}
+                    onMouseLeave={handleMegaMenuLeave}
+                  >
+                    <Link
+                      to={link.to}
+                      className={`
+                        relative px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
+                        ${active
+                          ? 'text-primary-500'
+                          : 'text-neutral-600 dark:text-neutral-300 hover:text-primary-500'
+                        }
+                      `}
+                    >
+                      {link.label}
+                      <span className={`material-symbols-outlined !text-sm ml-0.5 align-middle transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                      {active && (
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-500 rounded-full" />
+                      )}
+                    </Link>
+
+                    {/* Mega Menu Dropdown */}
+                    {isMegaMenuOpen && (
+                      <div
+                        className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
+                        onMouseEnter={handleMegaMenuEnter}
+                        onMouseLeave={handleMegaMenuLeave}
+                      >
+                        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-modal border border-neutral-100 dark:border-neutral-800 p-6 min-w-[480px] animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('common.categories', 'Danh mục sản phẩm')}</h3>
+                          </div>
+                          {categories.length === 0 ? (
+                            <div className="grid grid-cols-3 gap-3">
+                              {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                              {categories.map(cat => (
+                                <Link
+                                  key={cat.id}
+                                  to={`/shop?categoryName=${encodeURIComponent(cat.name)}`}
+                                  onClick={() => setIsMegaMenuOpen(false)}
+                                  className="flex items-center px-3 py-2.5 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-950 transition-colors group"
+                                >
+                                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-primary-500 transition-colors truncate">{cat.name}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                            <Link
+                              to="/shop"
+                              onClick={() => setIsMegaMenuOpen(false)}
+                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-500 text-sm font-bold hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors"
+                            >
+                              {t('common.viewAll', 'Xem tất cả sản phẩm')}
+                              <span className="material-symbols-outlined !text-base">arrow_forward</span>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={link.key}
+                  to={link.to}
+                  className={`
+                    relative px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
+                    ${active
+                      ? 'text-primary-500'
+                      : 'text-neutral-600 dark:text-neutral-300 hover:text-primary-500'
+                    }
+                  `}
+                >
+                  {link.label}
+                  {active && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-500 rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </header>

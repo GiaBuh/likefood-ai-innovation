@@ -1,5 +1,6 @@
 package com.ecommerce.likefood.cart.domain;
 
+import com.ecommerce.likefood.ai.domain.ComboCampaign;
 import com.ecommerce.likefood.common.utils.BaseEntity;
 import com.ecommerce.likefood.product.domain.ProductVariant;
 import jakarta.persistence.*;
@@ -8,10 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(
-        name = "cart_items",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"cart_id", "variant_id"})
-)
+@Table(name = "cart_items")
 @Getter
 @Setter
 @Builder
@@ -27,8 +25,16 @@ public class CartItem extends BaseEntity {
     private Cart cart;
 
     @ManyToOne
-    @JoinColumn(name = "variant_id", nullable = false)
-    private ProductVariant variant;
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant; // nullable for COMBO items
+
+    @ManyToOne
+    @JoinColumn(name = "combo_campaign_id")
+    private ComboCampaign comboCampaign; // nullable for PRODUCT items
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String itemType = "PRODUCT"; // "PRODUCT" or "COMBO"
 
     @Column(nullable = false)
     private Integer quantity;

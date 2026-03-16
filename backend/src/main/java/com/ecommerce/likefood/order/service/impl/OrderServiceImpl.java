@@ -1,8 +1,10 @@
 package com.ecommerce.likefood.order.service.impl;
 
 import com.ecommerce.likefood.ai.domain.ComboCampaign;
+import com.ecommerce.likefood.ai.domain.ComboItem;
 import com.ecommerce.likefood.ai.repository.ComboCampaignRepository;
 import com.ecommerce.likefood.cart.domain.Cart;
+import com.ecommerce.likefood.cart.domain.CartItem;
 import com.ecommerce.likefood.cart.repository.CartRepository;
 import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.common.response.PaginationResponse;
@@ -73,17 +75,7 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         List<OrderItem> orderItems = cart.getItems().stream()
-                .map(cartItem -> OrderItem.builder()
-                        .order(order)
-                        .variant(cartItem.getVariant())
-                        .quantity(cartItem.getQuantity())
-                        .price(cartItem.getPrice())
-                        .productName(cartItem.getVariant().getProduct().getName())
-                        .variantLabel(
-                                cartItem.getVariant().getWeightValue() + " " + cartItem.getVariant().getWeightUnit()
-                        )
-                        .imageKey(cartItem.getVariant().getProduct().getThumbnailKey())
-                        .build())
+                .map(cartItem -> mapCartItemToOrderItem(cartItem, order))
                 .toList();
 
         BigDecimal totalAmount = orderItems.stream()
@@ -94,11 +86,99 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
-        deductComboStock(savedOrder);
+        deductStockForOrder(savedOrder);
         cart.getItems().clear();
         cartRepository.saveAndFlush(cart);
 
         return orderMapper.toResponse(savedOrder);
+    }
+
+    private OrderItem mapCartItemToOrderItem(CartItem cartItem, Order order) {
+        if ("COMBO".equals(cartItem.getItemType()) && cartItem.getComboCampaign() != null) {
+            ComboCampaign combo = cartItem.getComboCampaign();
+            // Extract image key from combo URL
+            String imageKey = null;
+            if (combo.getImageUrl() != null && combo.getImageUrl().contains("amazonaws.com/")) {
+                imageKey = combo.getImageUrl().substring(combo.getImageUrl().indexOf("amazonaws.com/") + 14);
+            }
+            return OrderItem.builder()
+                    .order(order)
+                    .itemType("COMBO")
+                    .comboCampaignId(combo.getId())
+                    .quantity(cartItem.getQuantity())
+                    .price(cartItem.getPrice())
+                    .productName(combo.getComboName())
+                    .variantLabel("Combo -" + (combo.getDiscountPercentage() != null ? combo.getDiscountPercentage().intValue() : 0) + "%")
+                    .imageKey(imageKey)
+                    .build();
+        } else {
+            // PRODUCT item
+            ProductVariant variant = cartItem.getVariant();
+            return OrderItem.builder()
+                    .order(order)
+                    .itemType("PRODUCT")
+                    .variant(variant)
+                    .quantity(cartItem.getQuantity())
+                    .price(cartItem.getPrice())
+                    .productName(variant.getProduct().getName())
+                    .variantLabel(variant.getWeightValue() + " " + variant.getWeightUnit())
+                    .imageKey(variant.getProduct().getThumbnailKey())
+                    .build();
+        }
+    }
+
+    /**
+     * Deduct stock for all items in the order.
+     * For PRODUCT items: deduct from variant stock.
+     * For COMBO items: deduct from each combo item's product variant.
+     */
+    private void deductStockForOrder(Order order) {
+        for (OrderItem item : order.getItems()) {
+            if ("COMBO".equals(item.getItemType()) && item.getComboCampaignId() != null) {
+                deductComboStock(item);
+            } else if (item.getVariant() != null) {
+                // Regular product: deduct variant stock
+                ProductVariant variant = item.getVariant();
+                int newQty = Math.max(0, variant.getQuantity() - item.getQuantity());
+                variant.setQuantity(newQty);
+                log.info("Stock deduction: {} variant {}, qty {} -> {}",
+                        item.getProductName(), variant.getSku(),
+                        variant.getQuantity() + item.getQuantity(), newQty);
+            }
+        }
+    }
+
+    /**
+     * Deduct stock from the original products in a combo using ComboItem relations.
+     */
+    private void deductComboStock(OrderItem orderItem) {
+        try {
+            ComboCampaign combo = comboCampaignRepository.findById(orderItem.getComboCampaignId())
+                    .orElse(null);
+            if (combo == null || combo.getComboItems() == null) return;
+
+            for (ComboItem comboItem : combo.getComboItems()) {
+                ProductVariant targetVariant = comboItem.getVariant();
+                if (targetVariant == null) {
+                    // Use cheapest variant as fallback
+                    targetVariant = comboItem.getProduct().getVariants().stream()
+                            .filter(v -> v.getPrice() != null && v.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                            .min((a, b) -> a.getPrice().compareTo(b.getPrice()))
+                            .orElse(null);
+                }
+                if (targetVariant != null) {
+                    int deductQty = orderItem.getQuantity() * comboItem.getQuantity();
+                    int newQty = Math.max(0, targetVariant.getQuantity() - deductQty);
+                    log.info("Combo stock deduction: {} variant {} ({}), qty {} -> {}",
+                            comboItem.getProduct().getName(), targetVariant.getSku(),
+                            targetVariant.getWeightValue() + targetVariant.getWeightUnit(),
+                            targetVariant.getQuantity(), newQty);
+                    targetVariant.setQuantity(newQty);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to deduct combo stock for order item: {}", orderItem.getProductName(), e);
+        }
     }
 
     @Override
@@ -150,7 +230,12 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         Order savedOrder = orderRepository.save(order);
         if (status == OrderStatus.COMPLETED) {
-            orderInvoiceEmailService.sendInvoiceEmail(savedOrder);
+            try {
+                orderInvoiceEmailService.sendInvoiceEmail(savedOrder);
+            } catch (Exception e) {
+                // Email is best-effort; do not fail the status update
+                System.err.println("Failed to send invoice email for order " + orderId + ": " + e.getMessage());
+            }
         }
         return orderMapper.toResponse(savedOrder);
     }
@@ -182,65 +267,15 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new AppException("User not found"));
     }
 
-    /**
-     * When a combo order is completed, deduct stock from each original product in the combo.
-     */
-    private void deductComboStock(Order order) {
-        for (OrderItem item : order.getItems()) {
-            Product orderedProduct = item.getVariant().getProduct();
-            // Check if this product belongs to "AI Combos" category
-            if (orderedProduct.getCategory() != null 
-                && "AI Combos".equals(orderedProduct.getCategory().getName())) {
-                
-                // Find the combo campaign by matching product name
-                String comboName = orderedProduct.getName();
-                List<ComboCampaign> combos = comboCampaignRepository
-                    .findByStatusOrderByCreatedAtDesc("PUBLISHED");
-                
-                for (ComboCampaign combo : combos) {
-                    if (comboName.equals(combo.getComboName()) && combo.getItems() != null) {
-                        try {
-                            List<String> itemNames = objectMapper.readValue(
-                                combo.getItems(),
-                                objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
-                            );
-                            // Find original products and deduct stock on cheapest variant only
-                            List<Product> originalProducts = productRepository.findByNameIn(itemNames);
-                            for (Product origProduct : originalProducts) {
-                                // Find the cheapest variant (same logic as combo pricing)
-                                ProductVariant cheapestVariant = origProduct.getVariants().stream()
-                                    .filter(v -> v.getPrice() != null && v.getPrice().compareTo(BigDecimal.ZERO) > 0)
-                                    .min((a, b) -> a.getPrice().compareTo(b.getPrice()))
-                                    .orElse(null);
-                                
-                                if (cheapestVariant != null) {
-                                    int deductQty = item.getQuantity();
-                                    int newQty = Math.max(0, cheapestVariant.getQuantity() - deductQty);
-                                    log.info("Combo stock deduction: {} variant {} ({}), qty {} -> {}",
-                                        origProduct.getName(), cheapestVariant.getSku(),
-                                        cheapestVariant.getWeightValue() + cheapestVariant.getWeightUnit(),
-                                        cheapestVariant.getQuantity(), newQty);
-                                    cheapestVariant.setQuantity(newQty);
-                                }
-                            }
-                            productRepository.saveAll(originalProducts);
-                        } catch (Exception e) {
-                            log.error("Failed to deduct combo stock for: {}", comboName, e);
-                        }
-                        break; // Found matching combo, stop searching
-                    }
-                }
-            }
-        }
-    }
-
     private boolean isAdminStatusTransitionAllowed(OrderStatus currentStatus, OrderStatus nextStatus) {
         if (currentStatus == OrderStatus.CANCELED || currentStatus == OrderStatus.COMPLETED) {
             return false;
         }
-        return (currentStatus == OrderStatus.PENDING && (nextStatus == OrderStatus.CONFIRMED || nextStatus == OrderStatus.COMPLETED))
-                || (currentStatus == OrderStatus.CONFIRMED && (nextStatus == OrderStatus.SHIPPED || nextStatus == OrderStatus.COMPLETED))
-                || (currentStatus == OrderStatus.SHIPPED && nextStatus == OrderStatus.COMPLETED);
+        return switch (currentStatus) {
+            case PENDING -> nextStatus == OrderStatus.CONFIRMED || nextStatus == OrderStatus.COMPLETED || nextStatus == OrderStatus.CANCELED;
+            case CONFIRMED -> nextStatus == OrderStatus.SHIPPED || nextStatus == OrderStatus.COMPLETED || nextStatus == OrderStatus.CANCELED;
+            case SHIPPED -> nextStatus == OrderStatus.COMPLETED;
+            default -> false;
+        };
     }
-
 }
