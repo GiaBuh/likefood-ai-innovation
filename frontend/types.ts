@@ -16,6 +16,7 @@ export type ProductStatus = 'Active' | 'Draft' | 'Archived';
 export interface Product {
   id: number | string; // Allow string IDs for new products
   name: string;
+  slug?: string;
   price: number;
   image: string; // Keep for backward compatibility/thumbnail
   images: string[]; // New: Array of images for gallery

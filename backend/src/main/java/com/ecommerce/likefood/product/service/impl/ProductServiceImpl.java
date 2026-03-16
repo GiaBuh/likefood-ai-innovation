@@ -238,6 +238,13 @@ public class ProductServiceImpl implements ProductService {
         return toResponseWithSoldCount(product);
     }
 
+    @Override
+    public ProductResponse getBySlug(String slug) {
+        Product product = productRepository.findBySlug(slug)
+                .orElseThrow(() -> new AppException("Product not found"));
+        return toResponseWithSoldCount(product);
+    }
+
     // ─── Sold Count Helpers ──────────────────────────────────────
 
     /**

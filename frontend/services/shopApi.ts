@@ -229,6 +229,7 @@ export function toProduct(product: BackendProduct): Product {
   return {
     id: product.id || `p-${Math.random().toString(36).slice(2)}`,
     name: product.name || 'Untitled Product',
+    slug: product.slug || undefined,
     price: Number(product.price ?? fallbackPrice),
     image: finalImage,
     images: finalImages,
@@ -291,6 +292,19 @@ export async function fetchProductById(id: string): Promise<Product | null> {
   if (!response.ok) {
     if (response.status === 404) return null;
     throw new Error(`Failed to fetch product (${response.status})`);
+  }
+  const payload = (await response.json()) as RestResponse<BackendProduct> | BackendProduct;
+  const data = unwrapRestResponse(payload);
+  return data ? toProduct(data as BackendProduct) : null;
+}
+
+export async function fetchProductBySlug(slug: string): Promise<Product | null> {
+  const response = await apiFetch(`/products/slug/${encodeURIComponent(slug)}`, {
+    method: 'GET',
+  });
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Failed to fetch product by slug (${response.status})`);
   }
   const payload = (await response.json()) as RestResponse<BackendProduct> | BackendProduct;
   const data = unwrapRestResponse(payload);
@@ -584,6 +598,7 @@ export async function deleteProduct(id: string): Promise<Product> {
 
 async function buildProductPayload(product: Product, categoryId: string): Promise<{
   name: string;
+  slug?: string;
   description: string;
   categoryId: string;
   thumbnailKey: string;
@@ -641,6 +656,7 @@ async function buildProductPayload(product: Product, categoryId: string): Promis
 
   return {
     name: product.name,
+    slug: product.slug || undefined,
     description: product.description,
     categoryId,
     thumbnailKey: uploadedKeys[0],

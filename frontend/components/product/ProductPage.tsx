@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Product } from '../../types';
 import { useShop } from '../../contexts/ShopContext';
-import { fetchProductById } from '../../services/shopApi';
+import { fetchProductBySlug } from '../../services/shopApi';
 import ProductDetail from './ProductDetail';
 import SEO from '../ui/SEO';
 
@@ -14,7 +14,7 @@ interface ProductPageProps {
 
 const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { products, addToCart } = useShop();
   const [product, setProduct] = useState<Product | null>(null);
@@ -22,13 +22,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!id) {
+    if (!slug) {
       setNotFound(true);
       setIsLoading(false);
       return;
     }
 
-    const found = products.find((p) => String(p.id) === String(id));
+    // Try to find by slug in context first
+    const found = products.find((p) => p.slug === slug);
     if (found) {
       setProduct(found);
       setIsLoading(false);
@@ -36,7 +37,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
     }
 
     let cancelled = false;
-    fetchProductById(id)
+    fetchProductBySlug(slug)
       .then((p) => {
         if (!cancelled) {
           setProduct(p || null);
@@ -53,7 +54,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
     return () => {
       cancelled = true;
     };
-  }, [id, products]);
+  }, [slug, products]);
 
   const handleBack = () => navigate('/');
   const handleAddToCart = onAddToCart ?? ((p: Product, qty: number) => addToCart(p, qty));
@@ -93,7 +94,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
       <SEO
         title={`${product.name} | LikeFood`}
         description={product.description?.slice(0, 160) || product.name}
-        path={`/product/${product.id}`}
+        path={`/product/${product.slug || product.id}`}
       />
       <ProductDetail
         product={product}
@@ -110,7 +111,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
             {relatedProducts.map(rp => (
               <Link
                 key={rp.id}
-                to={`/product/${rp.id}`}
+                to={`/product/${rp.slug || rp.id}`}
                 className="flex-shrink-0 w-48 group snap-start"
               >
                 <div className="aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 mb-3">

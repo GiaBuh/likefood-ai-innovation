@@ -60,6 +60,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.getById(id));
     }
 
+    @GetMapping("/products/slug/{slug}")
+    @ApiMessage("Get product by slug")
+    public ResponseEntity<ProductResponse> getBySlug(@PathVariable("slug") String slug) {
+        return ResponseEntity.ok(productService.getBySlug(slug));
+    }
+
     @PostMapping(value = "/products/import", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('ADMIN')")
     @ApiMessage("Import products from CSV")

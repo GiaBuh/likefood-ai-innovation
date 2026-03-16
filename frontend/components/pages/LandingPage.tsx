@@ -56,7 +56,7 @@ const LandingPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {featuredProducts.map((product) => (
-                <Link key={product.id} to={`/product/${product.id}`} className="group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 border border-neutral-100 dark:border-neutral-700">
+                <Link key={product.id} to={`/product/${product.slug || product.id}`} className="group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 border border-neutral-100 dark:border-neutral-700">
                   <div className="aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-700">
                     <img
                       src={product.image}

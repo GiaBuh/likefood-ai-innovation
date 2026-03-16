@@ -30,4 +30,7 @@ public interface ProductRepository extends JpaRepository<Product, String>, JpaSp
 
     @EntityGraph(attributePaths = {"variants"})
     List<Product> findByNameIn(List<String> names);
+
+    @EntityGraph(attributePaths = {"variants", "category"})
+    java.util.Optional<Product> findBySlug(String slug);
 }

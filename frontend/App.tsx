@@ -81,7 +81,7 @@ const MainContent: React.FC = () => {
   }, [user, loadOrdersForRole, loadCartForCurrentUser, clearCart, clearOrders]);
 
   const handleProductClick = (product: Product) => {
-    navigate(`/product/${product.id}`);
+    navigate(`/product/${product.slug || product.id}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -91,7 +91,9 @@ const MainContent: React.FC = () => {
   };
 
   const handleOpenProductFromChat = (productId: string) => {
-    navigate(`/product/${productId}`);
+    // Try to find product by ID and navigate by slug
+    const p = products.find(pr => String(pr.id) === productId);
+    navigate(`/product/${p?.slug || productId}`);
   };
 
   const handleCheckoutStart = () => {
@@ -210,7 +212,7 @@ const MainContent: React.FC = () => {
         <Route path="/about" element={<Navigate to="/combo" replace />} />
         <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
         <Route
-          path="/product/:id"
+          path="/product/:slug"
           element={
             <ErrorBoundary>
               <ProductPage
