@@ -23,6 +23,12 @@ public class ProductResponse {
     @Builder.Default
     private long totalSoldCount = 0;
 
+    // Review stats
+    @Builder.Default
+    private Double averageRating = null;
+    @Builder.Default
+    private Long totalReviews = 0L;
+
     @Builder.Default
     private List<String> imageKeys = new ArrayList<>();
 

@@ -39,6 +39,8 @@ export interface Product {
   stock?: number;
   bestSeller?: boolean; // Derived: true if any variant is bestSeller
   totalSoldCount?: number; // Sum of all variant soldCounts
+  averageRating?: number; // Average review rating (1-5)
+  totalReviews?: number; // Total number of reviews
 }
 
 export interface CartItem extends Product {
@@ -56,7 +58,7 @@ export interface Category {
   icon?: string;
 }
 
-export type SortOption = 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
+export type SortOption = 'Phổ biến' | 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
 
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Refunded';
 export type FulfillmentStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';

@@ -9,6 +9,7 @@ import CategoryGrid from '../home/CategoryGrid';
 import FlashSale from '../home/FlashSale';
 import BestSellers from '../home/BestSellers';
 import TodaySuggestions from '../home/TodaySuggestions';
+import TrendSection from '../home/TrendSection';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -30,6 +31,9 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <Hero />
+
+      {/* Trending on TikTok */}
+      <TrendSection />
 
       {/* Category Grid */}
       <CategoryGrid />

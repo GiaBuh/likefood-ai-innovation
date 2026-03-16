@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '../../types';
 
 interface ProductCardProps {
@@ -7,6 +8,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
+  const { t } = useTranslation();
   // Get best discount from variants
   const getDiscount = () => {
     if (!product.variants?.length) return null;
@@ -70,7 +72,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         {/* Best Seller Badge */}
         {product.bestSeller && (
           <div className="absolute top-2 left-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-r uppercase tracking-wide">
-            Bán chạy
+            {t('shop.bestSeller')}
           </div>
         )}
       </div>
@@ -81,6 +83,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         <h3 className="text-[13px] text-neutral-800 dark:text-neutral-200 leading-snug line-clamp-2 min-h-[2.4rem] mb-2">
           {product.name}
         </h3>
+
+        {/* Star Rating */}
+        {product.averageRating != null && product.averageRating > 0 && (
+          <div className="flex items-center gap-1 mb-1.5">
+            <span className="text-yellow-400 text-xs">★</span>
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+              {product.averageRating}
+            </span>
+          </div>
+        )}
 
         {/* Price Row */}
         <div className="mt-auto flex items-center justify-between gap-1">
@@ -96,7 +108,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </div>
           {soldText && (
             <span className="text-[11px] text-neutral-400 dark:text-neutral-500 whitespace-nowrap flex-shrink-0">
-              Đã bán {soldText}
+              {t('shop.sold')} {soldText}
             </span>
           )}
         </div>

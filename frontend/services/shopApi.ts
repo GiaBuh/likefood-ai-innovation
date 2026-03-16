@@ -51,6 +51,8 @@ type BackendProduct = {
   variants?: BackendProductVariant[];
   status?: string;
   totalSoldCount?: number;
+  averageRating?: number;
+  totalReviews?: number;
 };
 
 type BackendOrderItem = {
@@ -259,6 +261,8 @@ export function toProduct(product: BackendProduct): Product {
     stock: variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0),
     bestSeller: variants.some(v => v.bestSeller),
     totalSoldCount: product.totalSoldCount ?? variants.reduce((sum, v) => sum + (v.soldCount || 0), 0),
+    averageRating: product.averageRating ?? undefined,
+    totalReviews: product.totalReviews ?? 0,
   };
 }
 

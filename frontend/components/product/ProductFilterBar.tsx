@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SortOption } from '../../types';
 
 interface ProductFilterBarProps {
@@ -18,12 +19,13 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
   onPageChange,
   totalProducts,
 }) => {
+  const { t } = useTranslation();
   const [priceDirection, setPriceDirection] = useState<'asc' | 'desc'>('asc');
 
   const sortTabs: { label: string; value: SortOption }[] = [
-    { label: 'Phổ Biến', value: 'Bán chạy nhất' },
-    { label: 'Mới Nhất', value: 'Mới nhất' },
-    { label: 'Bán Chạy', value: 'Bán chạy nhất' },
+    { label: t('shop.sortPopular'), value: 'Phổ biến' },
+    { label: t('shop.sortNewest'), value: 'Mới nhất' },
+    { label: t('shop.sortBestSelling'), value: 'Bán chạy nhất' },
   ];
 
   const isPriceSort = currentSort === 'Giá thấp đến cao' || currentSort === 'Giá cao đến thấp';
@@ -43,31 +45,29 @@ const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
     <div className="bg-neutral-50/80 dark:bg-neutral-800/50 rounded-sm px-4 py-3 flex items-center justify-between gap-4 border border-neutral-100 dark:border-neutral-700">
       {/* Left: Sort tabs */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:inline mr-1">Sắp xếp theo</span>
+        <span className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:inline mr-1">{t('shop.sortBy')}</span>
         {sortTabs.map((tab) => (
           <button
             key={tab.label}
             onClick={() => onSortChange(tab.value)}
-            className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all ${
-              currentSort === tab.value && !isPriceSort
+            className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all ${currentSort === tab.value && !isPriceSort
                 ? 'bg-primary text-white'
                 : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-primary border border-neutral-200 dark:border-neutral-600'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
         ))}
 
-        {/* Price dropdown-like button */}
+        {/* Price button */}
         <button
           onClick={handlePriceClick}
-          className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all flex items-center gap-1 ${
-            isPriceSort
+          className={`px-4 py-1.5 rounded-sm text-sm font-medium transition-all flex items-center gap-1 ${isPriceSort
               ? 'bg-primary text-white'
               : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-primary border border-neutral-200 dark:border-neutral-600'
-          }`}
+            }`}
         >
-          Giá
+          {t('shop.sortPrice')}
           <span className="material-symbols-outlined !text-sm">
             {isPriceSort && priceDirection === 'desc' ? 'arrow_downward' : 'arrow_upward'}
           </span>

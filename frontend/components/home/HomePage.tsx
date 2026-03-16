@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import BannerCarousel from "./BannerCarousel";
 import ShopSidebar from "./ShopSidebar";
 import ProductCard from "../product/ProductCard";
@@ -7,7 +8,7 @@ import ProductCardSkeleton from "../product/ProductCardSkeleton";
 import ProductFilterBar from "../product/ProductFilterBar";
 import SocialMediaSection from "./SocialMediaSection";
 import MobileFilterModal from "./MobileFilterModal";
-import TrendSection from "./TrendSection";
+
 import { Product, SortOption } from "../../types";
 import { useShop } from "../../contexts/ShopContext";
 import { fetchProductsWithQuery } from "../../services/shopApi";
@@ -21,21 +22,63 @@ const PAGE_SIZE = 30;
 
 const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
     const { products, categories, isLoadingProducts } = useShop();
-    const [currentSort, setCurrentSort] = useState<SortOption>("Bán chạy nhất");
+    const { t } = useTranslation();
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
     const [serverProducts, setServerProducts] = useState<Product[]>([]);
     const [isFilteringProducts, setIsFilteringProducts] = useState(false);
 
-    // Filter States
-    const [priceRange, setPriceRange] = useState<[number, number]>([1, 100]);
-    const [searchParams] = useSearchParams();
+    // URL-synced Filter States
+    const [searchParams, setSearchParams] = useSearchParams();
     const categoryFromUrl = searchParams.get('categoryName');
+    const sortFromUrl = searchParams.get('sort') as SortOption | null;
+    const minPriceFromUrl = searchParams.get('minPrice');
+    const maxPriceFromUrl = searchParams.get('maxPrice');
+
     const [activeCategory, setActiveCategory] = useState<string>(categoryFromUrl || "all");
+    const [currentSort, setCurrentSort] = useState<SortOption>(sortFromUrl || "Phổ biến");
+    const [priceRange, setPriceRange] = useState<[number, number]>([
+        minPriceFromUrl ? Number(minPriceFromUrl) : 1,
+        maxPriceFromUrl ? Number(maxPriceFromUrl) : 100,
+    ]);
+
+    // Helper to update URL params
+    const updateSearchParams = (updates: Record<string, string | null>) => {
+        const newParams = new URLSearchParams(searchParams);
+        for (const [key, value] of Object.entries(updates)) {
+            if (value === null || value === undefined) {
+                newParams.delete(key);
+            } else {
+                newParams.set(key, value);
+            }
+        }
+        setSearchParams(newParams, { replace: true });
+    };
+
+    // Sync category to URL so it persists on reload
+    const handleCategoryChange = (cat: string) => {
+        setActiveCategory(cat);
+        updateSearchParams({ categoryName: cat === 'all' ? null : cat });
+    };
+
+    // Sync sort to URL
+    const handleSortChange = (sort: SortOption) => {
+        setCurrentSort(sort);
+        updateSearchParams({ sort: sort === 'Phổ biến' ? null : sort });
+    };
+
+    // Sync price to URL
+    const handlePriceChange = (range: [number, number]) => {
+        setPriceRange(range);
+        updateSearchParams({
+            minPrice: range[0] === 1 ? null : String(range[0]),
+            maxPrice: range[1] === 100 ? null : String(range[1]),
+        });
+    };
 
     // Server-side Pagination
     const [currentPage, setCurrentPage] = useState(0);
 
-    // Sync URL categoryName changes to activeCategory
+    // Sync URL changes to state
     useEffect(() => {
         setActiveCategory(categoryFromUrl || "all");
     }, [categoryFromUrl]);
@@ -113,6 +156,9 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                 });
                 break;
             case "Bán chạy nhất":
+                result.sort((a, b) => (b.totalSoldCount || 0) - (a.totalSoldCount || 0));
+                break;
+            case "Phổ biến":
             default:
                 break;
         }
@@ -159,14 +205,15 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
     };
 
     const handleResetFilters = () => {
-        setPriceRange([1, 100]);
-        setActiveCategory("all");
+        handlePriceChange([1, 100]);
+        handleSortChange("Phổ biến");
+        handleCategoryChange("all");
     };
 
     return (
         <>
             <BannerCarousel />
-            <TrendSection />
+
             <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="flex gap-6" ref={productsRef}>
                     {/* Sidebar - Hidden on mobile */}
@@ -174,9 +221,9 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                         <ShopSidebar
                             categories={availableCategories}
                             activeCategory={activeCategory}
-                            onCategoryChange={setActiveCategory}
+                            onCategoryChange={handleCategoryChange}
                             priceRange={priceRange}
-                            onPriceChange={setPriceRange}
+                            onPriceChange={handlePriceChange}
                         />
                     </div>
 
@@ -188,13 +235,13 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                             className="lg:hidden mb-4 flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-sm text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:border-primary transition-colors"
                         >
                             <span className="material-symbols-outlined !text-lg">tune</span>
-                            Bộ lọc
+                            {t('shop.filter')}
                         </button>
 
                         {/* Sort Bar */}
                         <ProductFilterBar
                             currentSort={currentSort}
-                            onSortChange={setCurrentSort}
+                            onSortChange={handleSortChange}
                             currentPage={currentPage}
                             totalPages={totalPages}
                             onPageChange={handlePageChange}
@@ -214,16 +261,16 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                                     search_off
                                 </span>
                                 <h3 className="text-xl font-bold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Không tìm thấy sản phẩm
+                                    {t('shop.noProducts')}
                                 </h3>
                                 <p className="text-neutral-500 dark:text-neutral-400 max-w-md">
-                                    Thử điều chỉnh tìm kiếm, khoảng giá hoặc danh mục để tìm sản phẩm phù hợp.
+                                    {t('shop.noProductsHint')}
                                 </p>
                                 <button
                                     onClick={handleResetFilters}
                                     className="mt-6 px-6 py-2 bg-primary text-white font-bold text-sm rounded-sm hover:bg-primary-600 transition-colors"
                                 >
-                                    Xóa bộ lọc
+                                    {t('shop.clearFilters')}
                                 </button>
                             </div>
                         ) : (
@@ -263,11 +310,10 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                                         <button
                                             key={page}
                                             onClick={() => handlePageChange(page)}
-                                            className={`w-9 h-9 flex items-center justify-center rounded-sm text-sm font-medium transition-colors ${
-                                                page === currentPage
+                                            className={`w-9 h-9 flex items-center justify-center rounded-sm text-sm font-medium transition-colors ${page === currentPage
                                                     ? 'bg-primary text-white border border-primary'
                                                     : 'border border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 hover:bg-primary/10 hover:text-primary'
-                                            }`}
+                                                }`}
                                         >
                                             {page + 1}
                                         </button>
@@ -287,7 +333,7 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                         {!isLoadingProducts && !isFilteringProducts && (
                             <div className="mt-4 flex justify-center">
                                 <p className="text-neutral-400 dark:text-neutral-500 text-xs">
-                                    Showing {paginatedProducts.length} of {processedProducts.length} products
+                                    {t('shop.showing', { current: paginatedProducts.length, total: processedProducts.length })}
                                 </p>
                             </div>
                         )}
@@ -303,9 +349,9 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
                 onClose={() => setIsMobileFilterOpen(false)}
                 categories={availableCategories}
                 priceRange={priceRange}
-                onPriceChange={setPriceRange}
+                onPriceChange={handlePriceChange}
                 activeCategory={activeCategory}
-                onCategoryChange={setActiveCategory}
+                onCategoryChange={handleCategoryChange}
                 resultCount={processedProducts.length}
             />
         </>
