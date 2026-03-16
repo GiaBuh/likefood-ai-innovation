@@ -1,5 +1,5 @@
 import { Category, FulfillmentStatus, Order, PaginationMeta, Product, ProductVariant } from '../types';
-import { apiFetch, getAccessToken, getErrorMessageFromResponse } from './apiClient';
+import { apiFetch, getAccessToken, getApiBaseUrl, getErrorMessageFromResponse } from './apiClient';
 
 type RestResponse<T> = {
   statusCode: number;
@@ -31,6 +31,8 @@ type BackendProductVariant = {
   weightValue?: number;
   weightUnit?: string;
   price?: number;
+  originalPrice?: number;
+  discountPercent?: number;
   quantity?: number;
   bestSeller?: boolean;
   soldCount?: number;
@@ -207,6 +209,8 @@ function toProductVariant(variant: BackendProductVariant): ProductVariant {
     sku: variant.sku,
     weight: weight || 'Default',
     price: Number(variant.price ?? 0),
+    originalPrice: variant.originalPrice ? Number(variant.originalPrice) : undefined,
+    discountPercent: variant.discountPercent ?? undefined,
     weightValue: variant.weightValue,
     weightUnit: variant.weightUnit,
     quantity: variant.quantity,
@@ -1230,3 +1234,124 @@ export async function sendAdminMessage(userId: string, content: string): Promise
   return unwrapRestResponse(payload);
 }
 
+// ==================== PRODUCT REVIEWS ====================
+
+export type ReviewResponse = {
+  id: string;
+  productId: string;
+  productName: string;
+  userId: string;
+  username: string;
+  userAvatarUrl?: string;
+  orderId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  imageKeys: string[];
+  replyText?: string;
+  repliedAt?: string;
+};
+
+export type ReviewStatsResponse = {
+  productId: string;
+  averageRating: number;
+  totalReviews: number;
+  ratingCounts: Record<number, number>;
+  reviewsWithComments: number;
+  reviewsWithImages: number;
+};
+
+export type ReviewCreatePayload = {
+  productId: string;
+  orderId: string;
+  rating: number;
+  comment?: string;
+  imageKeys?: string[];
+};
+
+export async function fetchProductReviews(
+  productId: string,
+  page: number = 0,
+  size: number = 5,
+  rating?: number,
+  filter?: string,
+): Promise<{ content: ReviewResponse[]; totalElements: number; totalPages: number }> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (rating) params.set('rating', String(rating));
+  if (filter) params.set('filter', filter);
+  const response = await apiFetch(`/products/${productId}/reviews?${params.toString()}`, { method: 'GET' });
+  if (!response.ok) throw new Error('Failed to fetch reviews');
+  const payload = await response.json();
+  const data = unwrapRestResponse(payload);
+  return data as any;
+}
+
+export async function fetchProductReviewStats(productId: string): Promise<ReviewStatsResponse> {
+  const response = await apiFetch(`/products/${productId}/reviews/stats`, { method: 'GET' });
+  if (!response.ok) throw new Error('Failed to fetch review stats');
+  const payload = await response.json();
+  return unwrapRestResponse(payload) as ReviewStatsResponse;
+}
+
+export async function checkCanReview(productId: string): Promise<boolean> {
+  try {
+    const response = await apiFetch(`/products/${productId}/reviews/can-review`, { method: 'GET', requireAuth: true });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    const data = unwrapRestResponse(payload) as any;
+    return data?.canReview === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function createReview(payload: ReviewCreatePayload): Promise<ReviewResponse> {
+  const response = await apiFetch('/reviews', {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, 'Không thể gửi đánh giá'));
+  }
+  const data = await response.json();
+  return unwrapRestResponse(data) as ReviewResponse;
+}
+
+export async function uploadReviewImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getAccessToken();
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/storage/upload-review-image`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!response.ok) throw new Error('Upload failed');
+  const payload = await response.json();
+  const data = unwrapRestResponse(payload) as any;
+  return data?.key || data?.imageKey || '';
+}
+
+export async function adminReplyToReview(reviewId: string, replyText: string): Promise<ReviewResponse> {
+  const response = await apiFetch(`/admin/reviews/${reviewId}/reply`, {
+    method: 'POST',
+    requireAuth: true,
+    body: JSON.stringify({ replyText }),
+  });
+  if (!response.ok) throw new Error('Không thể trả lời đánh giá');
+  const data = await response.json();
+  return unwrapRestResponse(data) as ReviewResponse;
+}
+
+export async function fetchAdminReviews(
+  page: number = 0,
+  size: number = 10,
+): Promise<{ content: ReviewResponse[]; totalElements: number; totalPages: number }> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const response = await apiFetch(`/admin/reviews?${params.toString()}`, { method: 'GET', requireAuth: true });
+  if (!response.ok) throw new Error('Không thể tải đánh giá');
+  const payload = await response.json();
+  return unwrapRestResponse(payload) as any;
+}

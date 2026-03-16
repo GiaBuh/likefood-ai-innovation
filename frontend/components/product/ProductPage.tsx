@@ -5,6 +5,7 @@ import { Product } from '../../types';
 import { useShop } from '../../contexts/ShopContext';
 import { fetchProductBySlug } from '../../services/shopApi';
 import ProductDetail from './ProductDetail';
+import ReviewSection from './ReviewSection';
 import SEO from '../ui/SEO';
 
 interface ProductPageProps {
@@ -102,6 +103,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
       />
+
+      {/* Review Section */}
+      <ReviewSection productId={String(product.id)} />
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

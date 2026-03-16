@@ -2,7 +2,8 @@ package com.ecommerce.likefood.storage.enums;
 
 public enum StorageObjectType {
     PRODUCT("products"),
-    AVATAR("avatars");
+    AVATAR("avatars"),
+    REVIEW("reviews");
 
     private final String folder;
 

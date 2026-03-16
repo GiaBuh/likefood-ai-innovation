@@ -2,6 +2,8 @@
 export interface ProductVariant {
   weight: string;
   price: number;
+  originalPrice?: number;
+  discountPercent?: number;
   id: string; // unique identifier for the variant, e.g. "500g"
   sku?: string;
   weightValue?: number; // Added for admin edit

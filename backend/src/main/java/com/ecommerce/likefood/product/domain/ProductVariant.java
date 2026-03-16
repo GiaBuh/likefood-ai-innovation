@@ -30,6 +30,10 @@ public class ProductVariant extends BaseEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
+    // Original price before discount (nullable - no discount if null)
+    @Column(precision = 15, scale = 2)
+    private BigDecimal originalPrice;
+
     @Column(nullable = false)
     private Integer quantity;
 
