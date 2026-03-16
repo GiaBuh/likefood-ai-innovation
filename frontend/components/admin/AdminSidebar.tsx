@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends' | 'aicombo';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo';
 
 interface AdminSidebarProps {
   onExit: () => void;
@@ -12,6 +12,7 @@ const viewToPath: Record<AdminViewType, string> = {
   orders: '/admin/orders',
   products: '/admin/products',
   customers: '/admin/customers',
+  vouchers: '/admin/vouchers',
   chatting: '/admin/chat',
   trends: '/admin/trends',
   aicombo: '/admin/combo',
@@ -22,6 +23,7 @@ const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
   { view: 'orders', icon: 'shopping_bag', label: 'Đơn hàng' },
   { view: 'products', icon: 'inventory_2', label: 'Sản phẩm' },
   { view: 'customers', icon: 'group', label: 'Khách hàng' },
+  { view: 'vouchers', icon: 'loyalty', label: 'Khuyến mãi' },
   { view: 'chatting', icon: 'chat', label: 'Chat' },
   { view: 'trends', icon: 'trending_up', label: 'Xu hướng AI' },
   { view: 'aicombo', icon: 'magic_button', label: 'Tạo Combo Đu Trend' },
@@ -37,6 +39,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
     if (path.startsWith('/admin/orders')) return 'orders';
     if (path.startsWith('/admin/products')) return 'products';
     if (path.startsWith('/admin/customers')) return 'customers';
+    if (path.startsWith('/admin/vouchers')) return 'vouchers';
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';

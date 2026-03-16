@@ -26,6 +26,12 @@ import com.ecommerce.likefood.product.domain.ProductVariant;
 import com.ecommerce.likefood.product.repository.ProductRepository;
 import com.ecommerce.likefood.user.domain.User;
 import com.ecommerce.likefood.user.repository.UserRepository;
+import com.ecommerce.likefood.voucher.domain.DiscountType;
+import com.ecommerce.likefood.voucher.domain.UserVoucher;
+import com.ecommerce.likefood.voucher.domain.UserVoucherStatus;
+import com.ecommerce.likefood.voucher.domain.Voucher;
+import com.ecommerce.likefood.voucher.repository.UserVoucherRepository;
+import com.ecommerce.likefood.voucher.repository.VoucherRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -50,6 +57,8 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ComboCampaignRepository comboCampaignRepository;
     private final ObjectMapper objectMapper;
+    private final UserVoucherRepository userVoucherRepository;
+    private final VoucherRepository voucherRepository;
 
     @Override
     @Transactional
@@ -78,12 +87,33 @@ public class OrderServiceImpl implements OrderService {
                 .map(cartItem -> mapCartItemToOrderItem(cartItem, order))
                 .toList();
 
-        BigDecimal totalAmount = orderItems.stream()
+        BigDecimal subtotal = orderItems.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Voucher Calculation Logic
+        BigDecimal shopDiscount = BigDecimal.ZERO;
+        BigDecimal shippingDiscount = BigDecimal.ZERO;
+
+        if (request.getShopVoucherId() != null && !request.getShopVoucherId().isBlank()) {
+            UserVoucher shopVoucher = userVoucherRepository.findByIdAndUserId(request.getShopVoucherId(), user.getId())
+                    .orElseThrow(() -> new AppException("Shop voucher not found"));
+            shopDiscount = validateAndApplyVoucher(shopVoucher, order, subtotal, true);
+        }
+
+        if (request.getShippingVoucherId() != null && !request.getShippingVoucherId().isBlank()) {
+            UserVoucher shippingVoucher = userVoucherRepository.findByIdAndUserId(request.getShippingVoucherId(), user.getId())
+                    .orElseThrow(() -> new AppException("Shipping voucher not found"));
+            shippingDiscount = validateAndApplyVoucher(shippingVoucher, order, subtotal, false);
+        }
+
+        BigDecimal finalAmount = subtotal.subtract(shopDiscount).subtract(shippingDiscount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            finalAmount = BigDecimal.ZERO;
+        }
+
         order.setItems(orderItems);
-        order.setTotalAmount(totalAmount);
+        order.setTotalAmount(finalAmount);
 
         Order savedOrder = orderRepository.save(order);
         deductStockForOrder(savedOrder);
@@ -91,6 +121,43 @@ public class OrderServiceImpl implements OrderService {
         cartRepository.saveAndFlush(cart);
 
         return orderMapper.toResponse(savedOrder);
+    }
+
+    private BigDecimal validateAndApplyVoucher(UserVoucher userVoucher, Order order, BigDecimal subtotal, boolean isShopDiscount) {
+        if (userVoucher.getStatus() != UserVoucherStatus.SAVED) {
+            throw new AppException("Voucher already used or expired");
+        }
+        Voucher voucher = userVoucher.getVoucher();
+        if (subtotal.compareTo(voucher.getMinOrderValue()) < 0) {
+            throw new AppException("Minimum order value not met for voucher");
+        }
+
+        BigDecimal discount = BigDecimal.ZERO;
+        if (voucher.getDiscountType() == DiscountType.FIXED_AMOUNT) {
+            discount = voucher.getDiscountValue();
+        } else {
+            discount = subtotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100));
+            if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
+                discount = voucher.getMaxDiscountAmount();
+            }
+        }
+
+        if (isShopDiscount) {
+            order.setShopVoucher(voucher);
+            order.setShopDiscountAmount(discount);
+        } else {
+            order.setShippingVoucher(voucher);
+            order.setShippingDiscountAmount(discount);
+        }
+
+        // Mark as used
+        userVoucher.setStatus(UserVoucherStatus.USED);
+        userVoucher.setUsedAt(Instant.now());
+        voucher.setUsageCount(voucher.getUsageCount() + 1);
+        userVoucherRepository.save(userVoucher);
+        voucherRepository.save(voucher);
+
+        return discount;
     }
 
     private OrderItem mapCartItemToOrderItem(CartItem cartItem, Order order) {

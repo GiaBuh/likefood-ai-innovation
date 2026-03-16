@@ -145,6 +145,8 @@ type CreateOrderPayload = {
   shippingAddress: string;
   note?: string;
   paymentMethod?: 'COD' | 'BANK_TRANSFER' | 'E_WALLET';
+  shopVoucherId?: string;
+  shippingVoucherId?: string;
 };
 
 export type AiChatTurn = {

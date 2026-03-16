@@ -104,6 +104,10 @@ export interface Order {
   total: number; // Shop legacy
   totalAmount: number; // Admin view
   shippingAddress: string;
+  shopVoucher?: Voucher;
+  shippingVoucher?: Voucher;
+  shopDiscountAmount?: number;
+  shippingDiscountAmount?: number;
 }
 
 export type OrderStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';
@@ -134,3 +138,28 @@ export interface PaginationMeta {
   totalPages: number;
   total: number;
 }
+
+export interface Voucher {
+  id: string;
+  code: string;
+  type: 'SHOP_DISCOUNT' | 'SHIPPING_DISCOUNT';
+  discountType: 'PERCENT' | 'FIXED_AMOUNT';
+  discountValue: number;
+  maxDiscountAmount?: number;
+  minOrderValue: number;
+  usageLimit: number;
+  usageCount: number;
+  startTime?: string;
+  endTime?: string;
+  isActive: boolean;
+}
+
+export interface UserVoucher {
+  id: string;
+  userId: string;
+  voucher: Voucher;
+  status: 'SAVED' | 'USED' | 'EXPIRED';
+  collectedAt: string;
+  usedAt?: string;
+}
+

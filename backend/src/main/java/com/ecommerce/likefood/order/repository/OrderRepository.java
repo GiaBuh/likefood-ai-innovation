@@ -11,5 +11,8 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
     List<Order> findByUser_IdOrderByCreatedAtDesc(String userId);
     Optional<Order> findByIdAndUser_Id(String id, String userId);
 
+    boolean existsByShopVoucher_Id(String shopVoucherId);
+    boolean existsByShippingVoucher_Id(String shippingVoucherId);
+
     List<Order> findAllByOrderByCreatedAtDesc();
 }

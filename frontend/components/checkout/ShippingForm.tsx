@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { CartItem } from '../../types';
+import { CartItem, UserVoucher } from '../../types';
+import VoucherSelectorModal from './VoucherSelectorModal';
 
 interface FormData {
   name: string;
@@ -16,6 +17,10 @@ interface ShippingFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onBack: () => void;
   onPlaceOrder: () => void;
+  selectedShopVoucher: UserVoucher | null;
+  setSelectedShopVoucher: (v: UserVoucher | null) => void;
+  selectedShippingVoucher: UserVoucher | null;
+  setSelectedShippingVoucher: (v: UserVoucher | null) => void;
 }
 
 const ShippingForm: React.FC<ShippingFormProps> = ({ 
@@ -24,12 +29,46 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
   errors = {},
   onInputChange, 
   onBack,
-  onPlaceOrder
+  onPlaceOrder,
+  selectedShopVoucher,
+  setSelectedShopVoucher,
+  selectedShippingVoucher,
+  setSelectedShippingVoucher
 }) => {
   const { t } = useTranslation();
+  const [modalType, setModalType] = React.useState<'SHOP_DISCOUNT' | 'SHIPPING_DISCOUNT' | null>(null);
+
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 50 ? 0 : 5;
-  const total = subtotal + shipping;
+  
+  // Calculate shop discount
+  let shopDiscount = 0;
+  if (selectedShopVoucher && subtotal >= selectedShopVoucher.voucher.minOrderValue) {
+    if (selectedShopVoucher.voucher.discountType === 'FIXED_AMOUNT') {
+      shopDiscount = selectedShopVoucher.voucher.discountValue;
+    } else {
+      shopDiscount = subtotal * (selectedShopVoucher.voucher.discountValue / 100);
+      if (selectedShopVoucher.voucher.maxDiscountAmount && shopDiscount > selectedShopVoucher.voucher.maxDiscountAmount) {
+        shopDiscount = selectedShopVoucher.voucher.maxDiscountAmount;
+      }
+    }
+  }
+
+  // Base shipping cost
+  const baseShipping = subtotal > 50 ? 0 : 5;
+  
+  // Shipping discount
+  let shippingDiscount = 0;
+  if (selectedShippingVoucher && subtotal >= selectedShippingVoucher.voucher.minOrderValue) {
+    shippingDiscount = selectedShippingVoucher.voucher.discountType === 'FIXED_AMOUNT' 
+        ? selectedShippingVoucher.voucher.discountValue 
+        : baseShipping * (selectedShippingVoucher.voucher.discountValue / 100);
+    if (selectedShippingVoucher.voucher.maxDiscountAmount && shippingDiscount > selectedShippingVoucher.voucher.maxDiscountAmount) {
+      shippingDiscount = selectedShippingVoucher.voucher.maxDiscountAmount;
+    }
+  }
+
+  const finalShipping = Math.max(0, baseShipping - shippingDiscount);
+  const total = Math.max(0, subtotal - shopDiscount + finalShipping);
 
   const inputFields = [
     { name: 'name', label: t('checkout.receiverName'), icon: 'person', type: 'text', placeholder: 'Nguyễn Văn A', halfWidth: true },
@@ -137,6 +176,40 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
               ))}
             </div>
 
+            {/* Vouchers Section */}
+            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
+              <h4 className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">Voucher Shopee</h4>
+              <div className="space-y-2.5">
+                {/* Shop Voucher */}
+                <button 
+                  onClick={() => setModalType('SHOP_DISCOUNT')}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined !text-xl text-orange-500">local_offer</span>
+                    <span className="text-sm text-neutral-700 dark:text-neutral-200">
+                      {selectedShopVoucher ? (selectedShopVoucher.voucher.discountType === 'PERCENT' ? `Giảm ${selectedShopVoucher.voucher.discountValue}%` : `Giảm $${selectedShopVoucher.voucher.discountValue}`) : 'Chọn Voucher Shop'}
+                    </span>
+                  </div>
+                  <span className="material-symbols-outlined !text-lg text-neutral-400">chevron_right</span>
+                </button>
+
+                {/* Shipping Voucher */}
+                <button 
+                  onClick={() => setModalType('SHIPPING_DISCOUNT')}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined !text-xl text-emerald-500">local_shipping</span>
+                    <span className="text-sm text-neutral-700 dark:text-neutral-200">
+                      {selectedShippingVoucher ? (selectedShippingVoucher.voucher.discountType === 'PERCENT' ? `Giảm ${selectedShippingVoucher.voucher.discountValue}% phí vận chuyển` : `Giảm $${selectedShippingVoucher.voucher.discountValue} phí vận chuyển`) : 'Chọn Freeship'}
+                    </span>
+                  </div>
+                  <span className="material-symbols-outlined !text-lg text-neutral-400">chevron_right</span>
+                </button>
+              </div>
+            </div>
+
             {/* Totals */}
             <div className="space-y-2.5 pt-4 border-t border-neutral-200 dark:border-neutral-700">
               <div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
@@ -145,10 +218,21 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-500 dark:text-neutral-400">Phí vận chuyển</span>
-                <span className={shipping === 0 ? 'text-green-500 font-bold' : 'text-neutral-600 dark:text-neutral-300'}>
-                  {shipping === 0 ? '✨ Miễn phí' : `$${shipping.toFixed(2)}`}
+                <span className={finalShipping === 0 ? 'text-green-500 font-bold' : 'text-neutral-600 dark:text-neutral-300'}>
+                  {baseShipping === 0 ? '✨ Miễn phí' : (shippingDiscount > 0 ? (
+                    <span className="flex items-center gap-2">
+                      <span className="line-through text-neutral-400">${baseShipping.toFixed(2)}</span>
+                      {finalShipping === 0 ? '✨ Miễn phí' : `$${finalShipping.toFixed(2)}`}
+                    </span>
+                  ) : `$${baseShipping.toFixed(2)}`)}
                 </span>
               </div>
+              {shopDiscount > 0 && (
+                <div className="flex justify-between text-sm text-orange-500 font-semibold">
+                  <span>Voucher giảm giá</span>
+                  <span className="tabular-nums">-${shopDiscount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-end pt-3 border-t border-neutral-200 dark:border-neutral-700">
                 <span className="text-sm text-neutral-600 dark:text-neutral-300 font-semibold">Tổng cộng</span>
                 <span className="text-2xl font-black text-neutral-900 dark:text-white tabular-nums">${total.toFixed(2)}</span>
@@ -191,6 +275,18 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
           animation: shake 0.3s ease-in-out;
         }
       `}</style>
+      
+      <VoucherSelectorModal
+        isOpen={modalType !== null}
+        onClose={() => setModalType(null)}
+        type={modalType || 'SHOP_DISCOUNT'}
+        subtotal={subtotal}
+        currentVoucher={modalType === 'SHOP_DISCOUNT' ? selectedShopVoucher : selectedShippingVoucher}
+        onSelect={(v) => {
+          if (modalType === 'SHOP_DISCOUNT') setSelectedShopVoucher(v);
+          else setSelectedShippingVoucher(v);
+        }}
+      />
     </div>
   );
 };

@@ -57,7 +57,7 @@ interface ShopContextType {
 
   // Order Actions
   placeOrder: (order: Order) => void;
-  submitOrder: (payload: { name: string; phone: string; address: string; note?: string }) => Promise<void>;
+  submitOrder: (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => Promise<void>;
   updateOrderStatus: (orderId: string, status: FulfillmentStatus) => Promise<void>;
   cancelOrder: (orderId: string) => Promise<void>;
   loadOrdersForRole: (isAdmin: boolean) => Promise<void>;
@@ -496,6 +496,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const deleteProductAction = async (id: string) => {
     const updated = await deleteProductApi(id);
     setProducts((prev) => prev.map((p) => (String(p.id) === String(id) ? updated : p)));
+    return updated;
   };
 
   // --- Order Logic ---
@@ -504,13 +505,15 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearCart();
   };
 
-  const submitOrder = async (payload: { name: string; phone: string; address: string; note?: string }) => {
+  const submitOrder = async (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => {
     const created = await createOrderFromMyCart({
       receiverName: payload.name,
       receiverPhone: payload.phone,
       shippingAddress: payload.address,
       note: payload.note,
       paymentMethod: 'COD',
+      shopVoucherId: payload.shopVoucherId,
+      shippingVoucherId: payload.shippingVoucherId,
     });
     setOrders((prev) => [created, ...prev]);
     clearCart();

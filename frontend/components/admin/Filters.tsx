@@ -1,7 +1,7 @@
 import React from 'react';
 import { Category } from '../../types';
 
-type ViewType = 'orders' | 'products' | 'customers';
+type ViewType = 'orders' | 'products' | 'customers' | 'vouchers';
 
 interface FiltersProps {
   view: ViewType;
@@ -40,15 +40,25 @@ const Filters: React.FC<FiltersProps> = ({
       case 'orders': return 'Tìm Mã đơn, Khách hàng...';
       case 'products': return 'Tìm Tên SP, SKU...';
       case 'customers': return 'Tìm Tên, Email, SĐT...';
+      case 'vouchers': return 'Tìm Mã Voucher...';
     }
   };
 
   const renderPrimaryFilter = () => {
-    const options = view === 'orders'
-      ? [{ v: 'All', l: 'Tất cả trạng thái' }, { v: 'Paid', l: 'Đã thanh toán' }, { v: 'Unpaid', l: 'Chưa thanh toán' }, { v: 'Refunded', l: 'Đã hoàn tiền' }]
-      : view === 'products'
-        ? [{ v: 'All', l: 'Tất cả danh mục' }, ...productCategories.map(c => ({ v: c.name, l: c.name }))]
-        : [{ v: 'All', l: 'Tất cả khách hàng' }, { v: 'Active', l: 'Đang hoạt động' }, { v: 'Blocked', l: 'Bị chặn' }, { v: 'Inactive', l: 'Không hoạt động' }];
+    const options = (() => {
+      switch (view) {
+        case 'orders':
+          return [{ v: 'All', l: 'Tất cả trạng thái' }, { v: 'Paid', l: 'Đã thanh toán' }, { v: 'Unpaid', l: 'Chưa thanh toán' }, { v: 'Refunded', l: 'Đã hoàn tiền' }];
+        case 'products':
+          return [{ v: 'All', l: 'Tất cả danh mục' }, ...productCategories.map(c => ({ v: c.name, l: c.name }))];
+        case 'customers':
+          return [{ v: 'All', l: 'Tất cả khách hàng' }, { v: 'Active', l: 'Đang hoạt động' }, { v: 'Blocked', l: 'Bị chặn' }, { v: 'Inactive', l: 'Không hoạt động' }];
+        case 'vouchers':
+          return [{ v: 'All', l: 'Tất cả trạng thái' }, { v: 'Active', l: 'Đang hoạt động' }, { v: 'Inactive', l: 'Tạm khóa' }];
+        default:
+          return [{ v: 'All', l: 'Tất cả' }];
+      }
+    })();
 
     return (
       <select value={primaryFilter} onChange={(e) => onPrimaryFilterChange(e.target.value)} className={selectClass}>

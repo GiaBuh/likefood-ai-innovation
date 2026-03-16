@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { validateProfile } from '../../utils/validation';
 import { uploadAvatar } from '../../services/authApi';
 import { fetchOrders } from '../../services/shopApi';
+import VoucherWalletTab from './VoucherWalletTab';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'INFO' | 'VOUCHERS'>('INFO');
   const [stats, setStats] = useState<UserStats>({ totalOrders: 0, totalSpent: 0, memberSince: '2024' });
   const [formData, setFormData] = useState({
     name: user.name || '',
@@ -214,122 +216,146 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             </div>
           </div>
 
-          {/* ─── Form Fields ─── */}
-          <div className="px-6 pt-5 pb-2 space-y-3.5">
-            {/* Full Name */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
-                {t('auth.fullName')}
-              </label>
-              <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
-                fieldErrors.name
-                  ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
-                  : isEditing
-                    ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
-                    : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
-              }`}>
-                <span className="material-symbols-outlined !text-lg text-neutral-400">person</span>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none disabled:opacity-60"
-                />
-              </div>
-              {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
-            </div>
-
-            {/* Email (read-only) */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
-                {t('auth.email')}
-              </label>
-              <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 opacity-60">
-                <span className="material-symbols-outlined !text-lg text-neutral-400">mail</span>
-                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{user.email}</span>
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
-                {t('auth.phone')}
-              </label>
-              <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
-                fieldErrors.phone
-                  ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
-                  : isEditing
-                    ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
-                    : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
-              }`}>
-                <span className="material-symbols-outlined !text-lg text-neutral-400">phone</span>
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none disabled:opacity-60"
-                />
-              </div>
-              {fieldErrors.phone && <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p>}
-            </div>
-
-            {/* Address */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
-                {t('checkout.shippingAddress')}
-              </label>
-              <div className={`flex items-start gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
-                fieldErrors.address
-                  ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
-                  : isEditing
-                    ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
-                    : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
-              }`}>
-                <span className="material-symbols-outlined !text-lg text-neutral-400 mt-0.5">location_on</span>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  rows={2}
-                  className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none resize-none disabled:opacity-60"
-                />
-              </div>
-              {fieldErrors.address && <p className="mt-1 text-xs text-red-500">{fieldErrors.address}</p>}
-            </div>
+          {/* ─── Tabs ─── */}
+          <div className="flex px-6 mt-4 border-b border-neutral-100 dark:border-neutral-800">
+            <button
+              onClick={() => setActiveTab('INFO')}
+              className={`pb-2.5 px-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'INFO' ? 'border-primary-500 text-primary-500' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+            >
+              Cá nhân
+            </button>
+            <button
+              onClick={() => setActiveTab('VOUCHERS')}
+              className={`pb-2.5 px-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'VOUCHERS' ? 'border-primary-500 text-primary-500' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+            >
+              Ví Voucher
+            </button>
           </div>
 
-          {/* ─── Action Buttons ─── */}
-          <div className="px-6 pb-6 pt-3 flex gap-3">
-            {isEditing ? (
+          <div className="max-h-[50vh] overflow-y-auto scrollbar-hide pt-4">
+            {activeTab === 'INFO' ? (
               <>
-                <button
-                  onClick={handleCancel}
-                  className="flex-1 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleSubmitEdit}
-                  disabled={isSaving}
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                  {isSaving ? t('profile.saving') : t('profile.saveChanges')}
-                </button>
+                {/* ─── Form Fields ─── */}
+                <div className="px-6 pb-2 space-y-3.5">
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
+                      {t('auth.fullName')}
+                    </label>
+                    <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                      fieldErrors.name
+                        ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
+                        : isEditing
+                          ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
+                          : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
+                    }`}>
+                      <span className="material-symbols-outlined !text-lg text-neutral-400">person</span>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none disabled:opacity-60"
+                      />
+                    </div>
+                    {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
+                  </div>
+
+                  {/* Email (read-only) */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
+                      {t('auth.email')}
+                    </label>
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 opacity-60">
+                      <span className="material-symbols-outlined !text-lg text-neutral-400">mail</span>
+                      <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{user.email}</span>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
+                      {t('auth.phone')}
+                    </label>
+                    <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                      fieldErrors.phone
+                        ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
+                        : isEditing
+                          ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
+                          : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
+                    }`}>
+                      <span className="material-symbols-outlined !text-lg text-neutral-400">phone</span>
+                      <input
+                        type="text"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none disabled:opacity-60"
+                      />
+                    </div>
+                    {fieldErrors.phone && <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p>}
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-neutral-400 dark:text-neutral-500 mb-1 tracking-wider">
+                      {t('checkout.shippingAddress')}
+                    </label>
+                    <div className={`flex items-start gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                      fieldErrors.address
+                        ? 'border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10'
+                        : isEditing
+                          ? 'border-primary/40 bg-primary/5 dark:bg-primary/5'
+                          : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50'
+                    }`}>
+                      <span className="material-symbols-outlined !text-lg text-neutral-400 mt-0.5">location_on</span>
+                      <textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        rows={2}
+                        className="flex-1 bg-transparent text-sm font-medium text-neutral-800 dark:text-neutral-200 outline-none resize-none disabled:opacity-60"
+                      />
+                    </div>
+                    {fieldErrors.address && <p className="mt-1 text-xs text-red-500">{fieldErrors.address}</p>}
+                  </div>
+                </div>
+
+                {/* ─── Action Buttons ─── */}
+                <div className="px-6 pb-6 pt-3 flex gap-3">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="flex-1 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        onClick={handleSubmitEdit}
+                        disabled={isSaving}
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                        {isSaving ? t('profile.saving') : t('profile.saveChanges')}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined !text-lg">edit</span>
+                      {t('profile.editProfile')}
+                    </button>
+                  )}
+                </div>
               </>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined !text-lg">edit</span>
-                {t('profile.editProfile')}
-              </button>
+              <VoucherWalletTab />
             )}
           </div>
         </div>

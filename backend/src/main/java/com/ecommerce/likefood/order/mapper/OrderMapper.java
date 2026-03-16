@@ -8,7 +8,7 @@ import com.ecommerce.likefood.user.domain.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {com.ecommerce.likefood.user.mapper.UserMapper.class, com.ecommerce.likefood.voucher.mapper.VoucherMapper.class})
 public interface OrderMapper {
 
     @Mapping(source = "user.id", target = "userId")

@@ -13,7 +13,9 @@ import { CategoryManagementModal, ProductFormModal } from './ProductModals';
 import AdminChatView, { ChatConversation, ChatMessage } from './AdminChatView';
 import TrendHistoryView from './TrendHistoryView';
 import AiComboGenerator from './AiComboGenerator';
-import { Product, ProductVariant, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta } from '../../types';
+import VouchersTable from './VouchersTable';
+import { VoucherFormModal } from './VoucherFormModal';
+import { Product, ProductVariant, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta, Voucher } from '../../types';
 import {
   getAdminConversations,
   getAdminMessages,
@@ -22,8 +24,9 @@ import {
   ChatMessageRes,
 } from '../../services/shopApi';
 import { useAdminChatWebSocket } from '../../hooks/useAdminChatWebSocket';
+import { fetchAllVouchers, createVoucher, updateVoucher, deleteVoucher } from '../../services/voucherApi';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends' | 'aicombo';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -71,6 +74,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     if (path.startsWith('/admin/orders')) return 'orders';
     if (path.startsWith('/admin/products')) return 'products';
     if (path.startsWith('/admin/customers')) return 'customers';
+    if (path.startsWith('/admin/vouchers')) return 'vouchers';
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';
@@ -83,6 +87,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   // Products are passed in via props to share state with main app
   const [customers, setCustomers] = useState<CustomerProfile[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [primaryFilter, setPrimaryFilter] = useState('All');
@@ -97,6 +102,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
+
+  const handleOpenVoucherModal = (voucher: Voucher | null = null) => {
+    setEditingVoucher(voucher);
+    setShowVoucherModal(true);
+  };
 
   // Chat state
   const [chatConversations, setChatConversations] = useState<ChatConversation[]>([]);
@@ -148,6 +160,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   useEffect(() => {
     loadChatConversations();
+  }, [currentView]);
+
+  const loadVouchers = async () => {
+    if (currentView !== 'vouchers') return;
+    setIsLoading(true);
+    try {
+      const allVouchers = await fetchAllVouchers();
+      setVouchers(allVouchers);
+    } catch (e) {
+      console.error('Cannot load vouchers.', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadVouchers();
   }, [currentView]);
 
   // Poll for new conversations when on Chatting tab (1 request per 5s)
@@ -221,6 +250,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     orders: '/admin/orders',
     products: '/admin/products',
     customers: '/admin/customers',
+    vouchers: '/admin/vouchers',
     chatting: '/admin/chat',
     trends: '/admin/trends',
     aicombo: '/admin/combo',
@@ -282,6 +312,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     } catch (error) {
       console.error('Cannot toggle best seller.', error);
       alert(error instanceof Error ? error.message : 'Không thể cập nhật Best Seller.');
+    }
+  };
+
+  // --- Voucher Handlers ---
+  const handleSaveVoucher = async (voucherData: Omit<Voucher, 'id' | 'usageCount'>) => {
+    try {
+      if (editingVoucher) {
+        await updateVoucher(editingVoucher.id, voucherData);
+      } else {
+        await createVoucher(voucherData);
+      }
+      setShowVoucherModal(false);
+      setEditingVoucher(null);
+      await loadVouchers();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleDeleteVoucher = async (voucher: Voucher) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa voucher ${voucher.code}?`)) {
+      try {
+        await deleteVoucher(voucher.id);
+        await loadVouchers();
+      } catch (e) {
+        console.error(e);
+        alert('Lỗi khi xóa voucher: ' + (e instanceof Error ? e.message : 'Unknown error'));
+      }
     }
   };
 
@@ -414,11 +472,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       { label: 'Bị chặn', value: `${customers.filter((c) => c.status === 'Blocked').length}`, trend: 'Trạng thái hiện tại', trendDirection: 'down', icon: 'trending_down', iconColorClass: 'text-gray-500', iconBgClass: 'bg-gray-500/10' }
     ];
 
+    const voucherKpi: KPIStats[] = [
+      { label: 'Tổng Khuyến mãi', value: `${vouchers.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'loyalty', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
+      { label: 'Đang hoạt động', value: `${vouchers.filter(v => v.isActive).length}`, trend: 'Khả dụng', trendDirection: 'up', icon: 'check_circle', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
+      { label: 'Lượt đã dùng', value: `${vouchers.reduce((sum, v) => sum + v.usageCount, 0)}`, trend: 'Tương tác', trendDirection: 'up', icon: 'touch_app', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
+      { label: 'Đã khóa/Hết hạn', value: `${vouchers.filter(v => !v.isActive || v.usageCount >= v.usageLimit).length}`, trend: 'Không dùng được', trendDirection: 'down', icon: 'block', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' }
+    ];
+
     switch(currentView) {
       case 'dashboard': return dashboardKpi;
       case 'orders': return orderKpi;
       case 'products': return productKpi;
       case 'customers': return customerKpi;
+      case 'vouchers': return voucherKpi;
+      default: return [];
     }
   };
 
@@ -432,6 +499,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         return { title: 'Kho sản phẩm', subtitle: 'Quản lý danh mục, tồn kho và chi tiết sản phẩm', btnText: 'Thêm sản phẩm' };
       case 'customers':
         return { title: 'Khách hàng', subtitle: 'Xem và quản lý khách hàng đăng ký', btnText: 'Thêm khách hàng' };
+      case 'vouchers':
+        return { title: 'Khuyến mãi', subtitle: 'Quản lý mã giảm giá, khuyến mãi cho khách hàng', btnText: 'Thêm Voucher' };
       case 'chatting':
         return { title: 'Chat', subtitle: 'Chat với khách hàng theo thời gian thực', btnText: '' };
       case 'trends':
@@ -472,9 +541,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         const matchesStatus = primaryFilter === 'All' || customer.status === primaryFilter;
         return matchesSearch && matchesStatus;
       });
+    } else if (currentView === 'vouchers') {
+      return vouchers.filter(voucher => {
+        const matchesSearch = voucher.code.toLowerCase().includes(lowerSearch);
+        const matchesStatus = primaryFilter === 'All' || (primaryFilter === 'Active' ? voucher.isActive : !voucher.isActive);
+        return matchesSearch && matchesStatus;
+      });
     }
     return [];
-  }, [currentView, searchTerm, primaryFilter, secondaryFilter, orders, products, customers]);
+  }, [currentView, searchTerm, primaryFilter, secondaryFilter, orders, products, customers, vouchers]);
 
   // Paginated products (20 per page)
   const paginatedProducts = useMemo(() => {
@@ -545,7 +620,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   </button>
               </>
             ) : currentView !== 'orders' && currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'customers' && (
-                <button className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20">
+                <button 
+                  onClick={() => {
+                    if (currentView === 'vouchers') handleOpenVoucherModal();
+                  }}
+                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20"
+                >
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}
                 </button>
@@ -640,6 +720,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         isLoading={isLoading}
                     />
                 )}
+                {currentView === 'vouchers' && (
+                    <VouchersTable 
+                        vouchers={filteredData as any} 
+                        isLoading={isLoading}
+                        onEdit={handleOpenVoucherModal}
+                        onDelete={handleDeleteVoucher}
+                    />
+                )}
              </div>
           )}
         </div>
@@ -667,6 +755,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         order={selectedOrder}
         onUpdateStatus={handleUpdateOrderStatus}
         onCancelOrder={handleCancelOrder}
+      />
+      <VoucherFormModal
+        isOpen={showVoucherModal}
+        onClose={() => {
+          setShowVoucherModal(false);
+          setEditingVoucher(null);
+        }}
+        onSave={handleSaveVoucher}
+        initialData={editingVoucher}
       />
     </div>
   );

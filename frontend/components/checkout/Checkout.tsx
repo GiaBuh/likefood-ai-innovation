@@ -8,10 +8,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useShop } from '../../contexts/ShopContext';
 import { useToast } from '../../contexts/ToastContext';
 import { validateCheckout } from '../../utils/validation';
+import { UserVoucher } from '../../types';
 
 interface CheckoutProps {
   onBackToHome: () => void;
-  onPlaceOrder: (payload: { name: string; phone: string; address: string; note?: string }) => Promise<void>;
+  onPlaceOrder: (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => Promise<void>;
   onViewOrders: () => void;
 }
 
@@ -33,6 +34,8 @@ const Checkout: React.FC<CheckoutProps> = ({
     note: ''
   });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'phone' | 'address', string>>>({});
+  const [selectedShopVoucher, setSelectedShopVoucher] = useState<UserVoucher | null>(null);
+  const [selectedShippingVoucher, setSelectedShippingVoucher] = useState<UserVoucher | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,6 +81,8 @@ const Checkout: React.FC<CheckoutProps> = ({
         phone: formData.phone,
         address: formData.address,
         note: formData.note,
+        shopVoucherId: selectedShopVoucher?.id,
+        shippingVoucherId: selectedShippingVoucher?.id,
       });
       setDirection('forward');
       setStep(3);
@@ -131,6 +136,10 @@ const Checkout: React.FC<CheckoutProps> = ({
               onInputChange={handleInputChange}
               onBack={() => handlePrevStep(1)}
               onPlaceOrder={handlePlaceOrderClick}
+              selectedShopVoucher={selectedShopVoucher}
+              setSelectedShopVoucher={setSelectedShopVoucher}
+              selectedShippingVoucher={selectedShippingVoucher}
+              setSelectedShippingVoucher={setSelectedShippingVoucher}
             />
           )}
           

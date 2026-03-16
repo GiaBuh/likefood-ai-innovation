@@ -14,10 +14,11 @@ import com.ecommerce.likefood.common.security.UserDetailsCustom;
 import com.ecommerce.likefood.common.security.UserDetailsServiceCustom;
 import com.ecommerce.likefood.user.domain.Role;
 import com.ecommerce.likefood.user.domain.User;
-import com.ecommerce.likefood.user.mapper.UserMapper;
 import com.ecommerce.likefood.user.dto.res.UserResponse;
 import com.ecommerce.likefood.user.repository.RoleRepository;
 import com.ecommerce.likefood.user.repository.UserRepository;
+import com.ecommerce.likefood.user.mapper.UserMapper;
+import com.ecommerce.likefood.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -48,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final GoogleAuthService googleAuthService;
+    private final VoucherService voucherService;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
@@ -120,7 +122,9 @@ public class AuthServiceImpl implements AuthService {
                 .avatarUrl("avatars/avatar-default.svg")
                 .role(role)
                 .build();
-        return this.userRepository.save(user);
+        User savedUser = this.userRepository.save(user);
+        this.voucherService.assignWelcomeVouchers(savedUser);
+        return savedUser;
     }
 
     @Override
@@ -172,7 +176,9 @@ public class AuthServiceImpl implements AuthService {
         user.setAvatarUrl("avatars/avatar-default.svg");
         user.setRole(role);
 
-        return this.userMapper.toResponse(this.userRepository.save(user));
+        User savedUser = this.userRepository.save(user);
+        this.voucherService.assignWelcomeVouchers(savedUser);
+        return this.userMapper.toResponse(savedUser);
     }
 
     private void validationExistsByEmail(String email) {
