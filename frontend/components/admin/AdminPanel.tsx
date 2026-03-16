@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import KPICards from './KPICards';
 import Filters from './Filters';
@@ -61,7 +62,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   onUpdateProducts,
   onUpdateOrderStatus,
 }) => {
-  const [currentView, setCurrentView] = useState<AdminViewType>('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive currentView from URL pathname
+  const currentView: AdminViewType = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/admin/orders')) return 'orders';
+    if (path.startsWith('/admin/products')) return 'products';
+    if (path.startsWith('/admin/customers')) return 'customers';
+    if (path.startsWith('/admin/chat')) return 'chatting';
+    if (path.startsWith('/admin/trends')) return 'trends';
+    if (path.startsWith('/admin/combo')) return 'aicombo';
+    return 'dashboard';
+  }, [location.pathname]);
+
   const [isLoading, setIsLoading] = useState(true);
 
   // Data State
@@ -201,9 +216,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     );
   }, [orders]);
 
-  // Reset filters when view changes
+  const viewToPath: Record<AdminViewType, string> = {
+    dashboard: '/admin',
+    orders: '/admin/orders',
+    products: '/admin/products',
+    customers: '/admin/customers',
+    chatting: '/admin/chat',
+    trends: '/admin/trends',
+    aicombo: '/admin/combo',
+  };
+
   const handleViewChange = (view: AdminViewType) => {
-    setCurrentView(view);
+    navigate(viewToPath[view]);
     setSearchTerm('');
     setPrimaryFilter('All');
     setSecondaryFilter(view === 'orders' ? '30' : 'All');
@@ -475,7 +499,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar with Exit Button */}
-      <AdminSidebar currentView={currentView} onNavigate={handleViewChange} onExit={onExit} />
+      <AdminSidebar onExit={onExit} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-neutral-50 dark:bg-neutral-950 relative">

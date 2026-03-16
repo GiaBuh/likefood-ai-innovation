@@ -1,12 +1,21 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'chatting' | 'trends' | 'aicombo';
 
 interface AdminSidebarProps {
-  currentView: AdminViewType;
-  onNavigate: (view: AdminViewType) => void;
   onExit: () => void;
 }
+
+const viewToPath: Record<AdminViewType, string> = {
+  dashboard: '/admin',
+  orders: '/admin/orders',
+  products: '/admin/products',
+  customers: '/admin/customers',
+  chatting: '/admin/chat',
+  trends: '/admin/trends',
+  aicombo: '/admin/combo',
+};
 
 const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
   { view: 'dashboard', icon: 'dashboard', label: 'Tổng quan' },
@@ -18,7 +27,24 @@ const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
   { view: 'aicombo', icon: 'magic_button', label: 'Tạo Combo Đu Trend' },
 ];
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, onNavigate, onExit }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getActiveView = (): AdminViewType => {
+    const path = location.pathname;
+    if (path === '/admin' || path === '/admin/') return 'dashboard';
+    if (path.startsWith('/admin/orders')) return 'orders';
+    if (path.startsWith('/admin/products')) return 'products';
+    if (path.startsWith('/admin/customers')) return 'customers';
+    if (path.startsWith('/admin/chat')) return 'chatting';
+    if (path.startsWith('/admin/trends')) return 'trends';
+    if (path.startsWith('/admin/combo')) return 'aicombo';
+    return 'dashboard';
+  };
+
+  const currentView = getActiveView();
+
   return (
     <aside className="flex w-72 flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 transition-all duration-300 h-full">
       {/* Logo Header */}
@@ -42,7 +68,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentView, onNavigate, on
             return (
               <div
                 key={item.view}
-                onClick={() => onNavigate(item.view)}
+                onClick={() => navigate(viewToPath[item.view])}
                 className={`
                   group flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer
                   transition-all duration-200 relative

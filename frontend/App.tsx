@@ -156,7 +156,7 @@ const MainContent: React.FC = () => {
   };
 
   // Admin route - full screen, no Layout (RBAC: only admin role)
-  if (location.pathname === '/admin') {
+  if (location.pathname.startsWith('/admin')) {
     if (!user || user.role !== 'admin') {
       return <NotFound onGoHome={() => navigate('/')} />;
     }
