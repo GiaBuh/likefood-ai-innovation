@@ -3,15 +3,18 @@ package com.ecommerce.likefood.user.service.impl;
 import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.common.response.PaginationResponse;
 import com.ecommerce.likefood.common.specification.GenericSpecification;
+import com.ecommerce.likefood.user.domain.Permission;
 import com.ecommerce.likefood.user.domain.Role;
 import com.ecommerce.likefood.user.domain.User;
 import com.ecommerce.likefood.common.security.SecurityUtils;
 import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
+import com.ecommerce.likefood.user.dto.req.StaffCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserSpecRequest;
 import com.ecommerce.likefood.user.dto.req.UserUpdateRequest;
 import com.ecommerce.likefood.user.dto.res.UserResponse;
 import com.ecommerce.likefood.user.mapper.UserMapper;
+import com.ecommerce.likefood.user.repository.PermissionRepository;
 import com.ecommerce.likefood.user.repository.RoleRepository;
 import com.ecommerce.likefood.user.repository.UserRepository;
 import com.ecommerce.likefood.user.service.UserService;
@@ -28,9 +31,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    private  final RoleRepository roleRepository;
+    private final RoleRepository roleRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionRepository permissionRepository;
+
+    private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
+    private static final String USER_ROLE = "USER";
 
     @Override
     public UserResponse create(UserCreateRequest req) {
@@ -43,8 +50,47 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setAvatarUrl("default-avatar.png");
 
+        return this.userMapper.toResponse(this.userRepository.save(user));
+    }
+
+    @Override
+    public UserResponse createStaff(StaffCreateRequest request) {
+        validationExistsByEmail(request.getEmail());
+
+        Role role = findRoleById(request.getRoleId());
+        if (USER_ROLE.equals(role.getName())) {
+            throw new AppException("Cannot assign USER role to staff");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .avatarUrl("avatars/avatar-default.svg")
+                .role(role)
+                .mustChangePassword(true)
+                .build();
 
         return this.userMapper.toResponse(this.userRepository.save(user));
+    }
+
+    @Override
+    public List<String> getMyPermissions() {
+        String email = SecurityUtils.getCurrentUserLogin()
+                .orElseThrow(() -> new AppException("Unauthenticated"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException("User not found"));
+
+        Role role = user.getRole();
+        if (SUPER_ADMIN_ROLE.equals(role.getName())) {
+            return permissionRepository.findAll().stream()
+                    .map(Permission::toPermissionString)
+                    .toList();
+        }
+        if (role.getPermissions() == null) return List.of();
+        return role.getPermissions().stream()
+                .map(Permission::toPermissionString)
+                .toList();
     }
 
     private Role findRoleById(String id) {
@@ -53,7 +99,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void validationExistsByEmail(String email) {
-        if(this.userRepository.existsByEmail(email)) {
+        if (this.userRepository.existsByEmail(email)) {
             throw new AppException("Email already exists");
         }
     }
@@ -83,7 +129,6 @@ public class UserServiceImpl implements UserService {
 
         List<UserResponse> result = page.getContent().stream().map(userMapper::toResponse).toList();
 
-
         return PaginationResponse.builder()
                 .meta(meta)
                 .result(result)
@@ -94,7 +139,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse update(String id, UserUpdateRequest request) {
         User userDB = this.findUserById(id);
 
-        Role role  = this.findRoleById(request.getRole().getId());
+        Role role = this.findRoleById(request.getRole().getId());
 
         this.userMapper.updateUser(request, userDB);
         userDB.setRole(role);

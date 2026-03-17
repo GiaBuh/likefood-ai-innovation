@@ -13,6 +13,8 @@ export type StoredAuthUser = {
   address: string;
   avatar: string;
   role: 'admin' | 'customer';
+  permissions?: string[];
+  mustChangePassword?: boolean;
 };
 
 export function getApiBaseUrl(): string {

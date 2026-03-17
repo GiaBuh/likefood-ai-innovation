@@ -1,5 +1,6 @@
 package com.ecommerce.likefood.auth.controller;
 
+import com.ecommerce.likefood.auth.dto.req.ChangePasswordRequest;
 import com.ecommerce.likefood.auth.dto.req.GoogleAuthCallbackRequest;
 import com.ecommerce.likefood.auth.dto.req.LoginRequest;
 import com.ecommerce.likefood.auth.dto.req.RegisterRequest;
@@ -21,6 +22,7 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -126,5 +128,12 @@ public class AuthController {
     @ApiMessage("Register user")
     public ResponseEntity<UserResponse> register(@RequestBody @Valid RegisterRequest registerRequest) {
         return ResponseEntity.status(HttpStatus.CREATED).body(this.authService.register(registerRequest));
+    }
+
+    @PutMapping("/auth/change-password")
+    @ApiMessage("Change password")
+    public ResponseEntity<Void> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+        this.authService.changePassword(request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok().build();
     }
 }

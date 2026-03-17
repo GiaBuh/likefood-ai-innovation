@@ -3,6 +3,8 @@ package com.ecommerce.likefood.auth.dto.res;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
+import java.util.List;
+
 @Setter
 @Getter
 @Builder
@@ -26,7 +28,8 @@ public class LoginResponse {
         private String address;
         private String avatarUrl;
         private String role;
+        private boolean mustChangePassword;
+        private List<String> permissions;
     }
-
-
 }
+

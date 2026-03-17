@@ -17,4 +17,6 @@ public interface AuthService {
     RefreshResponse refresh(String refreshToken);
 
     UserResponse register(RegisterRequest registerRequest);
+
+    void changePassword(String currentPassword, String newPassword);
 }

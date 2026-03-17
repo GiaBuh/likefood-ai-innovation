@@ -48,7 +48,7 @@ public class OrderController {
     }
 
     @GetMapping("/orders")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'ORDERS', 'VIEW')")
     @ApiMessage("Get all orders")
     public ResponseEntity<PaginationResponse> getAllOrders(
             @ModelAttribute OrderSpecRequest orderSpecRequest,
@@ -58,7 +58,7 @@ public class OrderController {
     }
 
     @PatchMapping("/orders/{orderId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'ORDERS', 'EDIT')")
     @ApiMessage("Update order status")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable("orderId") String orderId,

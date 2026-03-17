@@ -20,7 +20,7 @@ public class VoucherController {
     private final VoucherService voucherService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'VOUCHERS', 'CREATE')")
     @ApiMessage("Created voucher successfully")
     public ResponseEntity<VoucherResponse> createVoucher(@RequestBody VoucherRequest request) {
         return ResponseEntity.ok(voucherService.createVoucher(request));
@@ -33,7 +33,7 @@ public class VoucherController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'VOUCHERS', 'VIEW')")
     @ApiMessage("Fetched all vouchers successfully")
     public ResponseEntity<List<VoucherResponse>> getAllVouchers() {
         return ResponseEntity.ok(voucherService.getAllVouchers());
@@ -46,14 +46,14 @@ public class VoucherController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'VOUCHERS', 'EDIT')")
     @ApiMessage("Updated voucher successfully")
     public ResponseEntity<VoucherResponse> updateVoucher(@PathVariable String id, @RequestBody VoucherRequest request) {
         return ResponseEntity.ok(voucherService.updateVoucher(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'VOUCHERS', 'DELETE')")
     @ApiMessage("Deleted voucher successfully")
     public ResponseEntity<Void> deleteVoucher(@PathVariable String id) {
         voucherService.deleteVoucher(id);

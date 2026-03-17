@@ -15,6 +15,7 @@ import TrendHistoryView from './TrendHistoryView';
 import AiComboGenerator from './AiComboGenerator';
 import VouchersTable from './VouchersTable';
 import { VoucherFormModal } from './VoucherFormModal';
+import StaffManagement from './StaffManagement';
 import { Product, ProductVariant, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta, Voucher } from '../../types';
 import {
   getAdminConversations,
@@ -25,8 +26,10 @@ import {
 } from '../../services/shopApi';
 import { useAdminChatWebSocket } from '../../hooks/useAdminChatWebSocket';
 import { fetchAllVouchers, createVoucher, updateVoucher, deleteVoucher } from '../../services/voucherApi';
+import ChangePasswordModal from '../common/ChangePasswordModal';
+import { useAuth } from '../../contexts/AuthContext';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo' | 'staff';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -67,6 +70,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, login } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(user?.mustChangePassword ?? false);
 
   // Derive currentView from URL pathname
   const currentView: AdminViewType = useMemo(() => {
@@ -78,6 +83,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';
+    if (path.startsWith('/admin/staff')) return 'staff';
     return 'dashboard';
   }, [location.pathname]);
 
@@ -254,6 +260,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     chatting: '/admin/chat',
     trends: '/admin/trends',
     aicombo: '/admin/combo',
+    staff: '/admin/staff',
   };
 
   const handleViewChange = (view: AdminViewType) => {
@@ -507,6 +514,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         return { title: 'Lịch sử xu hướng AI', subtitle: 'Lịch sử phân tích xu hướng TikTok bằng AI', btnText: '' };
       case 'aicombo':
         return { title: 'AI Combo Generator', subtitle: 'Bắt AI tự động tạo chiến dịch Combo bán hàng đu trend', btnText: '' };
+      case 'staff':
+        return { title: 'Quản lý nhân viên', subtitle: 'Quản lý tài khoản nhân viên và phân quyền', btnText: '' };
     }
   };
 
@@ -668,8 +677,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <AiComboGenerator products={products} />
           )}
 
+          {/* Staff Management View */}
+          {currentView === 'staff' && (
+              <StaffManagement />
+          )}
+
           {/* List Views */}
-          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && (
+          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'staff' && (
              <div className="flex flex-col gap-6">
                 <KPICards data={getKPIs()} isLoading={isLoading} />
 
@@ -765,6 +779,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         onSave={handleSaveVoucher}
         initialData={editingVoucher}
       />
+      {showChangePassword && (
+        <ChangePasswordModal
+          onSuccess={() => setShowChangePassword(false)}
+        />
+      )}
     </div>
   );
 };

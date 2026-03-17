@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { usePermission } from '../../hooks/usePermission';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo' | 'staff';
 
 interface AdminSidebarProps {
   onExit: () => void;
@@ -16,6 +17,20 @@ const viewToPath: Record<AdminViewType, string> = {
   chatting: '/admin/chat',
   trends: '/admin/trends',
   aicombo: '/admin/combo',
+  staff: '/admin/staff',
+};
+
+// Map view to required permission resource for VIEW access
+const viewPermissionMap: Record<AdminViewType, string | null> = {
+  dashboard: 'DASHBOARD',
+  orders: 'ORDERS',
+  products: 'PRODUCTS',
+  customers: 'CUSTOMERS',
+  vouchers: 'VOUCHERS',
+  chatting: 'CHAT',
+  trends: null,    // accessible to all admin
+  aicombo: null,   // accessible to all admin
+  staff: 'STAFF',
 };
 
 const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
@@ -25,6 +40,7 @@ const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
   { view: 'customers', icon: 'group', label: 'Khách hàng' },
   { view: 'vouchers', icon: 'loyalty', label: 'Khuyến mãi' },
   { view: 'chatting', icon: 'chat', label: 'Chat' },
+  { view: 'staff', icon: 'admin_panel_settings', label: 'Nhân viên' },
   { view: 'trends', icon: 'trending_up', label: 'Xu hướng AI' },
   { view: 'aicombo', icon: 'magic_button', label: 'Tạo Combo Đu Trend' },
 ];
@@ -32,6 +48,7 @@ const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasPermission } = usePermission();
 
   const getActiveView = (): AdminViewType => {
     const path = location.pathname;
@@ -43,10 +60,18 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';
+    if (path.startsWith('/admin/staff')) return 'staff';
     return 'dashboard';
   };
 
   const currentView = getActiveView();
+
+  // Filter menu items by permission
+  const visibleMenuItems = menuItems.filter(item => {
+    const resource = viewPermissionMap[item.view];
+    if (resource === null) return true; // no permission needed
+    return hasPermission(resource, 'VIEW');
+  });
 
   return (
     <aside className="flex w-72 flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 transition-all duration-300 h-full">
@@ -66,7 +91,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
       <div className="flex flex-1 flex-col justify-between overflow-y-auto p-4">
         <nav className="flex flex-col gap-1">
           <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 px-4 mb-2">Menu</p>
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const isActive = currentView === item.view;
             return (
               <div
