@@ -57,6 +57,8 @@ type BackendProduct = {
 
 type BackendOrderItem = {
   id?: string;
+  productId?: string;
+  productSlug?: string;
   productName?: string;
   variantLabel?: string;
   imageKey?: string;
@@ -728,6 +730,8 @@ function toOrder(order: BackendOrder): Order {
     fulfillmentStatus: safeFulfillment,
     items: (order.items || []).map((item) => ({
       id: item.id,
+      productId: item.productId,
+      productSlug: item.productSlug,
       productName: item.productName,
       variantLabel: item.variantLabel,
       productThumbnail: resolveImageUrl(item.imageKey || ''),

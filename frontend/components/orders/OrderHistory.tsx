@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Order, OrderStatus } from '../../types';
 import Skeleton from '../ui/Skeleton';
+import { useNavigate } from 'react-router-dom';
 
 interface OrderHistoryProps {
   orders: Order[];
@@ -21,6 +22,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Simulate data fetching
   useEffect(() => {
@@ -97,7 +99,17 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               {t('orders.reorder')}
             </button>
             {status === 'Complete' && (
-              <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
+              <button 
+                onClick={() => {
+                  // Navigate to the first product's detail page for review
+                  const firstItem = order.items[0];
+                  const slug = firstItem?.productSlug || firstItem?.productId || firstItem?.id;
+                  if (slug) {
+                    navigate(`/product/${slug}#reviews`);
+                  }
+                }}
+                className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm"
+              >
                 Viết đánh giá
               </button>
             )}
@@ -218,7 +230,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                           <p className="text-sm text-stone-500 dark:text-stone-400">Qty: {item.quantity} × ${item.price.toFixed(2)}</p>
                         </div>
                         <div className="text-right">
-                           <p className="font-bold text-slate-900 dark:text-white">${(item.price * item.quantity).toFixed(2)}</p>
+                           <p className="font-bold text-slate-900 dark:text-white">
+                             {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">Giá cập nhật</span>}
+                           </p>
                         </div>
                       </div>
                     ))}

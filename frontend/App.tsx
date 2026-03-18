@@ -143,7 +143,26 @@ const MainContent: React.FC = () => {
   };
 
   const handleReorder = (order: Order) => {
-    order.items.forEach((item) => addToCart(item, item.quantity));
+    order.items.forEach((item) => {
+      // Map OrderItem fields to Product-compatible fields
+      const productLike = {
+        ...item,
+        name: item.name || item.productName || 'Sản phẩm',
+        image: item.image || item.productThumbnail || '',
+        images: [],
+        location: 'Viet Nam',
+        category: '',
+        categoryName: '',
+        isUsShip: true,
+        description: '',
+        weight: item.variantLabel || 'Default',
+        packaging: 'Standard Pack',
+        variants: [],
+        thumbnail: item.image || item.productThumbnail || '',
+        status: 'Active' as const,
+      };
+      addToCart(productLike as any, item.quantity);
+    });
     navigate('/checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
