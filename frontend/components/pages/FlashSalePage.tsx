@@ -8,12 +8,12 @@ import ProductCardSkeleton from '../product/ProductCardSkeleton';
 import {
   fetchTodayFlashSales,
   fetchServerTime,
-  purchaseFlashSaleItem,
   FlashSaleEventResponse,
   FlashSaleItemResponse,
   FlashSaleSoldUpdate,
 } from '../../services/flashSaleApi';
 import { getApiBaseUrl } from '../../services/apiClient';
+import { useShop } from '../../contexts/ShopContext';
 
 const S3_BASE = (((import.meta as any).env?.VITE_S3_PUBLIC_BASE_URL as string) || '').replace(/\/+$/, '');
 
@@ -85,9 +85,9 @@ const TimeSlot: React.FC<{
       onClick={onClick}
       className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 sm:px-6 py-3 rounded-xl transition-all duration-300 min-w-[80px] ${
         isActive
-          ? 'bg-red-500 text-white shadow-lg scale-105'
+          ? 'bg-orange-500 text-white shadow-lg scale-105'
           : isHappening
-            ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+            ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/40'
             : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
       }`}
     >
@@ -103,16 +103,17 @@ const TimeSlot: React.FC<{
 const FlashSaleProductCard: React.FC<{
   item: FlashSaleItemResponse;
   t: any;
-  onPurchase: (itemId: string) => void;
-  purchasing: string | null;
-}> = ({ item, t, onPurchase, purchasing }) => {
+  onAddToCart: (item: FlashSaleItemResponse) => void;
+  adding: string | null;
+}> = ({ item, t, onAddToCart, adding }) => {
   const isSoldOut = item.stock > 0 && item.soldCount >= item.stock;
-  const isPurchasing = purchasing === item.id;
+  const isAdding = adding === item.id;
+  const productUrl = `/product/${item.productSlug || item.productId}?salePrice=${item.salePrice}&originalPrice=${item.originalPrice}&discount=${item.discountPercent}${item.variantId ? `&variantId=${item.variantId}` : ''}`;
 
   return (
     <div className={`group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 ${isSoldOut ? 'opacity-60' : ''}`}>
       {/* Image + Badge */}
-      <Link to={`/product/${item.productSlug || item.productId}`} className="block">
+      <Link to={productUrl} className="block">
         <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-700">
           <img
             src={resolveImage(item.productImage)}
@@ -121,13 +122,13 @@ const FlashSaleProductCard: React.FC<{
             loading="lazy"
           />
           {item.discountPercent > 0 && (
-            <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
+            <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
               -{item.discountPercent}%
             </div>
           )}
           {isSoldOut && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="text-white font-bold text-sm bg-red-500 px-3 py-1 rounded-full">
+              <span className="text-white font-bold text-sm bg-orange-500 px-3 py-1 rounded-full">
                 {t('flashSalePage.soldOut')}
               </span>
             </div>
@@ -137,7 +138,7 @@ const FlashSaleProductCard: React.FC<{
 
       {/* Info */}
       <div className="p-2.5 sm:p-3">
-        <Link to={`/product/${item.productSlug || item.productId}`}>
+        <Link to={productUrl}>
           <h3 className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white line-clamp-2 mb-1.5 min-h-[2.5em] group-hover:text-primary-500 transition-colors">
             {item.productName}
           </h3>
@@ -145,7 +146,7 @@ const FlashSaleProductCard: React.FC<{
 
         {/* Prices */}
         <div className="mb-1.5">
-          <p className="text-red-500 font-extrabold text-base sm:text-lg leading-tight">
+          <p className="text-orange-500 font-extrabold text-base sm:text-lg leading-tight">
             ${item.salePrice.toFixed(2)}
           </p>
           {item.originalPrice > item.salePrice && (
@@ -156,9 +157,9 @@ const FlashSaleProductCard: React.FC<{
         </div>
 
         {/* Sold Progress Bar */}
-        <div className="relative w-full h-5 sm:h-[22px] bg-red-100 dark:bg-red-950/30 rounded-full overflow-hidden mb-2">
+        <div className="relative w-full h-5 sm:h-[22px] bg-orange-100 dark:bg-orange-950/30 rounded-full overflow-hidden mb-2">
           <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-500 to-orange-400 rounded-full transition-all duration-1000"
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-1000"
             style={{ width: `${Math.min(item.soldPercent, 100)}%` }}
           />
           <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
@@ -168,23 +169,23 @@ const FlashSaleProductCard: React.FC<{
           </span>
         </div>
 
-        {/* Buy Button — Shopee-style */}
+        {/* Add to Cart Button */}
         <button
-          onClick={() => !isSoldOut && !isPurchasing && onPurchase(item.id)}
-          disabled={isSoldOut || isPurchasing}
-          className={`w-full py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 ${
+          onClick={() => !isSoldOut && !isAdding && onAddToCart(item)}
+          disabled={isSoldOut || isAdding}
+          className={`w-full py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1 ${
             isSoldOut
               ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
-              : isPurchasing
+              : isAdding
                 ? 'bg-orange-400 text-white cursor-wait animate-pulse'
-                : 'bg-red-500 hover:bg-red-600 text-white shadow-sm hover:shadow-md active:scale-95'
+                : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow-md active:scale-95'
           }`}
         >
           {isSoldOut
             ? t('flashSalePage.soldOut')
-            : isPurchasing
+            : isAdding
               ? '...'
-              : 'Mua ngay'}
+              : <><span className="material-symbols-outlined !text-sm">shopping_cart</span>Thêm giỏ hàng</>}
         </button>
       </div>
     </div>
@@ -194,13 +195,14 @@ const FlashSaleProductCard: React.FC<{
 // ─── Main Page ───
 const FlashSalePage: React.FC = () => {
   const { t } = useTranslation();
+  const { products, addToCart } = useShop();
   const [events, setEvents] = useState<FlashSaleEventResponse[]>([]);
   const [selectedEventIndex, setSelectedEventIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [serverOffset, setServerOffset] = useState(0);
-  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
   const stompClientRef = useRef<Client | null>(null);
 
   // ─── Fetch data + sync server time ───
@@ -284,18 +286,30 @@ const FlashSalePage: React.FC = () => {
     };
   }, [events.length]); // Re-connect when events change
 
-  // ─── Level 2: Atomic purchase ───
-  const handlePurchase = useCallback(async (itemId: string) => {
-    setPurchasing(itemId);
-    try {
-      await purchaseFlashSaleItem(itemId);
-      // WebSocket will update the sold bar for ALL connected users
-    } catch (err: any) {
-      alert(err.message || 'Mua thất bại');
-    } finally {
-      setPurchasing(null);
+  // ─── Add to Cart with sale price ───
+  const handleAddToCart = useCallback((item: FlashSaleItemResponse) => {
+    setAddingId(item.id);
+    // Find the real product from shop context
+    const realProduct = products.find(p => String(p.id) === String(item.productId));
+    if (!realProduct) {
+      alert('Sản phẩm không tồn tại');
+      setAddingId(null);
+      return;
     }
-  }, []);
+
+    // Use the specific variantId from flash sale (admin-chosen), fallback to first
+    const targetVariantId = item.variantId || realProduct.variants?.[0]?.id;
+    const targetVariant = realProduct.variants?.find(v => v.id === targetVariantId) || realProduct.variants?.[0];
+
+    const productWithSalePrice = {
+      ...realProduct,
+      price: item.salePrice,
+      variantId: targetVariant?.id,
+      weight: targetVariant?.weight || realProduct.weight,
+    };
+    addToCart(productWithSalePrice, 1);
+    setTimeout(() => setAddingId(null), 600);
+  }, [products, addToCart]);
 
   const selectedEvent = events[selectedEventIndex] || null;
   const { hours, minutes, seconds } = useCountdown(selectedEvent?.endTime || null, serverOffset);
@@ -322,7 +336,7 @@ const FlashSalePage: React.FC = () => {
       <SEO title={t('flashSalePage.title')} description={t('flashSalePage.subtitle')} path="/flash-sale" />
 
       {/* ═══ Hero Banner ═══ */}
-      <section className="relative bg-gradient-to-br from-red-600 via-red-500 to-orange-500 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-orange-600 via-orange-500 to-orange-500 overflow-hidden">
         <div className="max-w-[1440px] mx-auto">
           {selectedEvent?.bannerUrl ? (
             <img src={resolveImage(selectedEvent.bannerUrl)} alt="Flash Sale Banner"
@@ -340,9 +354,9 @@ const FlashSalePage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined !text-2xl sm:!text-3xl text-red-500"
+                <span className="material-symbols-outlined !text-2xl sm:!text-3xl text-orange-500"
                   style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-red-500 uppercase tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-orange-500 uppercase tracking-tight">
                   {t('flashSalePage.title')}
                 </h1>
               </div>
@@ -400,7 +414,7 @@ const FlashSalePage: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               <button onClick={() => setSelectedCategory(null)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                  !selectedCategory ? 'bg-red-500 text-white shadow-button'
+                  !selectedCategory ? 'bg-orange-500 text-white shadow-button'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}>
                 {t('flashSalePage.allCategories')}
@@ -408,7 +422,7 @@ const FlashSalePage: React.FC = () => {
               {categories.map((cat) => (
                 <button key={cat} onClick={() => setSelectedCategory(cat)}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                    selectedCategory === cat ? 'bg-red-500 text-white shadow-button'
+                    selectedCategory === cat ? 'bg-orange-500 text-white shadow-button'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                   }`}>
                   {cat}
@@ -430,7 +444,7 @@ const FlashSalePage: React.FC = () => {
             </div>
           ) : error ? (
             <div className="text-center py-16">
-              <span className="material-symbols-outlined !text-5xl text-red-400 mb-4 block opacity-50">error</span>
+              <span className="material-symbols-outlined !text-5xl text-orange-400 mb-4 block opacity-50">error</span>
               <p className="text-neutral-600 dark:text-neutral-400">{error}</p>
             </div>
           ) : events.length === 0 ? (
@@ -453,7 +467,7 @@ const FlashSalePage: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {filteredItems.map((item) => (
                 <FlashSaleProductCard key={item.id} item={item} t={t}
-                  onPurchase={handlePurchase} purchasing={purchasing} />
+                  onAddToCart={handleAddToCart} adding={addingId} />
               ))}
             </div>
           )}

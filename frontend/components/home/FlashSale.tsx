@@ -87,10 +87,10 @@ const FlashSale: React.FC = () => {
           <div className="flex items-center gap-3 sm:gap-4">
             {/* Flash Sale Title */}
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined !text-2xl text-red-500" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined !text-2xl text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>
                 bolt
               </span>
-              <h2 className="text-lg sm:text-xl font-extrabold text-red-500 uppercase tracking-tight">
+              <h2 className="text-lg sm:text-xl font-extrabold text-orange-500 uppercase tracking-tight">
                 {t('home.flashSaleTitle')}
               </h2>
             </div>
@@ -150,7 +150,7 @@ const FlashSale: React.FC = () => {
                       loading="lazy"
                     />
                     {/* Discount Badge */}
-                    <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
+                    <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
                       -{discount}%
                     </div>
                   </div>
@@ -159,7 +159,7 @@ const FlashSale: React.FC = () => {
                   <div className="p-2.5 sm:p-3">
                     {/* Price */}
                     <div className="mb-1.5">
-                      <p className="text-red-500 font-extrabold text-base sm:text-lg leading-tight">
+                      <p className="text-orange-500 font-extrabold text-base sm:text-lg leading-tight">
                         ${product.price.toFixed(2)}
                       </p>
                       <p className="text-neutral-400 dark:text-neutral-500 text-xs line-through">
@@ -168,9 +168,9 @@ const FlashSale: React.FC = () => {
                     </div>
 
                     {/* Sold Progress Bar */}
-                    <div className="relative w-full h-5 sm:h-[22px] bg-red-100 dark:bg-red-950/30 rounded-full overflow-hidden">
+                    <div className="relative w-full h-5 sm:h-[22px] bg-orange-100 dark:bg-orange-950/30 rounded-full overflow-hidden">
                       <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-500 to-orange-400 rounded-full transition-all duration-1000"
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-1000"
                         style={{ width: `${soldPercent}%` }}
                       ></div>
                       <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">

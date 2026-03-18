@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 public class FlashSaleItemResponse {
     private String id;
     private String productId;
+    private String variantId;
+    private String variantLabel;
     private String productName;
     private String productSlug;
     private String productImage;

@@ -91,6 +91,7 @@ public class FlashSaleServiceImpl implements FlashSaleService {
                 FlashSaleItem item = FlashSaleItem.builder()
                         .flashSaleEvent(event)
                         .product(product)
+                        .variantId(itemReq.getVariantId())
                         .salePrice(itemReq.getSalePrice())
                         .stock(itemReq.getStock() != null ? itemReq.getStock() : 0)
                         .soldCount(0)
@@ -128,6 +129,7 @@ public class FlashSaleServiceImpl implements FlashSaleService {
                 FlashSaleItem item = FlashSaleItem.builder()
                         .flashSaleEvent(event)
                         .product(product)
+                        .variantId(itemReq.getVariantId())
                         .salePrice(itemReq.getSalePrice())
                         .stock(itemReq.getStock() != null ? itemReq.getStock() : 0)
                         .soldCount(0)
@@ -201,8 +203,25 @@ public class FlashSaleServiceImpl implements FlashSaleService {
 
     private FlashSaleItemResponse toItemResponse(FlashSaleItem item) {
         Product product = item.getProduct();
-        BigDecimal originalPrice = getOriginalPrice(product);
+        String variantId = item.getVariantId();
+        ProductVariant matchedVariant = null;
+
+        // Find the specific variant if variantId is set
+        if (variantId != null && product.getVariants() != null) {
+            matchedVariant = product.getVariants().stream()
+                    .filter(v -> v.getId().equals(variantId))
+                    .findFirst().orElse(null);
+        }
+
+        BigDecimal originalPrice = matchedVariant != null
+                ? (matchedVariant.getOriginalPrice() != null ? matchedVariant.getOriginalPrice() : matchedVariant.getPrice())
+                : getOriginalPrice(product);
         BigDecimal salePrice = item.getSalePrice();
+
+        String variantLabel = matchedVariant != null
+                ? matchedVariant.getWeightValue() + matchedVariant.getWeightUnit()
+                : null;
+
         int discountPercent = 0;
         if (originalPrice.compareTo(BigDecimal.ZERO) > 0 && originalPrice.compareTo(salePrice) > 0) {
             discountPercent = originalPrice.subtract(salePrice)
@@ -219,6 +238,8 @@ public class FlashSaleServiceImpl implements FlashSaleService {
         return FlashSaleItemResponse.builder()
                 .id(item.getId())
                 .productId(product.getId())
+                .variantId(variantId)
+                .variantLabel(variantLabel)
                 .productName(product.getName())
                 .productSlug(product.getSlug())
                 .productImage(product.getThumbnailKey())
