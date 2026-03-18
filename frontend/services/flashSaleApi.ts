@@ -5,6 +5,8 @@ import { apiFetch, getErrorMessageFromResponse } from './apiClient';
 export interface FlashSaleItemResponse {
   id: string;
   productId: string;
+  variantId: string | null;
+  variantLabel: string | null;
   productName: string;
   productSlug: string;
   productImage: string; // thumbnailKey from backend
@@ -29,6 +31,7 @@ export interface FlashSaleEventResponse {
 
 export interface FlashSaleItemRequest {
   productId: string;
+  variantId?: string;
   salePrice: number;
   stock: number;
 }

@@ -10,6 +10,10 @@ import com.ecommerce.likefood.common.exception.AppException;
 import com.ecommerce.likefood.common.response.PaginationResponse;
 import com.ecommerce.likefood.common.security.SecurityUtils;
 import com.ecommerce.likefood.common.specification.GenericSpecification;
+import com.ecommerce.likefood.flashsale.domain.FlashSaleEvent;
+import com.ecommerce.likefood.flashsale.domain.FlashSaleItem;
+import com.ecommerce.likefood.flashsale.repository.FlashSaleEventRepository;
+import com.ecommerce.likefood.flashsale.repository.FlashSaleItemRepository;
 import com.ecommerce.likefood.order.domain.Order;
 import com.ecommerce.likefood.order.domain.OrderItem;
 import com.ecommerce.likefood.order.domain.OrderStatus;
@@ -43,7 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +65,24 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
     private final UserVoucherRepository userVoucherRepository;
     private final VoucherRepository voucherRepository;
+    private final FlashSaleEventRepository flashSaleEventRepository;
+    private final FlashSaleItemRepository flashSaleItemRepository;
+
+    private Map<String, FlashSaleItem> buildActiveFlashSaleMap() {
+        Map<String, FlashSaleItem> flashSaleMap = new HashMap<>();
+        List<FlashSaleEvent> activeEvents = flashSaleEventRepository.findActiveEvents(Instant.now());
+        if (!activeEvents.isEmpty()) {
+            List<FlashSaleItem> activeItems = flashSaleItemRepository.findByFlashSaleEventIn(activeEvents);
+            for (FlashSaleItem item : activeItems) {
+                if (item.getVariantId() != null && !item.getVariantId().isBlank()) {
+                    flashSaleMap.put(item.getVariantId(), item);
+                } else {
+                    flashSaleMap.put("product-" + item.getProduct().getId(), item);
+                }
+            }
+        }
+        return flashSaleMap;
+    }
 
     @Override
     @Transactional
@@ -83,8 +107,10 @@ public class OrderServiceImpl implements OrderService {
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
+        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
+
         List<OrderItem> orderItems = cart.getItems().stream()
-                .map(cartItem -> mapCartItemToOrderItem(cartItem, order))
+                .map(cartItem -> mapCartItemToOrderItem(cartItem, order, flashSaleMap))
                 .toList();
 
         BigDecimal subtotal = orderItems.stream()
@@ -160,7 +186,7 @@ public class OrderServiceImpl implements OrderService {
         return discount;
     }
 
-    private OrderItem mapCartItemToOrderItem(CartItem cartItem, Order order) {
+    private OrderItem mapCartItemToOrderItem(CartItem cartItem, Order order, Map<String, FlashSaleItem> flashSaleMap) {
         if ("COMBO".equals(cartItem.getItemType()) && cartItem.getComboCampaign() != null) {
             ComboCampaign combo = cartItem.getComboCampaign();
             // Extract image key from combo URL
@@ -181,12 +207,19 @@ public class OrderServiceImpl implements OrderService {
         } else {
             // PRODUCT item
             ProductVariant variant = cartItem.getVariant();
+            BigDecimal currentPrice = variant != null ? variant.getPrice() : cartItem.getPrice();
+            FlashSaleItem productLevelSale = variant != null ? flashSaleMap.get("product-" + variant.getProduct().getId()) : null;
+            FlashSaleItem fsItem = variant != null && flashSaleMap.containsKey(variant.getId()) ? flashSaleMap.get(variant.getId()) : productLevelSale;
+            if (fsItem != null) {
+                currentPrice = fsItem.getSalePrice();
+            }
+
             return OrderItem.builder()
                     .order(order)
                     .itemType("PRODUCT")
                     .variant(variant)
                     .quantity(cartItem.getQuantity())
-                    .price(cartItem.getPrice())
+                    .price(currentPrice)
                     .productName(variant.getProduct().getName())
                     .variantLabel(variant.getWeightValue() + " " + variant.getWeightUnit())
                     .imageKey(variant.getProduct().getThumbnailKey())

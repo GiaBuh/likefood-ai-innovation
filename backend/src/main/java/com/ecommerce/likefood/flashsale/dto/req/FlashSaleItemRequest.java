@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class FlashSaleItemRequest {
     private String productId;
+    private String variantId;
     private BigDecimal salePrice;
     private Integer stock;
 }

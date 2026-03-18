@@ -9,7 +9,7 @@ import {
   FlashSaleEventRequest,
   FlashSaleItemRequest,
 } from '../../services/flashSaleApi';
-import { Product } from '../../types';
+import { Product, ProductVariant } from '../../types';
 
 const S3_BASE = (((import.meta as any).env?.VITE_S3_PUBLIC_BASE_URL as string) || '').replace(/\/+$/, '');
 function resolveImage(key: string | null | undefined): string {
@@ -24,6 +24,14 @@ function toLocalDatetimeStr(iso: string): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+// ─── Flash Sale Item with variant info ───
+interface FlashSaleFormItem {
+  productId: string;
+  variantId?: string;
+  salePrice: number;
+  stock: number;
+}
+
 // ─── Event Form Modal ───
 const FlashSaleFormModal: React.FC<{
   isOpen: boolean;
@@ -35,7 +43,7 @@ const FlashSaleFormModal: React.FC<{
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [items, setItems] = useState<FlashSaleItemRequest[]>([]);
+  const [items, setItems] = useState<FlashSaleFormItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showPicker, setShowPicker] = useState(false);
@@ -45,7 +53,12 @@ const FlashSaleFormModal: React.FC<{
       setName(initial.name);
       setStartTime(toLocalDatetimeStr(initial.startTime));
       setEndTime(toLocalDatetimeStr(initial.endTime));
-      setItems(initial.items.map(i => ({ productId: i.productId, salePrice: i.salePrice, stock: i.stock })));
+      setItems(initial.items.map(i => ({
+        productId: i.productId,
+        variantId: i.variantId || undefined,
+        salePrice: i.salePrice,
+        stock: i.stock,
+      })));
     } else {
       setName('');
       setStartTime('');
@@ -56,20 +69,33 @@ const FlashSaleFormModal: React.FC<{
     setShowPicker(false);
   }, [initial, isOpen]);
 
-  const usedProductIds = new Set(items.map(i => i.productId));
+  // Use productId+variantId as unique key
+  const usedKeys = new Set(items.map(i => `${i.productId}__${i.variantId || 'default'}`));
 
-  const addProduct = (productId: string) => {
-    const product = products.find(p => String(p.id) === productId);
-    if (!product) return;
-    const price = product.variants?.[0]?.price || 0;
+  const addVariant = (product: Product, variant: ProductVariant) => {
+    const key = `${product.id}__${variant.id}`;
+    if (usedKeys.has(key)) return;
     setItems(prev => [...prev, {
-      productId,
+      productId: String(product.id),
+      variantId: variant.id,
+      salePrice: Math.round(variant.price * 0.7 * 100) / 100,
+      stock: variant.quantity || 50,
+    }]);
+  };
+
+  const addProductDefault = (product: Product) => {
+    // Product with no variants — add with no variantId
+    const key = `${product.id}__default`;
+    if (usedKeys.has(key)) return;
+    const price = product.price || 0;
+    setItems(prev => [...prev, {
+      productId: String(product.id),
       salePrice: Math.round(price * 0.7 * 100) / 100,
       stock: 50,
     }]);
   };
 
-  const updateItem = (idx: number, field: keyof FlashSaleItemRequest, value: any) => {
+  const updateItem = (idx: number, field: keyof FlashSaleFormItem, value: any) => {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
   };
 
@@ -90,7 +116,12 @@ const FlashSaleFormModal: React.FC<{
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
         isActive: true,
-        items,
+        items: items.map(i => ({
+          productId: i.productId,
+          variantId: i.variantId,
+          salePrice: i.salePrice,
+          stock: i.stock,
+        })),
       });
       onClose();
     } catch (e: any) {
@@ -112,7 +143,7 @@ const FlashSaleFormModal: React.FC<{
             <h2 className="text-lg font-extrabold text-neutral-900 dark:text-white">
               {initial ? 'Chỉnh sửa khung giờ' : 'Tạo khung giờ Flash Sale'}
             </h2>
-            <p className="text-sm text-neutral-500">Chọn sản phẩm và đặt giá sale cho khung giờ</p>
+            <p className="text-sm text-neutral-500">Chọn sản phẩm + biến thể và đặt giá sale</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors">
             <span className="material-symbols-outlined">close</span>
@@ -126,7 +157,7 @@ const FlashSaleFormModal: React.FC<{
             <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Tên khung giờ</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="Ví dụ: Khung 15:00 - Combo Siêu Rẻ"
-              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none" />
+              className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none" />
           </div>
 
           {/* Time Range */}
@@ -134,12 +165,12 @@ const FlashSaleFormModal: React.FC<{
             <div>
               <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Bắt đầu</label>
               <input type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none" />
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Kết thúc</label>
               <input type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none" />
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none" />
             </div>
           </div>
 
@@ -150,53 +181,83 @@ const FlashSaleFormModal: React.FC<{
                 Sản phẩm đã chọn ({items.length})
               </label>
               <button onClick={() => setShowPicker(!showPicker)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors">
                 <span className="material-symbols-outlined !text-sm">{showPicker ? 'expand_less' : 'add'}</span>
                 {showPicker ? 'Đóng' : 'Thêm sản phẩm'}
               </button>
             </div>
 
-            {/* Product Picker Grid */}
+            {/* ── Product + Variant Picker ── */}
             {showPicker && (
-              <div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                <p className="text-xs font-semibold text-neutral-500 mb-2">Bấm chọn sản phẩm muốn thêm:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
+              <div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-200 dark:border-neutral-700 max-h-[300px] overflow-y-auto">
+                <p className="text-xs font-semibold text-neutral-500 mb-2">Chọn sản phẩm và biến thể:</p>
+                <div className="space-y-3">
                   {products.map(p => {
                     const pid = String(p.id);
-                    const isUsed = usedProductIds.has(pid);
-                    const price = p.variants?.[0]?.price || 0;
+                    const hasVariants = p.variants && p.variants.length > 0;
+
                     return (
-                      <button key={pid} onClick={() => !isUsed && addProduct(pid)} disabled={isUsed}
-                        className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all ${
-                          isUsed
-                            ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800'
-                            : 'bg-white dark:bg-neutral-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:ring-2 hover:ring-red-500/50 cursor-pointer border border-neutral-200 dark:border-neutral-700'
-                        }`}>
-                        <img src={resolveImage(p.thumbnail)} alt=""
-                          className="w-10 h-10 rounded-lg object-cover bg-neutral-200 dark:bg-neutral-700 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-neutral-800 dark:text-white truncate">{p.name}</p>
-                          <p className="text-[10px] text-neutral-400">${price}</p>
+                      <div key={pid} className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                        {/* Product Header */}
+                        <div className="flex items-center gap-2 p-2">
+                          <img src={resolveImage(p.thumbnail)} alt=""
+                            className="w-10 h-10 rounded-lg object-cover bg-neutral-200 dark:bg-neutral-700 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-neutral-800 dark:text-white truncate">{p.name}</p>
+                            <p className="text-[10px] text-neutral-400">
+                              {hasVariants ? `${p.variants.length} biến thể` : `$${p.price}`}
+                            </p>
+                          </div>
+                          {!hasVariants && (
+                            <button onClick={() => addProductDefault(p)}
+                              disabled={usedKeys.has(`${pid}__default`)}
+                              className={`px-2 py-1 text-[10px] font-bold rounded-md ${usedKeys.has(`${pid}__default`) ? 'text-green-500 bg-green-50' : 'text-orange-500 bg-orange-50 hover:bg-orange-100'}`}>
+                              {usedKeys.has(`${pid}__default`) ? '✓' : '+ Thêm'}
+                            </button>
+                          )}
                         </div>
-                        {isUsed && <span className="material-symbols-outlined !text-sm text-green-500">check_circle</span>}
-                      </button>
+                        {/* Variant List */}
+                        {hasVariants && (
+                          <div className="px-2 pb-2 flex flex-wrap gap-1.5">
+                            {p.variants.map(v => {
+                              const vKey = `${pid}__${v.id}`;
+                              const isUsed = usedKeys.has(vKey);
+                              return (
+                                <button key={v.id} onClick={() => !isUsed && addVariant(p, v)} disabled={isUsed}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                                    isUsed
+                                      ? 'bg-green-50 dark:bg-green-900/20 text-green-600 cursor-not-allowed'
+                                      : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-500'
+                                  }`}>
+                                  <span>{v.weight}</span>
+                                  <span className="text-neutral-400">·</span>
+                                  <span>${v.price}</span>
+                                  {v.quantity !== undefined && <span className="text-neutral-400">(SL: {v.quantity})</span>}
+                                  {isUsed && <span className="text-green-500">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
               </div>
             )}
 
-            {/* Selected Items */}
+            {/* ── Selected Items ── */}
             {items.length === 0 ? (
               <div className="text-center py-8 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
                 <span className="material-symbols-outlined !text-4xl text-neutral-300 dark:text-neutral-600 mb-2 block">add_shopping_cart</span>
-                <p className="text-sm text-neutral-400">Bấm "Thêm sản phẩm" để chọn</p>
+                <p className="text-sm text-neutral-400">Bấm "Thêm sản phẩm" để chọn sản phẩm và biến thể</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {items.map((item, idx) => {
                   const product = products.find(p => String(p.id) === item.productId);
-                  const originalPrice = product?.variants?.[0]?.price || 0;
+                  const variant = item.variantId ? product?.variants?.find(v => v.id === item.variantId) : null;
+                  const originalPrice = variant?.price || product?.price || 0;
                   const discount = originalPrice > 0 ? Math.round((1 - item.salePrice / originalPrice) * 100) : 0;
                   return (
                     <div key={idx} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700">
@@ -204,10 +265,15 @@ const FlashSaleFormModal: React.FC<{
                         className="w-12 h-12 rounded-lg object-cover bg-neutral-200 dark:bg-neutral-700 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{product?.name || 'Unknown'}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {variant && (
+                            <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                              {variant.weight}
+                            </span>
+                          )}
                           <span className="text-[10px] text-neutral-400">Giá gốc: ${originalPrice}</span>
                           {discount > 0 && (
-                            <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded">-{discount}%</span>
+                            <span className="text-[10px] font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded">-{discount}%</span>
                           )}
                         </div>
                       </div>
@@ -215,16 +281,16 @@ const FlashSaleFormModal: React.FC<{
                         <label className="text-[10px] text-neutral-400 block">Giá sale</label>
                         <input type="number" step="0.01" min="0" value={item.salePrice}
                           onChange={e => updateItem(idx, 'salePrice', parseFloat(e.target.value) || 0)}
-                          className="w-full text-sm font-bold text-red-500 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-red-500" />
+                          className="w-full text-sm font-bold text-orange-500 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-orange-500" />
                       </div>
                       <div className="w-20">
                         <label className="text-[10px] text-neutral-400 block">Số lượng</label>
                         <input type="number" min="1" value={item.stock}
                           onChange={e => updateItem(idx, 'stock', parseInt(e.target.value) || 1)}
-                          className="w-full text-sm font-bold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-red-500 text-neutral-900 dark:text-white" />
+                          className="w-full text-sm font-bold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-orange-500 text-neutral-900 dark:text-white" />
                       </div>
                       <button onClick={() => removeItem(idx)}
-                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0">
+                        className="p-1.5 text-neutral-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors flex-shrink-0">
                         <span className="material-symbols-outlined !text-lg">delete</span>
                       </button>
                     </div>
@@ -235,7 +301,7 @@ const FlashSaleFormModal: React.FC<{
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-lg">
               <span className="material-symbols-outlined !text-lg">error</span>
               {error}
             </div>
@@ -249,7 +315,7 @@ const FlashSaleFormModal: React.FC<{
             Hủy
           </button>
           <button onClick={handleSubmit} disabled={saving}
-            className="px-5 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-red-500/20">
+            className="px-5 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-orange-500/20">
             {saving && <span className="material-symbols-outlined !text-lg animate-spin">progress_activity</span>}
             {initial ? 'Cập nhật' : 'Tạo khung giờ'}
           </button>
@@ -314,19 +380,17 @@ const FlashSaleManager: React.FC<{ products: Product[] }> = ({ products }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
           {events.length} khung giờ Flash Sale
         </p>
         <button onClick={() => { setEditingEvent(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-sm rounded-xl hover:from-red-600 hover:to-orange-600 transition-all shadow-lg shadow-red-500/20">
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-500 text-white font-bold text-sm rounded-xl hover:from-orange-600 hover:to-orange-600 transition-all shadow-lg shadow-orange-500/20">
           <span className="material-symbols-outlined !text-lg">add</span>
           Tạo khung giờ
         </button>
       </div>
 
-      {/* Content */}
       {isLoading ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -350,7 +414,7 @@ const FlashSaleManager: React.FC<{ products: Product[] }> = ({ products }) => {
           <h3 className="text-lg font-bold text-neutral-700 dark:text-neutral-300 mb-2">Chưa có Flash Sale</h3>
           <p className="text-sm text-neutral-400 mb-4">Tạo khung giờ đầu tiên để bắt đầu</p>
           <button onClick={() => { setEditingEvent(null); setShowModal(true); }}
-            className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-colors">
+            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-colors">
             Tạo ngay
           </button>
         </div>
@@ -366,7 +430,7 @@ const FlashSaleManager: React.FC<{ products: Product[] }> = ({ products }) => {
               <div key={event.id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-4 p-5">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined !text-xl text-red-500" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                    <span className="material-symbols-outlined !text-xl text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
                     <h3 className="font-bold text-neutral-900 dark:text-white">{event.name}</h3>
                   </div>
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${status.color}`}>{status.label}</span>
@@ -381,7 +445,7 @@ const FlashSaleManager: React.FC<{ products: Product[] }> = ({ products }) => {
                     <span className="material-symbols-outlined !text-lg">edit</span>
                   </button>
                   <button onClick={() => handleDelete(event)}
-                    className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Xóa">
+                    className="p-2 text-neutral-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Xóa">
                     <span className="material-symbols-outlined !text-lg">delete</span>
                   </button>
                 </div>
@@ -392,8 +456,11 @@ const FlashSaleManager: React.FC<{ products: Product[] }> = ({ products }) => {
                         <img src={resolveImage(item.productImage)} alt="" className="w-12 h-12 rounded-lg object-cover bg-neutral-200 dark:bg-neutral-700" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-neutral-800 dark:text-white truncate">{item.productName}</p>
+                          {item.variantLabel && (
+                            <span className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 rounded">{item.variantLabel}</span>
+                          )}
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-sm font-extrabold text-red-500">${item.salePrice}</span>
+                            <span className="text-sm font-extrabold text-orange-500">${item.salePrice}</span>
                             {item.originalPrice > item.salePrice && (
                               <span className="text-[10px] text-neutral-400 line-through">${item.originalPrice}</span>
                             )}

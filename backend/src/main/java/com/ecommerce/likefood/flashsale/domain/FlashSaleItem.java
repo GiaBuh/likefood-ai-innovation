@@ -27,6 +27,9 @@ public class FlashSaleItem extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @Column(name = "variant_id")
+    private String variantId;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal salePrice;
 

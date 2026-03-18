@@ -21,12 +21,18 @@ import com.ecommerce.likefood.product.repository.ProductRepository;
 import com.ecommerce.likefood.product.repository.ProductVariantRepository;
 import com.ecommerce.likefood.product.service.ProductService;
 import com.ecommerce.likefood.review.repository.ReviewRepository;
+import com.ecommerce.likefood.flashsale.domain.FlashSaleEvent;
+import com.ecommerce.likefood.flashsale.domain.FlashSaleItem;
+import com.ecommerce.likefood.flashsale.repository.FlashSaleEventRepository;
+import com.ecommerce.likefood.flashsale.repository.FlashSaleItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,6 +53,8 @@ public class ProductServiceImpl implements ProductService {
     private final CartItemRepository cartItemRepository;
     private final OrderItemRepository orderItemRepository;
     private final ReviewRepository reviewRepository;
+    private final FlashSaleEventRepository flashSaleEventRepository;
+    private final FlashSaleItemRepository flashSaleItemRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -178,6 +186,7 @@ public class ProductServiceImpl implements ProductService {
 
         // Batch load soldCounts for all variants in the page
         Map<String, Long> soldCountMap = buildSoldCountMap();
+        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
 
         PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
                 .page(page.getNumber() + 1)
@@ -187,7 +196,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         List<ProductResponse> result = page.getContent().stream()
-                .map(p -> toResponseWithSoldCount(p, soldCountMap))
+                .map(p -> toResponseWithSoldCount(p, soldCountMap, flashSaleMap))
                 .toList();
 
         return PaginationResponse.builder()
@@ -215,6 +224,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Map<String, Long> soldCountMap = buildSoldCountMap();
+        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
 
         PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
                 .page(page.getNumber() + 1)
@@ -224,7 +234,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         List<ProductResponse> result = page.getContent().stream()
-                .map(p -> toResponseWithSoldCount(p, soldCountMap))
+                .map(p -> toResponseWithSoldCount(p, soldCountMap, flashSaleMap))
                 .toList();
 
         return PaginationResponse.builder()
@@ -260,6 +270,22 @@ public class ProductServiceImpl implements ProductService {
         return map;
     }
 
+    private Map<String, FlashSaleItem> buildActiveFlashSaleMap() {
+        Map<String, FlashSaleItem> flashSaleMap = new HashMap<>();
+        List<FlashSaleEvent> activeEvents = flashSaleEventRepository.findActiveEvents(Instant.now());
+        if (!activeEvents.isEmpty()) {
+            List<FlashSaleItem> activeItems = flashSaleItemRepository.findByFlashSaleEventIn(activeEvents);
+            for (FlashSaleItem item : activeItems) {
+                if (item.getVariantId() != null && !item.getVariantId().isBlank()) {
+                    flashSaleMap.put(item.getVariantId(), item);
+                } else {
+                    flashSaleMap.put("product-" + item.getProduct().getId(), item);
+                }
+            }
+        }
+        return flashSaleMap;
+    }
+
     /**
      * Convert Product to ProductResponse with soldCount injected (single product, queries DB).
      */
@@ -268,21 +294,35 @@ public class ProductServiceImpl implements ProductService {
         for (Object[] row : orderItemRepository.findSoldCountByProductId(product.getId())) {
             soldCountMap.put((String) row[0], ((Number) row[1]).longValue());
         }
-        return toResponseWithSoldCount(product, soldCountMap);
+        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
+        return toResponseWithSoldCount(product, soldCountMap, flashSaleMap);
     }
 
     /**
      * Convert Product to ProductResponse with soldCount from pre-built map.
      */
-    private ProductResponse toResponseWithSoldCount(Product product, Map<String, Long> soldCountMap) {
+    private ProductResponse toResponseWithSoldCount(Product product, Map<String, Long> soldCountMap, Map<String, FlashSaleItem> flashSaleMap) {
         ProductResponse response = productMapper.toResponse(product);
 
-        // Inject soldCount into each variant
+        // Inject soldCount into each variant, and apply flash sale override if any
         long totalSold = 0;
+        FlashSaleItem productLevelSale = flashSaleMap.get("product-" + product.getId());
         for (ProductVariantResponse vr : response.getVariants()) {
             long sold = soldCountMap.getOrDefault(vr.getId(), 0L);
             vr.setSoldCount(sold);
             totalSold += sold;
+
+            FlashSaleItem fsItem = flashSaleMap.containsKey(vr.getId()) ? flashSaleMap.get(vr.getId()) : productLevelSale;
+            if (fsItem != null) {
+                vr.setOriginalPrice(vr.getPrice());
+                vr.setPrice(fsItem.getSalePrice());
+                if (vr.getOriginalPrice() != null && vr.getOriginalPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    int percent = BigDecimal.valueOf(100).subtract(
+                        fsItem.getSalePrice().multiply(BigDecimal.valueOf(100)).divide(vr.getOriginalPrice(), java.math.RoundingMode.HALF_UP)
+                    ).intValue();
+                    vr.setDiscountPercent(percent);
+                }
+            }
         }
         response.setTotalSoldCount(totalSold);
 
