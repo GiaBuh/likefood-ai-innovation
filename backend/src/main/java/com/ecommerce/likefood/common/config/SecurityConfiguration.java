@@ -58,8 +58,11 @@ public class SecurityConfiguration {
                                 .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers("/ai/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
-                                        "/storage/public-url", "/vouchers/active")
+                                        "/storage/public-url", "/vouchers/active",
+                                        "/flash-sale/active", "/flash-sale/today",
+                                        "/flash-sale/server-time")
                                 .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/flash-sale/purchase/**").permitAll()
                                 // Storage
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-avatar").authenticated()
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-image",
@@ -83,6 +86,11 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.POST, "/vouchers").authenticated()
                                 .requestMatchers(HttpMethod.PUT, "/vouchers/**").authenticated()
                                 .requestMatchers(HttpMethod.DELETE, "/vouchers/**").authenticated()
+                                // Flash Sale management
+                                .requestMatchers(HttpMethod.GET, "/flash-sale", "/flash-sale/*").authenticated()
+                                .requestMatchers(HttpMethod.POST, "/flash-sale").authenticated()
+                                .requestMatchers(HttpMethod.PUT, "/flash-sale/**").authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/flash-sale/**").authenticated()
                                 // User-specific endpoints
                                 .requestMatchers("/carts/me/**", "/orders/me/**").authenticated()
                                 .requestMatchers("/chat/me/**").authenticated()

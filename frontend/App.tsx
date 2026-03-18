@@ -16,7 +16,7 @@ import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
 import LandingPage from './components/pages/LandingPage';
 import ComboPage from './components/pages/ComboPage';
-import BlogPage from './components/pages/BlogPage';
+import FlashSalePage from './components/pages/FlashSalePage';
 import VouchersPage from './components/pages/VouchersPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -236,7 +236,7 @@ const MainContent: React.FC = () => {
         />
         <Route path="/combo" element={<ErrorBoundary><ComboPage /></ErrorBoundary>} />
         <Route path="/about" element={<Navigate to="/combo" replace />} />
-        <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
+        <Route path="/flash-sale" element={<ErrorBoundary><FlashSalePage /></ErrorBoundary>} />
         <Route path="/vouchers" element={<ErrorBoundary><VouchersPage /></ErrorBoundary>} />
         <Route
           path="/product/:slug"

@@ -28,7 +28,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ cartCount, onOpenCart
     { path: '/shop', icon: 'storefront', label: t('common.shop') },
     { path: '#cart', icon: 'shopping_cart', label: t('common.cart'), badge: cartCount },
     { path: '/combo', icon: 'redeem', label: 'Combo' },
-    { path: '/blog', icon: 'article', label: t('common.blog') },
+    { path: '/flash-sale', icon: 'bolt', label: t('common.flashSale') },
   ];
 
   const isActive = (path: string) => location.pathname === path;

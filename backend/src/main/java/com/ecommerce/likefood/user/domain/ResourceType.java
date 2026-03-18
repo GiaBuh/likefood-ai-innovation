@@ -8,5 +8,6 @@ public enum ResourceType {
     CUSTOMERS,
     VOUCHERS,
     CHAT,
-    STAFF
+    STAFF,
+    FLASH_SALE
 }

@@ -16,6 +16,7 @@ import AiComboGenerator from './AiComboGenerator';
 import VouchersTable from './VouchersTable';
 import { VoucherFormModal } from './VoucherFormModal';
 import StaffManagement from './StaffManagement';
+import FlashSaleManager from './FlashSaleManager';
 import { Product, ProductVariant, Order, FulfillmentStatus, CustomerProfile, KPIStats, Category, PaginationMeta, Voucher } from '../../types';
 import {
   getAdminConversations,
@@ -29,7 +30,7 @@ import { fetchAllVouchers, createVoucher, updateVoucher, deleteVoucher } from '.
 import ChangePasswordModal from '../common/ChangePasswordModal';
 import { useAuth } from '../../contexts/AuthContext';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo' | 'staff';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'flashsale' | 'chatting' | 'trends' | 'aicombo' | 'staff';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -80,6 +81,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     if (path.startsWith('/admin/products')) return 'products';
     if (path.startsWith('/admin/customers')) return 'customers';
     if (path.startsWith('/admin/vouchers')) return 'vouchers';
+    if (path.startsWith('/admin/flash-sale')) return 'flashsale';
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';
@@ -257,6 +259,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     products: '/admin/products',
     customers: '/admin/customers',
     vouchers: '/admin/vouchers',
+    flashsale: '/admin/flash-sale',
     chatting: '/admin/chat',
     trends: '/admin/trends',
     aicombo: '/admin/combo',
@@ -508,6 +511,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         return { title: 'Khách hàng', subtitle: 'Xem và quản lý khách hàng đăng ký', btnText: 'Thêm khách hàng' };
       case 'vouchers':
         return { title: 'Khuyến mãi', subtitle: 'Quản lý mã giảm giá, khuyến mãi cho khách hàng', btnText: 'Thêm Voucher' };
+      case 'flashsale':
+        return { title: 'Flash Sale', subtitle: 'Quản lý khung giờ Flash Sale — chọn sản phẩm, đặt giá, thời gian', btnText: '' };
       case 'chatting':
         return { title: 'Chat', subtitle: 'Chat với khách hàng theo thời gian thực', btnText: '' };
       case 'trends':
@@ -682,8 +687,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <StaffManagement />
           )}
 
+          {/* Flash Sale Management View */}
+          {currentView === 'flashsale' && (
+              <FlashSaleManager products={products} />
+          )}
+
           {/* List Views */}
-          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'staff' && (
+          {currentView !== 'dashboard' && currentView !== 'chatting' && currentView !== 'trends' && currentView !== 'aicombo' && currentView !== 'staff' && currentView !== 'flashsale' && (
              <div className="flex flex-col gap-6">
                 <KPICards data={getKPIs()} isLoading={isLoading} />
 
