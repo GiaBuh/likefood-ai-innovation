@@ -8,6 +8,7 @@ import Layout from './components/layout/Layout';
 import HomePage from './components/home/HomePage';
 import ProductPage from './components/product/ProductPage';
 import Checkout from './components/checkout/Checkout';
+import VnpayReturnPage from './components/checkout/VnpayReturnPage';
 import OrderHistory from './components/orders/OrderHistory';
 import UserProfileModal from './components/auth/UserProfileModal';
 import AuthModal from './components/auth/AuthModal';
@@ -38,6 +39,7 @@ const MainContent: React.FC = () => {
     addToCart,
     updateProducts,
     submitOrder,
+    retryVnpayPayment,
     addCategory,
     updateCategory,
     deleteCategory,
@@ -126,13 +128,24 @@ const MainContent: React.FC = () => {
     setIsAuthModalOpen(true);
   };
 
-  const handlePlaceOrder = async (payload: { name: string; phone: string; address: string; note?: string }) => {
-    if (!user) return;
-    await submitOrder({
+  const handlePlaceOrder = async (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    note?: string;
+    paymentMethod: 'COD' | 'BANK_TRANSFER';
+    shopVoucherId?: string;
+    shippingVoucherId?: string;
+  }) => {
+    if (!user) return { order: {} as any, paymentRequired: false };
+    return await submitOrder({
       name: payload.name || user.name,
       phone: payload.phone || user.phone,
       address: payload.address || user.address,
       note: payload.note,
+      paymentMethod: payload.paymentMethod,
+      shopVoucherId: payload.shopVoucherId,
+      shippingVoucherId: payload.shippingVoucherId,
     });
   };
 
@@ -293,7 +306,23 @@ const MainContent: React.FC = () => {
                 }}
                 onTrackOrder={(id) => alert(`Tracking Order #${id}`)}
                 onReorder={handleReorder}
+                onRetryPayment={async (orderId) => {
+                  try {
+                    const paymentUrl = await retryVnpayPayment(orderId);
+                    window.location.href = paymentUrl;
+                  } catch (error) {
+                    showError(error instanceof Error ? error.message : 'Không thể mở thanh toán VNPay.');
+                  }
+                }}
               />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/payment/vnpay/return"
+          element={
+            <ErrorBoundary>
+              <VnpayReturnPage />
             </ErrorBoundary>
           }
         />

@@ -17,14 +17,18 @@ import com.ecommerce.likefood.flashsale.repository.FlashSaleItemRepository;
 import com.ecommerce.likefood.order.domain.Order;
 import com.ecommerce.likefood.order.domain.OrderItem;
 import com.ecommerce.likefood.order.domain.OrderStatus;
+import com.ecommerce.likefood.order.domain.PaymentMethod;
 import com.ecommerce.likefood.order.domain.PaymentStatus;
 import com.ecommerce.likefood.order.dto.req.OrderCreateRequest;
 import com.ecommerce.likefood.order.dto.req.OrderSpecRequest;
+import com.ecommerce.likefood.order.dto.res.OrderCheckoutResponse;
 import com.ecommerce.likefood.order.dto.res.OrderResponse;
 import com.ecommerce.likefood.order.mapper.OrderMapper;
 import com.ecommerce.likefood.order.repository.OrderRepository;
 import com.ecommerce.likefood.order.service.OrderInvoiceEmailService;
 import com.ecommerce.likefood.order.service.OrderService;
+import com.ecommerce.likefood.payment.vnpay.dto.VnpayReturnResponse;
+import com.ecommerce.likefood.payment.vnpay.service.VnpayService;
 import com.ecommerce.likefood.product.domain.Product;
 import com.ecommerce.likefood.product.domain.ProductVariant;
 import com.ecommerce.likefood.product.repository.ProductRepository;
@@ -50,6 +54,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +72,7 @@ public class OrderServiceImpl implements OrderService {
     private final VoucherRepository voucherRepository;
     private final FlashSaleEventRepository flashSaleEventRepository;
     private final FlashSaleItemRepository flashSaleItemRepository;
+    private final VnpayService vnpayService;
 
     private Map<String, FlashSaleItem> buildActiveFlashSaleMap() {
         Map<String, FlashSaleItem> flashSaleMap = new HashMap<>();
@@ -86,7 +92,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponse createOrderFromMyCart(OrderCreateRequest request) {
+    public OrderCheckoutResponse createOrderFromMyCart(OrderCreateRequest request, String clientIp) {
         User user = getCurrentUser();
         Cart cart = cartRepository.findByUser_Id(user.getId())
                 .orElseThrow(() -> new AppException("Cart not found"));
@@ -103,9 +109,14 @@ public class OrderServiceImpl implements OrderService {
                 .shippingAddress(request.getShippingAddress())
                 .note(request.getNote())
                 .paymentMethod(request.getPaymentMethod())
-                .paymentStatus(PaymentStatus.PENDING)
+                .paymentStatus(resolveDefaultPaymentStatus(request.getPaymentMethod()))
                 .totalAmount(BigDecimal.ZERO)
                 .build();
+
+        if (request.getPaymentMethod() == PaymentMethod.BANK_TRANSFER) {
+            order.setPaymentRef(generatePaymentRef());
+            order.setPaymentGateway("VNPAY");
+        }
 
         Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
 
@@ -140,13 +151,32 @@ public class OrderServiceImpl implements OrderService {
 
         order.setItems(orderItems);
         order.setTotalAmount(finalAmount);
+        if (order.getPaymentMethod() == PaymentMethod.BANK_TRANSFER) {
+            order.setPaymentAmountVnd(vnpayService.resolvePaymentAmountVnd(order));
+        }
 
         Order savedOrder = orderRepository.save(order);
         deductStockForOrder(savedOrder);
         cart.getItems().clear();
         cartRepository.saveAndFlush(cart);
 
-        return orderMapper.toResponse(savedOrder);
+        OrderResponse orderResponse = orderMapper.toResponse(savedOrder);
+        if (savedOrder.getPaymentMethod() == PaymentMethod.BANK_TRANSFER) {
+            String paymentUrl = vnpayService.generatePaymentUrl(savedOrder, clientIp);
+            return OrderCheckoutResponse.builder()
+                    .order(orderResponse)
+                    .paymentRequired(true)
+                    .paymentProvider("VNPAY")
+                    .vnpayPaymentUrl(paymentUrl)
+                    .build();
+        }
+
+        return OrderCheckoutResponse.builder()
+                .order(orderResponse)
+                .paymentRequired(false)
+                .paymentProvider(null)
+                .vnpayPaymentUrl(null)
+                .build();
     }
 
     private BigDecimal validateAndApplyVoucher(UserVoucher userVoucher, Order order, BigDecimal subtotal, boolean isShopDiscount) {
@@ -365,6 +395,104 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new AppException("Unauthenticated"));
         return userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new AppException("User not found"));
+    }
+
+    @Override
+    @Transactional
+    public String retryVnpayPayment(String orderId, String clientIp) {
+        User user = getCurrentUser();
+        Order order = orderRepository.findByIdAndUser_Id(orderId, user.getId())
+                .orElseThrow(() -> new AppException("Order not found"));
+
+        if (order.getPaymentMethod() != PaymentMethod.BANK_TRANSFER) {
+            throw new AppException("Order is not using VNPay payment");
+        }
+
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new AppException("Order is already paid");
+        }
+
+        if (order.getPaymentRef() == null || order.getPaymentRef().isBlank()) {
+            order.setPaymentRef(generatePaymentRef());
+        }
+        if (order.getPaymentAmountVnd() == null || order.getPaymentAmountVnd() <= 0) {
+            order.setPaymentAmountVnd(vnpayService.resolvePaymentAmountVnd(order));
+        }
+
+        Order savedOrder = orderRepository.save(order);
+        return vnpayService.generatePaymentUrl(savedOrder, clientIp);
+    }
+
+    @Override
+    @Transactional
+    public VnpayReturnResponse handleVnpayReturn(Map<String, String> params) {
+        String paymentRef = vnpayService.resolvePaymentRef(params);
+        if (paymentRef.isBlank()) {
+            return VnpayReturnResponse.builder()
+                    .validSignature(false)
+                    .paid(false)
+                    .paymentRef("")
+                    .responseCode(params != null ? params.getOrDefault("vnp_ResponseCode", "") : "")
+                    .message("Missing VNPay payment reference")
+                    .build();
+        }
+
+        Order order = orderRepository.findByPaymentRef(paymentRef).orElse(null);
+        if (order == null) {
+            return VnpayReturnResponse.builder()
+                    .validSignature(false)
+                    .paid(false)
+                    .paymentRef(paymentRef)
+                    .responseCode(params != null ? params.getOrDefault("vnp_ResponseCode", "") : "")
+                    .message("Order not found")
+                    .build();
+        }
+
+        boolean validSignature = vnpayService.isReturnSignatureValid(params);
+        boolean successResponse = validSignature && vnpayService.isSuccessResponse(params);
+        boolean amountMatched = validSignature && vnpayService.isAmountMatched(params, order);
+        boolean success = successResponse && amountMatched;
+
+        if (success) {
+            if (order.getPaymentStatus() != PaymentStatus.PAID) {
+                order.setPaymentStatus(PaymentStatus.PAID);
+                order.setPaidAt(Instant.now());
+                orderRepository.save(order);
+            }
+        } else if (order.getPaymentStatus() != PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.FAILED);
+            orderRepository.save(order);
+        }
+
+        String message;
+        if (success) {
+            message = "Payment successful";
+        } else if (!validSignature) {
+            message = "Invalid VNPay signature";
+        } else if (!successResponse) {
+            message = "Payment not completed";
+        } else {
+            message = "VNPay amount mismatch";
+        }
+
+        return VnpayReturnResponse.builder()
+                .validSignature(validSignature)
+                .paid(success)
+                .paymentRef(paymentRef)
+                .responseCode(params != null ? params.getOrDefault("vnp_ResponseCode", "") : "")
+                .message(message)
+                .build();
+    }
+
+    private PaymentStatus resolveDefaultPaymentStatus(PaymentMethod paymentMethod) {
+        if (paymentMethod == PaymentMethod.BANK_TRANSFER) {
+            return PaymentStatus.FAILED;
+        }
+        return PaymentStatus.PENDING;
+    }
+
+    private String generatePaymentRef() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     private boolean isAdminStatusTransitionAllowed(OrderStatus currentStatus, OrderStatus nextStatus) {

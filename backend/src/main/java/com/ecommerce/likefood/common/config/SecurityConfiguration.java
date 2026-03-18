@@ -57,6 +57,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/auth/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers("/ai/**").permitAll()
+                                .requestMatchers("/payments/vnpay/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
                                         "/storage/public-url", "/vouchers/active",
                                         "/flash-sale/active", "/flash-sale/today",

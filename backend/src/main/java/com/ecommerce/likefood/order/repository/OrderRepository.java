@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecificationExecutor<Order> {
     List<Order> findByUser_IdOrderByCreatedAtDesc(String userId);
     Optional<Order> findByIdAndUser_Id(String id, String userId);
+    Optional<Order> findByPaymentRef(String paymentRef);
 
     boolean existsByShopVoucher_Id(String shopVoucherId);
     boolean existsByShippingVoucher_Id(String shippingVoucherId);

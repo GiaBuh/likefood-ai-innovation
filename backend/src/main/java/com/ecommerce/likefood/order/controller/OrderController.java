@@ -5,8 +5,11 @@ import com.ecommerce.likefood.common.utils.ApiMessage;
 import com.ecommerce.likefood.order.dto.req.OrderCreateRequest;
 import com.ecommerce.likefood.order.dto.req.OrderSpecRequest;
 import com.ecommerce.likefood.order.dto.req.OrderStatusUpdateRequest;
+import com.ecommerce.likefood.order.dto.res.OrderCheckoutResponse;
 import com.ecommerce.likefood.order.dto.res.OrderResponse;
 import com.ecommerce.likefood.order.service.OrderService;
+import com.ecommerce.likefood.payment.vnpay.dto.VnpayPaymentUrlResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -31,8 +34,22 @@ public class OrderController {
 
     @PostMapping("/orders/me")
     @ApiMessage("Create order from my cart")
-    public ResponseEntity<OrderResponse> createFromMyCart(@RequestBody @Valid OrderCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrderFromMyCart(request));
+    public ResponseEntity<OrderCheckoutResponse> createFromMyCart(
+            @RequestBody @Valid OrderCreateRequest request,
+            HttpServletRequest httpServletRequest
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(orderService.createOrderFromMyCart(request, resolveClientIp(httpServletRequest)));
+    }
+
+    @PostMapping("/orders/me/{orderId}/payment/vnpay/retry")
+    @ApiMessage("Retry VNPay checkout for my order")
+    public ResponseEntity<VnpayPaymentUrlResponse> retryVnpayPayment(
+            @PathVariable("orderId") String orderId,
+            HttpServletRequest httpServletRequest
+    ) {
+        String paymentUrl = orderService.retryVnpayPayment(orderId, resolveClientIp(httpServletRequest));
+        return ResponseEntity.ok(new VnpayPaymentUrlResponse(paymentUrl));
     }
 
     @GetMapping("/orders/me")
@@ -65,5 +82,13 @@ public class OrderController {
             @RequestBody @Valid OrderStatusUpdateRequest request
     ) {
         return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getStatus()));
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && !ip.isBlank()) {
+            return ip.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

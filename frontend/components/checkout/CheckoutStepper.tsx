@@ -12,7 +12,8 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
   const steps = [
     { id: 1, label: t('checkout.step1'), icon: 'shopping_cart' },
     { id: 2, label: t('checkout.step2'), icon: 'local_shipping' },
-    { id: 3, label: t('checkout.step3'), icon: 'check_circle' },
+    { id: 3, label: t('checkout.step3'), icon: 'payments' },
+    { id: 4, label: t('checkout.step4'), icon: 'check_circle' },
   ];
 
   return (
@@ -21,7 +22,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
         {steps.map((s, index) => {
           const isCompleted = step > s.id;
           const isActive = step === s.id;
-          const isClickable = s.id < step && step !== 3;
+          const isClickable = s.id < step && step !== 4;
 
           return (
             <React.Fragment key={s.id}>

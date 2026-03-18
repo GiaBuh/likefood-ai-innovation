@@ -11,6 +11,7 @@ interface OrderHistoryProps {
   onCancelOrder: (orderId: string) => Promise<void> | void;
   onTrackOrder: (orderId: string) => void;
   onReorder: (order: Order) => void;
+  onRetryPayment?: (orderId: string) => Promise<void> | void;
 }
 
 const OrderHistory: React.FC<OrderHistoryProps> = ({
@@ -18,10 +19,12 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
   onBackToShop,
   onCancelOrder,
   onTrackOrder,
-  onReorder
+  onReorder,
+  onRetryPayment
 }) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
+  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Simulate data fetching
@@ -49,6 +52,23 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Processing':
         return (
           <>
+            {order.paymentMethod === 'BANK_TRANSFER' && order.paymentStatusRaw !== 'PAID' && onRetryPayment && (
+              <button
+                onClick={async () => {
+                  setRetryingOrderId(order.id);
+                  try {
+                    await onRetryPayment(order.id);
+                  } finally {
+                    setRetryingOrderId(null);
+                  }
+                }}
+                disabled={retryingOrderId === order.id}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg shadow-blue-500/20 text-sm flex items-center justify-center gap-2 disabled:opacity-60 mb-2"
+              >
+                <span className="material-symbols-outlined !text-lg">payments</span>
+                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+              </button>
+            )}
             <button
               onClick={() => onCancelOrder(order.id)}
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"

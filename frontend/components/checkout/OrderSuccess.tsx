@@ -4,16 +4,39 @@ import { useTranslation } from 'react-i18next';
 interface OrderSuccessProps {
   onBackToHome: () => void;
   onViewOrder: () => void;
+  paymentMethod?: 'COD' | 'BANK_TRANSFER';
+  paymentStatusRaw?: 'PENDING' | 'PAID' | 'FAILED';
+  onRetryPayment?: () => Promise<void> | void;
 }
 
-const OrderSuccess: React.FC<OrderSuccessProps> = ({ onBackToHome, onViewOrder }) => {
+const OrderSuccess: React.FC<OrderSuccessProps> = ({
+  onBackToHome,
+  onViewOrder,
+  paymentMethod = 'COD',
+  paymentStatusRaw = 'PENDING',
+  onRetryPayment,
+}) => {
   const { t } = useTranslation();
   const [showConfetti, setShowConfetti] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 4000);
     return () => clearTimeout(timer);
   }, []);
+
+  const isVnpay = paymentMethod === 'BANK_TRANSFER';
+  const isPaid = paymentStatusRaw === 'PAID';
+
+  const handleRetryPayment = async () => {
+    if (!onRetryPayment) return;
+    try {
+      setIsRetrying(true);
+      await onRetryPayment();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center py-12 sm:py-16 animate-in zoom-in-95 duration-500 relative overflow-hidden">
@@ -78,10 +101,26 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({ onBackToHome, onViewOrder }
           <span className="material-symbols-outlined !text-2xl text-green-500">verified</span>
           <div>
             <p className="text-sm font-bold text-green-700 dark:text-green-400">Đơn hàng đã được xác nhận</p>
-            <p className="text-xs text-green-600 dark:text-green-500">Chúng tôi sẽ liên hệ bạn sớm nhất</p>
+            <p className="text-xs text-green-600 dark:text-green-500">
+              {isVnpay
+                ? isPaid
+                  ? 'Thanh toán VNPay đã thành công.'
+                  : 'Thanh toán VNPay chưa hoàn tất. Bạn có thể thanh toán lại.'
+                : 'Chúng tôi sẽ liên hệ bạn sớm nhất'}
+            </p>
           </div>
         </div>
       </div>
+
+      {isVnpay && !isPaid && onRetryPayment && (
+        <button
+          onClick={handleRetryPayment}
+          disabled={isRetrying}
+          className="mb-6 px-5 py-3 rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-60"
+        >
+          {isRetrying ? 'Đang mở VNPay...' : 'Thanh toán lại với VNPay'}
+        </button>
+      )}
       
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500 delay-1000">

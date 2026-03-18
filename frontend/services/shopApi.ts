@@ -85,9 +85,34 @@ type BackendOrder = {
   createdAt?: string; // ISO from backend Instant
   shippingAddress?: string;
   totalAmount?: number;
+  paymentMethod?: string;
   paymentStatus?: string;
+  paymentRef?: string;
+  paymentGateway?: string;
   customer?: BackendOrderCustomer;
   items?: BackendOrderItem[];
+};
+
+type BackendCheckoutResponse = {
+  order?: BackendOrder;
+  paymentRequired?: boolean;
+  paymentProvider?: string | null;
+  vnpayPaymentUrl?: string | null;
+};
+
+export type CheckoutOrderResult = {
+  order: Order;
+  paymentRequired: boolean;
+  paymentProvider?: string | null;
+  vnpayPaymentUrl?: string | null;
+};
+
+export type VnpayReturnResponse = {
+  validSignature: boolean;
+  paid: boolean;
+  paymentRef: string;
+  responseCode: string;
+  message: string;
 };
 
 type BackendCartItem = {
@@ -727,6 +752,8 @@ function toOrder(order: BackendOrder): Order {
     time: parsedDate ? parsedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
     status: safeFulfillment,
     paymentStatus,
+    paymentStatusRaw: paymentStatusRaw === 'PAID' ? 'PAID' : paymentStatusRaw === 'FAILED' ? 'FAILED' : 'PENDING',
+    paymentMethod: (order.paymentMethod || 'COD').toUpperCase() as any,
     fulfillmentStatus: safeFulfillment,
     items: (order.items || []).map((item) => ({
       id: item.id,
@@ -741,6 +768,8 @@ function toOrder(order: BackendOrder): Order {
     total: Number(order.totalAmount ?? 0),
     totalAmount: Number(order.totalAmount ?? 0),
     shippingAddress: order.shippingAddress || '',
+    paymentRef: order.paymentRef,
+    paymentGateway: order.paymentGateway,
   };
 }
 
@@ -1119,7 +1148,7 @@ export async function getCartRecommendations(): Promise<CartRecommendationRespon
   return { recommendations: items };
 }
 
-export async function createOrderFromMyCart(payload: CreateOrderPayload): Promise<Order> {
+export async function createOrderFromMyCart(payload: CreateOrderPayload): Promise<CheckoutOrderResult> {
   const response = await apiFetch('/orders/me', {
     method: 'POST',
     requireAuth: true,
@@ -1129,6 +1158,8 @@ export async function createOrderFromMyCart(payload: CreateOrderPayload): Promis
       shippingAddress: payload.shippingAddress,
       note: payload.note || '',
       paymentMethod: payload.paymentMethod || 'COD',
+      shopVoucherId: payload.shopVoucherId || null,
+      shippingVoucherId: payload.shippingVoucherId || null,
     }),
   });
 
@@ -1136,8 +1167,65 @@ export async function createOrderFromMyCart(payload: CreateOrderPayload): Promis
     throw new Error(await getErrorMessageFromResponse(response, `Failed to create order (${response.status})`));
   }
 
-  const data = unwrapRestResponse((await response.json()) as any) as BackendOrder;
-  return toOrder(data);
+  const data = unwrapRestResponse((await response.json()) as any) as BackendCheckoutResponse | BackendOrder;
+
+  if (data && typeof data === 'object' && 'order' in data) {
+    const checkoutData = data as BackendCheckoutResponse;
+    const order = toOrder((checkoutData.order || {}) as BackendOrder);
+    return {
+      order,
+      paymentRequired: Boolean(checkoutData.paymentRequired),
+      paymentProvider: checkoutData.paymentProvider || null,
+      vnpayPaymentUrl: checkoutData.vnpayPaymentUrl || null,
+    };
+  }
+
+  const legacyOrder = toOrder(data as BackendOrder);
+  return {
+    order: legacyOrder,
+    paymentRequired: false,
+    paymentProvider: null,
+    vnpayPaymentUrl: null,
+  };
+}
+
+export async function retryVnpayPayment(orderId: string): Promise<string> {
+  const response = await apiFetch(`/orders/me/${encodeURIComponent(orderId)}/payment/vnpay/retry`, {
+    method: 'POST',
+    requireAuth: true,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Failed to retry VNPay payment (${response.status})`));
+  }
+
+  const data = unwrapRestResponse((await response.json()) as any) as { paymentUrl?: string };
+  const paymentUrl = data?.paymentUrl || '';
+  if (!paymentUrl) {
+    throw new Error('Không nhận được URL thanh toán VNPay.');
+  }
+  return paymentUrl;
+}
+
+export async function verifyVnpayReturn(queryString: string): Promise<VnpayReturnResponse> {
+  const normalized = queryString.startsWith('?') ? queryString.substring(1) : queryString;
+  const response = await apiFetch(`/payments/vnpay/return?${normalized}`, {
+    method: 'GET',
+    requireAuth: false,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessageFromResponse(response, `Failed to verify VNPay return (${response.status})`));
+  }
+
+  const data = unwrapRestResponse((await response.json()) as any) as VnpayReturnResponse;
+  return {
+    validSignature: Boolean(data.validSignature),
+    paid: Boolean(data.paid),
+    paymentRef: data.paymentRef || '',
+    responseCode: data.responseCode || '',
+    message: data.message || '',
+  };
 }
 
 export async function updateOrderStatusByAdmin(

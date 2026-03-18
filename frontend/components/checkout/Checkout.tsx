@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CheckoutStepper from './CheckoutStepper';
 import CartReview from './CartReview';
 import ShippingForm from './ShippingForm';
+import PaymentStep from './PaymentStep';
 import OrderSuccess from './OrderSuccess';
 import BoxAnimation from './BoxAnimation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,10 +11,19 @@ import { useShop } from '../../contexts/ShopContext';
 import { useToast } from '../../contexts/ToastContext';
 import { validateCheckout } from '../../utils/validation';
 import { UserVoucher } from '../../types';
+import { CheckoutOrderResult } from '../../services/shopApi';
 
 interface CheckoutProps {
   onBackToHome: () => void;
-  onPlaceOrder: (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => Promise<void>;
+  onPlaceOrder: (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    note?: string;
+    paymentMethod: 'COD' | 'BANK_TRANSFER';
+    shopVoucherId?: string;
+    shippingVoucherId?: string;
+  }) => Promise<CheckoutOrderResult>;
   onViewOrders: () => void;
 }
 
@@ -23,11 +33,13 @@ const Checkout: React.FC<CheckoutProps> = ({
   onViewOrders
 }) => {
   const { user } = useAuth();
-  const { cart, updateCartQuantity, removeFromCart, addToCartByVariantId } = useShop();
+  const { cart, updateCartQuantity, removeFromCart, addToCartByVariantId, retryVnpayPayment } = useShop();
   const { showError } = useToast();
 
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'BANK_TRANSFER'>('COD');
+  const [lastCheckoutResult, setLastCheckoutResult] = useState<CheckoutOrderResult | null>(null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -79,25 +91,44 @@ const Checkout: React.FC<CheckoutProps> = ({
 
     try {
       setIsPacking(true);
-      // Run the network request and the animation delay concurrently so animation finishes nicely
-      await Promise.all([
+      const [result] = await Promise.all([
         onPlaceOrder({
           name: formData.name,
           phone: formData.phone,
           address: formData.address,
           note: formData.note,
+          paymentMethod,
           shopVoucherId: selectedShopVoucher?.id,
           shippingVoucherId: selectedShippingVoucher?.id,
         }),
         new Promise(resolve => setTimeout(resolve, 3000))
       ]);
+      setLastCheckoutResult(result as CheckoutOrderResult);
       setDirection('forward');
-      setStep(3);
+
+      // If VNPay payment is required, redirect to VNPay
+      const checkoutResult = result as CheckoutOrderResult;
+      if (checkoutResult.paymentRequired && checkoutResult.vnpayPaymentUrl) {
+        window.location.href = checkoutResult.vnpayPaymentUrl;
+        return;
+      }
+
+      setStep(4);
     } catch (error) {
       console.error('Cannot place order.', error);
       showError(error instanceof Error ? error.message : 'Không thể đặt hàng. Vui lòng kiểm tra giỏ hàng và thử lại.');
     } finally {
       setIsPacking(false);
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    if (!lastCheckoutResult?.order?.id) return;
+    try {
+      const paymentUrl = await retryVnpayPayment(lastCheckoutResult.order.id);
+      window.location.href = paymentUrl;
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Không thể mở thanh toán VNPay.');
     }
   };
 
@@ -122,7 +153,7 @@ const Checkout: React.FC<CheckoutProps> = ({
 
       {/* Stepper */}
       <CheckoutStepper step={step} onStepClick={(s) => {
-        if (s < step && step !== 3) handlePrevStep(s);
+        if (s < step && step !== 4) handlePrevStep(s);
       }} />
 
       {/* Content Card */}
@@ -146,25 +177,39 @@ const Checkout: React.FC<CheckoutProps> = ({
               errors={fieldErrors}
               onInputChange={handleInputChange}
               onBack={() => handlePrevStep(1)}
-              onPlaceOrder={handlePlaceOrderClick}
+              onPlaceOrder={handleNextStep}
               selectedShopVoucher={selectedShopVoucher}
               setSelectedShopVoucher={setSelectedShopVoucher}
               selectedShippingVoucher={selectedShippingVoucher}
               setSelectedShippingVoucher={setSelectedShippingVoucher}
             />
           )}
-          
+
           {step === 3 && (
+            <PaymentStep
+              cart={cart}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+              onBack={() => handlePrevStep(2)}
+              onConfirm={handlePlaceOrderClick}
+              isSubmitting={isPacking}
+            />
+          )}
+          
+          {step === 4 && (
             <OrderSuccess 
               onBackToHome={onBackToHome}
               onViewOrder={onViewOrders}
+              paymentMethod={paymentMethod}
+              paymentStatusRaw={lastCheckoutResult?.order?.paymentStatusRaw}
+              onRetryPayment={paymentMethod === 'BANK_TRANSFER' ? handleRetryPayment : undefined}
             />
           )}
         </div>
       </div>
 
       {/* Trust badges */}
-      {step !== 3 && (
+      {step !== 4 && (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-neutral-400 dark:text-neutral-500">
           <span className="flex items-center gap-1">
             <span className="material-symbols-outlined !text-sm">lock</span>
