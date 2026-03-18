@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             secure: false,
           },
+          '/payments': {
+            target: 'http://localhost:8080',
+            changeOrigin: true,
+            secure: false,
+          },
         },
       },
       plugins: [react()],
