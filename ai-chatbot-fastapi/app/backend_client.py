@@ -7,9 +7,6 @@ import httpx
 from .config import settings
 from .domain import Product, ProductVariant
 
-VoucherDict = dict[str, Any]
-ComboDict = dict[str, Any]
-
 
 class BackendClient:
     def __init__(self) -> None:
@@ -54,7 +51,6 @@ class BackendClient:
                     name=str(raw.get("name") or ""),
                     description=str(raw.get("description") or ""),
                     category=str((raw.get("category") or {}).get("name") or "Khac"),
-                    slug=str(raw.get("slug") or ""),
                     variants=[v for v in variants if v.id and v.price > 0 and v.quantity > 0],
                 )
             )
@@ -74,26 +70,4 @@ class BackendClient:
                 return None
             payload = response.json()
             return payload.get("data", payload)
-
-    async def fetch_active_vouchers(self) -> list[VoucherDict]:
-        try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                response = await client.get(f"{self.base_url}/vouchers/active")
-                response.raise_for_status()
-                payload = response.json()
-            data = payload.get("data", payload)
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
-
-    async def fetch_published_combos(self) -> list[ComboDict]:
-        try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                response = await client.get(f"{self.base_url}/ai/combos/published")
-                response.raise_for_status()
-                payload = response.json()
-            data = payload.get("data", payload)
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
 

@@ -61,6 +61,36 @@ First build may take 3–5 minutes (backend + frontend).
 | MySQL | localhost:3306 | `root` / `DB_PASSWORD` from `.env` |
 | Redis | localhost:6379 | No auth by default |
 
+### Deploy VPS (`https://hutechchatbotai.id.vn`)
+
+1. Use production env:
+
+```bash
+cp .env.production .env
+```
+
+2. Fill real secrets in `.env`:
+- `SEPAY_MERCHANT_ID`
+- `SEPAY_SECRET_KEY`
+- `SEPAY_IPN_SECRET`
+- `JWT_SECRET`
+- DB / AWS / MAIL / OAuth keys
+
+3. Build and run:
+
+```bash
+docker compose up -d --build
+```
+
+4. Configure SePay dashboard:
+- **Checkout URL**: backend creates and signs automatically
+- **IPN URL**: `https://hutechchatbotai.id.vn/payments/sepay/ipn`
+- **IPN Header** `X-Secret-Key`: must match `SEPAY_IPN_SECRET`
+- Success/Error/Cancel URLs should point to:
+  - `https://hutechchatbotai.id.vn/payment/sepay/success`
+  - `https://hutechchatbotai.id.vn/payment/sepay/error`
+  - `https://hutechchatbotai.id.vn/payment/sepay/cancel`
+
 ### Common commands
 
 ```bash

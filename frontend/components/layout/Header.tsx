@@ -126,7 +126,7 @@ const Header: React.FC<HeaderProps> = ({
     { to: '/shop', label: t('common.shop'), key: 'shop', hasMega: true },
     { to: '/combo', label: 'Combo', key: 'combo' },
     { to: '/vouchers', label: 'Khuyến mãi', key: 'vouchers' },
-    { to: '/flash-sale', label: t('common.flashSale'), key: 'flash-sale' },
+    { to: '/blog', label: t('common.blog'), key: 'blog' },
   ];
 
   const isNavActive = (to: string, key: string) => {

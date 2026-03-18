@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getPublishedCombos, PublishedCombo, resolveImageUrl } from '../../services/shopApi';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useShop } from '../../contexts/ShopContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFlyToCart } from '../../contexts/FlyToCartContext';
@@ -11,7 +11,6 @@ import Skeleton from '../ui/Skeleton';
 const ComboPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
   const { addComboToCart } = useShop();
   const { isAuthenticated } = useAuth();
   const { triggerFly } = useFlyToCart();
@@ -26,14 +25,6 @@ const ComboPage: React.FC = () => {
       try {
         const data = await getPublishedCombos();
         setCombos(data);
-
-        // Auto-open combo if provided in URL
-        const params = new URLSearchParams(location.search);
-        const comboId = params.get('id');
-        if (comboId) {
-          const combo = data.find((c) => String(c.id) === comboId);
-          if (combo) setSelectedCombo(combo);
-        }
       } catch (err) {
         console.error('Failed to fetch combos:', err);
       } finally {
@@ -41,7 +32,7 @@ const ComboPage: React.FC = () => {
       }
     };
     fetchCombos();
-  }, [location.search]);
+  }, []);
 
   const getComboItemNames = (combo: PublishedCombo): string[] => {
     // Use comboItems if available (new structure)
@@ -56,7 +47,7 @@ const ComboPage: React.FC = () => {
   };
 
   const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
   return (

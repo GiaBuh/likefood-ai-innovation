@@ -4,7 +4,6 @@
     "shop": "Cửa hàng",
     "about": "Giới thiệu",
     "blog": "Tin tức",
-    "flashSale": "Flash Sale",
     "cart": "Giỏ hàng",
     "orders": "Đơn hàng",
     "profile": "Tài khoản",
@@ -129,7 +128,8 @@
     "title": "Thanh Toán",
     "step1": "Xem giỏ hàng",
     "step2": "Thông tin giao hàng",
-    "step3": "Đặt hàng thành công",
+    "step3": "Chọn thanh toán",
+    "step4": "Hoàn tất đơn hàng",
     "shippingInfo": "Thông Tin Giao Hàng",
     "receiverName": "Tên người nhận",
     "receiverPhone": "Số điện thoại",
@@ -232,20 +232,5 @@
     "categories": "Danh mục",
     "allPosts": "Tất cả bài viết",
     "publishedOn": "Đăng ngày"
-  },
-  "flashSalePage": {
-    "title": "FLASH SALE",
-    "subtitle": "Giảm sốc đến 50% - Chỉ trong hôm nay!",
-    "endsIn": "Kết thúc trong",
-    "happeningNow": "Đang diễn ra",
-    "upcoming": "Sắp diễn ra",
-    "ended": "Đã kết thúc",
-    "allCategories": "Tất cả",
-    "sold": "Đã bán",
-    "sellingFast": "Bán chạy",
-    "soldOut": "Hết hàng",
-    "noEvents": "Chưa có sự kiện Flash Sale nào",
-    "noEventsDesc": "Quay lại sau để xem các chương trình khuyến mãi hấp dẫn!",
-    "backToShop": "Về cửa hàng"
   }
 }

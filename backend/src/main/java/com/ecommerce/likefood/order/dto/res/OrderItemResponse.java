@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 @Builder
 public class OrderItemResponse {
     private String id;
-    private String productId;
-    private String productSlug;
     private String variantId;
     private String productName;
     private String variantLabel;

@@ -58,6 +58,11 @@ services:
             GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
             GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
             GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/auth/google/callback}
+            AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+            VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+            VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+            VNPAY_PAY_URL: ${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+            VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost/payment/vnpay/return}
         ports:
             - "8080:8080"
 

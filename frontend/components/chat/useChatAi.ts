@@ -24,7 +24,6 @@ import type { ChatAction, Message } from './chatTypes';
 type UseChatAiParams = {
   products: Product[];
   addToCart: (product: Product, qty: number) => void;
-  addComboToCart: (comboId: string, quantity: number) => Promise<void>;
   aiMessages: Message[];
   setAiMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   aiStage: string;
@@ -67,7 +66,6 @@ export function useChatAi(params: UseChatAiParams) {
   const {
     products,
     addToCart,
-    addComboToCart,
     aiMessages,
     setAiMessages,
     aiStage,
@@ -551,19 +549,6 @@ export function useChatAi(params: UseChatAiParams) {
       }
       if ((action.type === 'open-product' || action.type === 'open_product') && action.productId) {
         onOpenProduct(action.productId);
-        return;
-      }
-
-      if (action.type === 'buy_combo' || action.type === 'buy-combo') {
-        if (!action.productId) {
-          pushAiMessage('Nút mua combo đang bị lỗi. Anh/chị thông cảm.');
-          return;
-        }
-        addComboToCart(action.productId, 1);
-        pushAiMessage('Đã thêm combo vào giỏ hàng. Bạn muốn thanh toán ngay không?', [
-          { id: 'go-checkout', label: 'Đi đến thanh toán', type: 'go_checkout' },
-          { id: 'go-orders', label: 'Xem đơn hàng', type: 'go_orders' },
-        ]);
         return;
       }
 

@@ -5,6 +5,7 @@ import { useToast } from './ToastContext';
 import {
   addItemToMyCart,
   cancelMyOrder as cancelMyOrderApi,
+  CheckoutOrderResult,
   createCategory,
   createOrderFromMyCart,
   createProduct,
@@ -17,6 +18,7 @@ import {
   getMyCart,
   importProductsFromCsv as importProductsFromCsvApi,
   removeMyCartItem,
+  retryVnpayPayment as retryVnpayPaymentApi,
   toProduct,
   updateCategory as updateCategoryApi,
   updateProduct as updateProductApi,
@@ -57,7 +59,16 @@ interface ShopContextType {
 
   // Order Actions
   placeOrder: (order: Order) => void;
-  submitOrder: (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => Promise<void>;
+  submitOrder: (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    note?: string;
+    paymentMethod: 'COD' | 'BANK_TRANSFER';
+    shopVoucherId?: string;
+    shippingVoucherId?: string;
+  }) => Promise<CheckoutOrderResult>;
+  retryVnpayPayment: (orderId: string) => Promise<string>;
   updateOrderStatus: (orderId: string, status: FulfillmentStatus) => Promise<void>;
   cancelOrder: (orderId: string) => Promise<void>;
   loadOrdersForRole: (isAdmin: boolean) => Promise<void>;
@@ -505,20 +516,33 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearCart();
   };
 
-  const submitOrder = async (payload: { name: string; phone: string; address: string; note?: string; shopVoucherId?: string; shippingVoucherId?: string }) => {
+  const submitOrder = async (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    note?: string;
+    paymentMethod: 'COD' | 'BANK_TRANSFER';
+    shopVoucherId?: string;
+    shippingVoucherId?: string;
+  }): Promise<CheckoutOrderResult> => {
     const created = await createOrderFromMyCart({
       receiverName: payload.name,
       receiverPhone: payload.phone,
       shippingAddress: payload.address,
       note: payload.note,
-      paymentMethod: 'COD',
+      paymentMethod: payload.paymentMethod,
       shopVoucherId: payload.shopVoucherId,
       shippingVoucherId: payload.shippingVoucherId,
     });
-    setOrders((prev) => [created, ...prev]);
+    setOrders((prev) => [created.order, ...prev]);
     clearCart();
     cartRevisionRef.current += 1;
     await loadCartForCurrentUser();
+    return created;
+  };
+
+  const retryVnpayPayment = async (orderId: string): Promise<string> => {
+    return retryVnpayPaymentApi(orderId);
   };
 
   const updateOrderStatus = async (orderId: string, status: FulfillmentStatus) => {
@@ -587,6 +611,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       cartBounce,
       placeOrder,
       submitOrder,
+      retryVnpayPayment,
       updateOrderStatus,
       cancelOrder,
       loadOrdersForRole,

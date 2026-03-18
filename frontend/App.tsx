@@ -8,6 +8,7 @@ import Layout from './components/layout/Layout';
 import HomePage from './components/home/HomePage';
 import ProductPage from './components/product/ProductPage';
 import Checkout from './components/checkout/Checkout';
+import VnpayReturnPage from './components/checkout/VnpayReturnPage';
 import OrderHistory from './components/orders/OrderHistory';
 import UserProfileModal from './components/auth/UserProfileModal';
 import AuthModal from './components/auth/AuthModal';
@@ -16,7 +17,7 @@ import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
 import LandingPage from './components/pages/LandingPage';
 import ComboPage from './components/pages/ComboPage';
-import FlashSalePage from './components/pages/FlashSalePage';
+import BlogPage from './components/pages/BlogPage';
 import VouchersPage from './components/pages/VouchersPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -48,6 +49,7 @@ const MainContent: React.FC = () => {
     deleteProduct,
     updateOrderStatus,
     cancelOrder,
+    retryVnpayPayment,
     loadOrdersForRole,
     clearCart,
     clearOrders,
@@ -94,13 +96,8 @@ const MainContent: React.FC = () => {
 
   const handleOpenProductFromChat = (productId: string) => {
     // Try to find product by ID and navigate by slug
-    const p = products.find((pr) => String(pr.id) === productId);
-    if (p) {
-      navigate(`/product/${p.slug || productId}`);
-    } else {
-      // If not in products, it must be a combo
-      navigate(`/combo?id=${productId}`);
-    }
+    const p = products.find(pr => String(pr.id) === productId);
+    navigate(`/product/${p?.slug || productId}`);
   };
 
   const handleCheckoutStart = () => {
@@ -126,13 +123,26 @@ const MainContent: React.FC = () => {
     setIsAuthModalOpen(true);
   };
 
-  const handlePlaceOrder = async (payload: { name: string; phone: string; address: string; note?: string }) => {
-    if (!user) return;
-    await submitOrder({
+  const handlePlaceOrder = async (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    note?: string;
+    paymentMethod: 'COD' | 'BANK_TRANSFER';
+    shopVoucherId?: string;
+    shippingVoucherId?: string;
+  }) => {
+    if (!user) {
+      throw new Error('Vui lòng đăng nhập để đặt hàng.');
+    }
+    return submitOrder({
       name: payload.name || user.name,
       phone: payload.phone || user.phone,
       address: payload.address || user.address,
       note: payload.note,
+      paymentMethod: payload.paymentMethod,
+      shopVoucherId: payload.shopVoucherId,
+      shippingVoucherId: payload.shippingVoucherId,
     });
   };
 
@@ -148,26 +158,7 @@ const MainContent: React.FC = () => {
   };
 
   const handleReorder = (order: Order) => {
-    order.items.forEach((item) => {
-      // Map OrderItem fields to Product-compatible fields
-      const productLike = {
-        ...item,
-        name: item.name || item.productName || 'Sản phẩm',
-        image: item.image || item.productThumbnail || '',
-        images: [],
-        location: 'Viet Nam',
-        category: '',
-        categoryName: '',
-        isUsShip: true,
-        description: '',
-        weight: item.variantLabel || 'Default',
-        packaging: 'Standard Pack',
-        variants: [],
-        thumbnail: item.image || item.productThumbnail || '',
-        status: 'Active' as const,
-      };
-      addToCart(productLike as any, item.quantity);
-    });
+    order.items.forEach((item) => addToCart(item, item.quantity));
     navigate('/checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -236,8 +227,9 @@ const MainContent: React.FC = () => {
         />
         <Route path="/combo" element={<ErrorBoundary><ComboPage /></ErrorBoundary>} />
         <Route path="/about" element={<Navigate to="/combo" replace />} />
-        <Route path="/flash-sale" element={<ErrorBoundary><FlashSalePage /></ErrorBoundary>} />
+        <Route path="/blog" element={<ErrorBoundary><BlogPage /></ErrorBoundary>} />
         <Route path="/vouchers" element={<ErrorBoundary><VouchersPage /></ErrorBoundary>} />
+        <Route path="/payment/vnpay/return" element={<ErrorBoundary><VnpayReturnPage /></ErrorBoundary>} />
         <Route
           path="/product/:slug"
           element={
@@ -293,6 +285,15 @@ const MainContent: React.FC = () => {
                 }}
                 onTrackOrder={(id) => alert(`Tracking Order #${id}`)}
                 onReorder={handleReorder}
+                onRetryPayment={async (orderId) => {
+                  try {
+                    const paymentUrl = await retryVnpayPayment(orderId);
+                    window.location.assign(paymentUrl);
+                  } catch (error) {
+                    console.error('Cannot retry VNPay payment.', error);
+                    showError(error instanceof Error ? error.message : 'Không thể mở lại VNPay.');
+                  }
+                }}
               />
             </ErrorBoundary>
           }

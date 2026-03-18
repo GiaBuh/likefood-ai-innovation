@@ -39,7 +39,7 @@ const Footer: React.FC = () => {
             <ul className="space-y-3 text-sm">
               <li><Link className="hover:text-primary-500 transition-colors" to="/shop">{t('common.shop')}</Link></li>
               <li><Link className="hover:text-primary-500 transition-colors" to="/combo">Combo</Link></li>
-              <li><Link className="hover:text-primary-500 transition-colors" to="/flash-sale">{t('common.flashSale')}</Link></li>
+              <li><Link className="hover:text-primary-500 transition-colors" to="/blog">{t('common.blog')}</Link></li>
             </ul>
           </div>
 

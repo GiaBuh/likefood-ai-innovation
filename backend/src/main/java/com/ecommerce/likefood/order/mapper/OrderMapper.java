@@ -19,8 +19,6 @@ public interface OrderMapper {
     OrderResponse.CustomerResponse toCustomerResponse(User user);
 
     @Mapping(source = "variant.id", target = "variantId")
-    @Mapping(source = "variant.product.id", target = "productId")
-    @Mapping(source = "variant.product.slug", target = "productSlug")
     @Mapping(target = "lineTotal", expression = "java(item.getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))")
     OrderItemResponse toItemResponse(OrderItem item);
 }

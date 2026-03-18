@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Order, OrderStatus } from '../../types';
 import Skeleton from '../ui/Skeleton';
-import { useNavigate } from 'react-router-dom';
 
 interface OrderHistoryProps {
   orders: Order[];
@@ -11,18 +10,20 @@ interface OrderHistoryProps {
   onCancelOrder: (orderId: string) => Promise<void> | void;
   onTrackOrder: (orderId: string) => void;
   onReorder: (order: Order) => void;
+  onRetryPayment?: (orderId: string) => Promise<void> | void;
 }
 
-const OrderHistory: React.FC<OrderHistoryProps> = ({
-  orders,
+const OrderHistory: React.FC<OrderHistoryProps> = ({ 
+  orders, 
   onBackToShop,
   onCancelOrder,
   onTrackOrder,
-  onReorder
+  onReorder,
+  onRetryPayment
 }) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
 
   // Simulate data fetching
   useEffect(() => {
@@ -43,13 +44,72 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
     }
   };
 
+  const getPaymentStatusMeta = (order: Order) => {
+    const method = order.paymentMethod || 'COD';
+    const paymentRaw = order.paymentStatusRaw || 'PENDING';
+
+    if (method === 'BANK_TRANSFER') {
+      if (paymentRaw === 'PAID') {
+        return {
+          label: 'Đã thanh toán (VNPay)',
+          className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        };
+      }
+      if (paymentRaw === 'FAILED') {
+        return {
+          label: 'Chưa thanh toán (VNPay)',
+          className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        };
+      }
+      return {
+        label: 'Chờ thanh toán (VNPay)',
+        className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      };
+    }
+
+    return {
+      label: 'COD - Thanh toán khi nhận hàng',
+      className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    };
+  };
+
+  const canRetryVnpayPayment = (order: Order): boolean => {
+    const status = (order.fulfillmentStatus || order.status) as OrderStatus;
+    return Boolean(onRetryPayment)
+      && order.paymentMethod === 'BANK_TRANSFER'
+      && order.paymentStatusRaw !== 'PAID'
+      && status !== 'Cancelled';
+  };
+
+  const handleRetryPayment = async (orderId: string) => {
+    if (!onRetryPayment) return;
+    try {
+      setRetryingOrderId(orderId);
+      await onRetryPayment(orderId);
+    } finally {
+      setRetryingOrderId(null);
+    }
+  };
+
   const renderOrderActions = (order: Order) => {
     const status = (order.fulfillmentStatus || order.status) as OrderStatus;
+    const showRetry = canRetryVnpayPayment(order);
+
     switch (status) {
       case 'Processing':
         return (
           <>
-            <button
+            {showRetry && (
+              <button
+                onClick={() => handleRetryPayment(order.id)}
+                disabled={retryingOrderId === order.id}
+                className="w-full py-2.5 rounded-xl border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined !text-lg">credit_card</span>
+                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+              </button>
+            )}
+            <button 
               onClick={() => onCancelOrder(order.id)}
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
@@ -62,7 +122,17 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Confirm':
         return (
           <>
-            <button
+            {showRetry && (
+              <button
+                onClick={() => handleRetryPayment(order.id)}
+                disabled={retryingOrderId === order.id}
+                className="w-full py-2.5 rounded-xl border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined !text-lg">credit_card</span>
+                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+              </button>
+            )}
+            <button 
               onClick={() => onCancelOrder(order.id)}
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
@@ -75,7 +145,17 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Shipped':
         return (
           <>
-            <button
+            {showRetry && (
+              <button
+                onClick={() => handleRetryPayment(order.id)}
+                disabled={retryingOrderId === order.id}
+                className="w-full py-2.5 rounded-xl border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined !text-lg">credit_card</span>
+                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+              </button>
+            )}
+            <button 
               onClick={() => onTrackOrder(order.id)}
               className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
             >
@@ -91,7 +171,17 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Cancelled':
         return (
           <>
-            <button
+            {showRetry && (
+              <button
+                onClick={() => handleRetryPayment(order.id)}
+                disabled={retryingOrderId === order.id}
+                className="w-full py-2.5 rounded-xl border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined !text-lg">credit_card</span>
+                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+              </button>
+            )}
+             <button 
               onClick={() => onReorder(order)}
               className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 text-sm flex items-center justify-center gap-2"
             >
@@ -99,17 +189,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               {t('orders.reorder')}
             </button>
             {status === 'Complete' && (
-              <button
-                onClick={() => {
-                  // Navigate to the first product's detail page for review
-                  const firstItem = order.items[0];
-                  const slug = firstItem?.productSlug || firstItem?.productId || firstItem?.id;
-                  if (slug) {
-                    navigate(`/product/${slug}#reviews`);
-                  }
-                }}
-                className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm"
-              >
+              <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
                 Viết đánh giá
               </button>
             )}
@@ -127,7 +207,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           <h1 className="text-3xl font-extrabold text-neutral-900 dark:text-white">{t('orders.title')}</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1">{t('orders.title')}</p>
         </div>
-        <button
+        <button 
           onClick={onBackToShop}
           className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
         >
@@ -138,41 +218,41 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
 
       {isLoading ? (
         <div className="space-y-6">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden">
-              {/* Header Skeleton */}
-              <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex gap-12">
-                <div>
-                  <Skeleton className="h-3 w-16 mb-2" />
-                  <Skeleton className="h-4 w-24" />
+           {[...Array(2)].map((_, i) => (
+             <div key={i} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden">
+                {/* Header Skeleton */}
+                <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex gap-12">
+                   <div>
+                      <Skeleton className="h-3 w-16 mb-2" />
+                      <Skeleton className="h-4 w-24" />
+                   </div>
+                   <div>
+                      <Skeleton className="h-3 w-20 mb-2" />
+                      <Skeleton className="h-4 w-32" />
+                   </div>
+                   <div className="ml-auto">
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                   </div>
                 </div>
-                <div>
-                  <Skeleton className="h-3 w-20 mb-2" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-                <div className="ml-auto">
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-              </div>
-              {/* Body Skeleton */}
-              <div className="p-6">
-                <div className="flex flex-col lg:flex-row gap-6">
-                  <div className="flex-1 flex gap-4">
-                    <Skeleton className="h-16 w-16 rounded-lg" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
+                {/* Body Skeleton */}
+                <div className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        <div className="flex-1 flex gap-4">
+                             <Skeleton className="h-16 w-16 rounded-lg" />
+                             <div className="space-y-2 flex-1">
+                                <Skeleton className="h-4 w-48" />
+                                <Skeleton className="h-3 w-32" />
+                             </div>
+                        </div>
+                        <div className="lg:w-72 pl-6 border-l border-stone-100 dark:border-stone-800 space-y-3">
+                             <Skeleton className="h-3 w-24" />
+                             <Skeleton className="h-4 w-full" />
+                             <Skeleton className="h-10 w-full rounded-xl mt-2" />
+                        </div>
                     </div>
-                  </div>
-                  <div className="lg:w-72 pl-6 border-l border-stone-100 dark:border-stone-800 space-y-3">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-10 w-full rounded-xl mt-2" />
-                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+             </div>
+           ))}
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 border-dashed">
@@ -181,7 +261,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t('orders.empty')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-sm text-center">{t('orders.empty')}</p>
-          <button
+          <button 
             onClick={onBackToShop}
             className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20"
           >
@@ -190,7 +270,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          {orders.map((order) => (
+          {orders.map((order) => {
+            const paymentMeta = getPaymentStatusMeta(order);
+            return (
             <div key={order.id} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden hover:shadow-lg transition-shadow duration-300">
               {/* Order Header */}
               <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex flex-wrap gap-4 justify-between items-center">
@@ -212,6 +294,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor((order.fulfillmentStatus || order.status) as OrderStatus)}`}>
                     {order.fulfillmentStatus || order.status}
                   </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${paymentMeta.className}`}>
+                    {paymentMeta.label}
+                  </span>
                 </div>
               </div>
 
@@ -230,9 +315,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                           <p className="text-sm text-stone-500 dark:text-stone-400">Qty: {item.quantity} × ${item.price.toFixed(2)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-slate-900 dark:text-white">
-                            {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">Giá cập nhật</span>}
-                          </p>
+                           <p className="font-bold text-slate-900 dark:text-white">${(item.price * item.quantity).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -241,19 +324,20 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                   {/* Actions / Address */}
                   <div className="lg:w-72 lg:border-l lg:border-stone-100 lg:dark:border-stone-800 lg:pl-6 flex flex-col justify-center gap-3">
                     <div className="mb-2">
-                      <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Shipping To</p>
-                      <p className="text-sm text-slate-700 dark:text-stone-300 leading-relaxed line-clamp-2">
-                        {order.shippingAddress || "123 Main St, Springfield, USA"}
-                      </p>
+                       <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Shipping To</p>
+                       <p className="text-sm text-slate-700 dark:text-stone-300 leading-relaxed line-clamp-2">
+                         {order.shippingAddress || "123 Main St, Springfield, USA"}
+                       </p>
                     </div>
-
+                    
                     {renderOrderActions(order)}
-
+                    
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>

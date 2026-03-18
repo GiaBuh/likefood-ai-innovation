@@ -53,10 +53,10 @@ const Dashboard: React.FC<DashboardProps> = ({ kpiData, recentOrders, topProduct
               <p className="text-sm">Chưa có dữ liệu doanh thu.</p>
             </div>
           ) : (
-            <div className="flex h-64 items-stretch justify-between gap-2 px-2 pt-8">
+            <div className="flex h-64 items-end justify-between gap-2 px-2">
               {chartData.map((item, index) => (
-                <div key={index} className="flex h-full flex-col items-center justify-end gap-2 w-full group">
-                  <div className="relative flex-1 h-full w-full max-w-[40px] rounded-t-lg bg-primary-50 dark:bg-primary-950/20 group-hover:bg-primary-100 dark:group-hover:bg-primary-950/30 transition-all duration-300">
+                <div key={index} className="flex flex-col items-center gap-2 w-full group">
+                  <div className="relative w-full max-w-[40px] rounded-t-lg bg-primary-50 dark:bg-primary-950/20 group-hover:bg-primary-100 dark:group-hover:bg-primary-950/30 transition-all duration-300" style={{ height: '100%' }}>
                     <div 
                       className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-primary-600 to-primary-400 transition-all duration-500 ease-out group-hover:from-primary-700 group-hover:to-primary-500"
                       style={{ height: `${maxRevenue > 0 ? Math.max(8, (item.value / maxRevenue) * 100) : 8}%` }}

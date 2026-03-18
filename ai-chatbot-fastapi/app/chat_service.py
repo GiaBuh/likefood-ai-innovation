@@ -5,7 +5,7 @@ import re
 import unicodedata
 import uuid
 
-from .backend_client import BackendClient, ComboDict, VoucherDict
+from .backend_client import BackendClient
 from .budget import format_usd, normalize_price_to_usd, parse_budget_value, pick_variants_for_budget
 from .config import settings
 from .domain import Product, ProductVariant
@@ -66,153 +66,6 @@ class ChatService:
                     confidenceBand="high",
                     intent="GREETING",
                     formatProfile="simple_cta",
-                ),
-            ), context.awaiting)
-
-        # ── NEW: Support intent (shipping, returns, payment, storage) ──
-        if self._is_support_intent(message):
-            support_reply = await self.gemini.support_response(message)
-            return self._attach_debug_meta(AiAssistantResponse(
-                reply=support_reply,
-                language=language,
-                nextContext=AiChatContext(awaiting=AWAITING_NONE),
-                recommendationMeta=AiRecommendationMeta(
-                    reason="CSKH - Ho tro khach hang",
-                    offerType="primary",
-                    fallbackLevel="SAFE",
-                    confidenceBand="high",
-                    intent="CUSTOMER_SUPPORT",
-                    formatProfile="simple_cta",
-                ),
-            ), context.awaiting)
-
-        # ── NEW: Voucher / discount intent ──
-        if self._is_voucher_intent(message):
-            vouchers = await self.backend.fetch_active_vouchers()
-            if vouchers:
-                vouchers_summary = self._build_vouchers_summary(vouchers)
-                voucher_reply = await self.gemini.voucher_response(vouchers_summary, message)
-            else:
-                voucher_reply = "Dạ hiện bên em chưa có mã giảm giá nào đang hoạt động. Anh/chị ghé lại sau hoặc để em gợi ý món ngon nhé! 😊"
-            return self._attach_debug_meta(AiAssistantResponse(
-                reply=voucher_reply,
-                language=language,
-                actions=[AiChatAction(type="navigate", label="Xem trang Voucher 🎁", command="/navigate:vouchers")],
-                nextContext=AiChatContext(awaiting=AWAITING_NONE),
-                recommendationMeta=AiRecommendationMeta(
-                    reason="Thong tin voucher/khuyen mai",
-                    offerType="primary",
-                    fallbackLevel="SAFE",
-                    confidenceBand="high",
-                    intent="VOUCHER_INQUIRY",
-                    formatProfile="simple_cta",
-                ),
-            ), context.awaiting)
-
-        # ── NEW: Combo / gift intent ──
-        if self._is_combo_intent(message):
-            published_combos = await self.backend.fetch_published_combos()
-            if published_combos:
-                # Build a descriptive reply directly from combo data
-                combo_lines: list[str] = []
-                for c in published_combos[:5]:  # type: ComboDict
-                    name = c.get("comboName", "Combo")
-                    discount = c.get("discountPercentage", 0)
-                    combo_price = c.get("comboPrice")
-                    slogan = c.get("slogan", "")
-
-                    # Get item names
-                    combo_items = c.get("comboItems", [])
-                    item_names = []
-                    for item in combo_items[:5]:
-                        product = item.get("product", {})
-                        if product:
-                            item_names.append(product.get("name", ""))
-                    items_str = ", ".join(n for n in item_names if n)
-
-                    line = f"🔥 {name}"
-                    if discount and float(discount) > 0:
-                        line += f" (giảm {int(float(discount))}%)"
-                    if combo_price:
-                        line += f" — chỉ ${combo_price}"
-                    if slogan:
-                        line += f'. "{slogan}"'
-                    if items_str:
-                        line += f" | Gồm: {items_str}"
-                    combo_lines.append(line)
-
-                rule_reply = f"Dạ bên em đang có {len(published_combos)} combo deal cực hot ạ! "
-                rule_reply += " ".join(combo_lines)
-                rule_reply += " Anh/chị bấm xem combo nào để em tư vấn chi tiết nhé! 😋"
-
-                # Try Gemini enhancement, fallback to rule-based
-                combos_summary = self._build_combos_summary(published_combos)
-                gemini_reply = await self.gemini.combo_suggest(
-                    combos_summary, "có sẵn",
-                    f"Khách hỏi: {message}. Giới thiệu các combo deal đang có.",
-                )
-                # Use Gemini reply only if it's NOT the default fallback
-                if gemini_reply and "muốn combo quà trong tầm giá" not in gemini_reply:
-                    combo_reply = gemini_reply
-                else:
-                    combo_reply = rule_reply
-
-                # Build a name→slug lookup from products (combos are also products)
-                name_to_slug: dict[str, str] = {}
-                for p in products:
-                    name_to_slug[self._normalize(p.name)] = p.slug or p.id
-
-                combo_actions = []
-                for c in published_combos[:5]:
-                    combo_name = c.get("comboName", "Combo")
-                    combo_id = c.get("id", "")
-                    if combo_id:
-                        combo_actions.append(
-                            AiChatAction(
-                                type="open_product",
-                                label=f"Xem {combo_name}",
-                                productId=combo_id,
-                            )
-                        )
-                        combo_actions.append(
-                            AiChatAction(
-                                type="buy_combo",
-                                label=f"Mua {combo_name}",
-                                productId=combo_id,
-                            )
-                        )
-                    else:
-                        combo_actions.append(
-                            AiChatAction(
-                                type="navigate",
-                                label=f"Xem {combo_name}",
-                                command="/navigate:combo",
-                            )
-                        )
-                combo_actions.append(
-                    AiChatAction(type="navigate", label="Xem tất cả Combo 🔥", command="/navigate:combo")
-                )
-            else:
-                budget_val = parse_budget_value(message)
-                budget_str = format_usd(budget_val) if budget_val else "không giới hạn"
-                products_summary = self._build_products_summary(products)
-                combo_reply = await self.gemini.combo_suggest(products_summary, budget_str, message)
-                combo_actions = [
-                    AiChatAction(type="show-more-options", label="Xem thêm sản phẩm", command="/show-more"),
-                ]
-
-            return self._attach_debug_meta(AiAssistantResponse(
-                reply=combo_reply,
-                language=language,
-                actions=combo_actions,
-                nextContext=AiChatContext(awaiting=AWAITING_NONE),
-                recommendationMeta=AiRecommendationMeta(
-                    reason="Tu van combo qua tang",
-                    offerType="primary",
-                    fallbackLevel="SAFE",
-                    confidenceBand="high",
-                    intent="COMBO_GIFT",
-                    formatProfile="recommendation_list",
                 ),
             ), context.awaiting)
 
@@ -355,23 +208,8 @@ class ChatService:
             if quantity is None:
                 return self._ask_quantity_only(selected_product, chosen_variant, language)
 
-            # ── NEW: Cross-sell after adding to cart ──
-            base_reply = f"Đã thêm {quantity} x {selected_product.name} ({chosen_variant.weight_label}) vào giỏ hàng."
-            cross_sell_text = await self.gemini.cross_sell(
-                selected_product.name,
-                selected_product.category,
-                self._build_products_summary(
-                    [p for p in list(product_map.values()) if p.category != selected_product.category],
-                    limit=10,
-                ),
-            )
-            if cross_sell_text:
-                base_reply = f"{base_reply} {cross_sell_text}"
-            else:
-                base_reply = f"{base_reply} Anh/chị muốn thanh toán ngay không ạ?"
-
             return AiAssistantResponse(
-                reply=base_reply,
+                reply=f"Đã thêm {quantity} x {selected_product.name} ({chosen_variant.weight_label}) vào giỏ hàng. Anh/chị muốn thanh toán ngay không ạ?",
                 language=language,
                 cartInstruction=AiCartInstruction(
                     productId=selected_product.id, variantId=chosen_variant.id, quantity=quantity
@@ -557,22 +395,8 @@ class ChatService:
         # Product search / detail / buy flow
         matches = self._search_products(products, message)
         if not matches:
-            # ── NEW: Use Gemini smart_recommend instead of generic 3 alternatives ──
-            products_summary = self._build_products_summary(products)
-            smart_reply = await self.gemini.smart_recommend(products_summary, message)
             topic_category = selected_category or self._infer_topic_from_message(products, message)
-            fallback = self._build_three_alternatives(products, language, topic_category)
-            if smart_reply and smart_reply != fallback.reply:
-                fallback.reply = smart_reply
-                fallback.recommendationMeta = AiRecommendationMeta(
-                    reason="AI smart recommend",
-                    offerType="related",
-                    fallbackLevel="RELATED",
-                    confidenceBand="medium",
-                    intent="SMART_RECOMMEND",
-                    formatProfile="recommendation_list",
-                )
-            return fallback
+            return self._build_three_alternatives(products, language, topic_category)
 
         first = matches[0]
         if self._is_buy_intent(message):
@@ -836,13 +660,7 @@ class ChatService:
 
     def _is_availability_intent(self, message: str) -> bool:
         normalized = self._normalize(message)
-        is_availability = ("co " in normalized and " khong" in normalized) or normalized.startswith("co ")
-        if not is_availability:
-            return False
-        # Exclude messages that match higher-priority intents
-        if self._is_combo_intent(message) or self._is_voucher_intent(message) or self._is_support_intent(message):
-            return False
-        return True
+        return ("co " in normalized and " khong" in normalized) or normalized.startswith("co ")
 
     def _extract_requested_name(self, message: str) -> str:
         normalized = self._normalize(message)
@@ -950,102 +768,6 @@ class ChatService:
             "tim mon khac",
         }
         return normalized in switch_keys or any(k in normalized for k in {"doi mon khac", "xem mon khac"})
-
-    # ── NEW intent detectors ─────────────────────────────────────────────────
-    def _is_support_intent(self, message: str) -> bool:
-        normalized = self._normalize(message)
-        support_keys = [
-            "giao hang", "don hang", "doi tra", "bao quan", "ship",
-            "van chuyen", "khieu nai", "hoan tien", "phan nan",
-            "thanh toan", "tra hang", "delivery", "shipping",
-            "giao bao lau", "phí ship", "phi van chuyen",
-        ]
-        return any(k in normalized for k in support_keys)
-
-    def _is_combo_intent(self, message: str) -> bool:
-        normalized = self._normalize(message)
-        combo_keys = [
-            "qua tang", "combo", "set qua", "sinh nhat", "tet",
-            "bieu", "hop qua", "qua bieu", "gift", "tang qua",
-            "qua tet", "qua noel", "qua giang sinh",
-        ]
-        return any(k in normalized for k in combo_keys)
-
-    def _is_voucher_intent(self, message: str) -> bool:
-        normalized = self._normalize(message)
-        voucher_keys = [
-            "voucher", "ma giam gia", "khuyen mai", "discount", "coupon",
-            "giam gia", "code giam", "promo", "uu dai",
-        ]
-        return any(k in normalized for k in voucher_keys)
-
-    # ── NEW helper: build products summary for Gemini ────────────────────────
-    def _build_products_summary(self, products: list[Product], limit: int = 20) -> str:
-        lines: list[str] = []
-        for p in products[:limit]:
-            variant_parts = []
-            for v in p.variants[:4]:
-                variant_parts.append(f"{v.weight_label}: {format_usd(normalize_price_to_usd(v.price))}")
-            variants_str = ", ".join(variant_parts) if variant_parts else "liên hệ"
-            lines.append(f"• {p.name} [{p.category}] — {variants_str}")
-        return "\n".join(lines) if lines else "Không có sản phẩm"
-
-    # ── NEW helper: build vouchers summary for Gemini ────────────────────────
-    def _build_vouchers_summary(self, vouchers: list[VoucherDict]) -> str:
-        lines: list[str] = []
-        for v in vouchers[:10]:
-            code = v.get("code", "???")
-            discount_type = v.get("discountType", "")
-            discount_value = v.get("discountValue", 0)
-            min_order = v.get("minOrderValue", 0)
-            voucher_type = v.get("type", "")
-
-            if discount_type == "PERCENT":
-                desc = f"Giảm {discount_value}%"
-            else:
-                desc = f"Giảm ${discount_value}"
-
-            if voucher_type == "SHIPPING_DISCOUNT":
-                desc += " phí ship"
-
-            if min_order and float(min_order) > 0:
-                desc += f" (đơn từ ${min_order})"
-
-            lines.append(f"• Mã: {code} — {desc}")
-        return "\n".join(lines) if lines else "Không có mã giảm giá"
-
-    # ── NEW helper: build combos summary for Gemini ──────────────────────────
-    def _build_combos_summary(self, combos: list[ComboDict]) -> str:
-        lines: list[str] = []
-        for c in combos[:10]:
-            name = c.get("comboName", "Combo")
-            discount = c.get("discountPercentage", 0)
-            combo_price = c.get("comboPrice")
-            source = c.get("source", "")
-            desc = c.get("description", "")
-
-            line = f"• {name}"
-            if discount and float(discount) > 0:
-                line += f" (giảm {int(float(discount))}%)"
-            if combo_price:
-                line += f" — Giá combo: ${combo_price}"
-
-            # Extract item names if available
-            combo_items = c.get("comboItems", [])
-            if combo_items and isinstance(combo_items, list):
-                item_names = []
-                for item in combo_items[:5]:
-                    product = item.get("product", {})
-                    if product:
-                        item_names.append(product.get("name", ""))
-                if item_names:
-                    line += f" | Gồm: {', '.join(n for n in item_names if n)}"
-
-            if desc:
-                line += f" | {desc[:80]}"
-
-            lines.append(line)
-        return "\n".join(lines) if lines else "Không có combo"
 
     def _normalize(self, text: str) -> str:
         lowered = text.lower().strip()

@@ -16,7 +16,7 @@ interface ShippingFormProps {
   errors?: Partial<Record<'name' | 'phone' | 'address', string>>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onBack: () => void;
-  onPlaceOrder: () => void;
+  onNext: () => void;
   selectedShopVoucher: UserVoucher | null;
   setSelectedShopVoucher: (v: UserVoucher | null) => void;
   selectedShippingVoucher: UserVoucher | null;
@@ -29,7 +29,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
   errors = {},
   onInputChange, 
   onBack,
-  onPlaceOrder,
+  onNext,
   selectedShopVoucher,
   setSelectedShopVoucher,
   selectedShippingVoucher,
@@ -253,13 +253,13 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
           {t('common.back')}
         </button>
         <button 
-          onClick={onPlaceOrder}
+          onClick={onNext}
           className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl 
             hover:from-primary-600 hover:to-primary-700 transition-all duration-300 
             shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30
             flex items-center gap-2 hover:gap-3 active:scale-[0.98]"
         >
-          {t('checkout.placeOrder')}
+          Tiếp tục thanh toán
           <span className="material-symbols-outlined !text-lg">lock</span>
         </button>
       </div>

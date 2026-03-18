@@ -61,6 +61,8 @@ export interface Category {
 export type SortOption = 'Phổ biến' | 'Bán chạy nhất' | 'Mới nhất' | 'Giá thấp đến cao' | 'Giá cao đến thấp';
 
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Refunded';
+export type PaymentStatusRaw = 'PENDING' | 'PAID' | 'FAILED';
+export type PaymentMethodRaw = 'COD' | 'BANK_TRANSFER' | 'E_WALLET';
 export type FulfillmentStatus = 'Processing' | 'Confirm' | 'Shipped' | 'Complete' | 'Cancelled';
 export type CustomerStatus = 'Active' | 'Inactive' | 'Blocked';
 
@@ -99,6 +101,10 @@ export interface Order {
   time?: string;
   status: OrderStatus | string; // Shop view legacy vs Admin view
   paymentStatus: PaymentStatus;
+  paymentStatusRaw?: PaymentStatusRaw;
+  paymentMethod?: PaymentMethodRaw;
+  paymentRef?: string;
+  paymentGateway?: string;
   fulfillmentStatus: FulfillmentStatus;
   items: any[]; // relaxed type for compat between Shop CartItem and Admin OrderItem
   total: number; // Shop legacy
@@ -164,4 +170,3 @@ export interface UserVoucher {
   collectedAt: string;
   usedAt?: string;
 }
-

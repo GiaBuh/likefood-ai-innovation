@@ -27,6 +27,8 @@ public class OrderResponse {
     private String note;
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
+    private String paymentRef;
+    private String paymentGateway;
     private Instant paidAt;
     private CustomerResponse customer;
 

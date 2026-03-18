@@ -49,6 +49,14 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private PaymentStatus paymentStatus;
 
+    @Column(unique = true)
+    private String paymentRef;
+
+    private String paymentGateway;
+
+    @Column
+    private Long paymentAmountVnd;
+
     private Instant paidAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

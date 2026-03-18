@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Product } from '../../types';
 import { useShop } from '../../contexts/ShopContext';
@@ -21,14 +21,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  // ─── Flash Sale price override from URL params ───
-  // MUST BE CALLED BEFORE ANY EARLY RETURNS
-  const [searchParams] = useSearchParams();
-  const flashSalePrice = searchParams.get('salePrice') ? parseFloat(searchParams.get('salePrice')!) : null;
-  const flashOriginalPrice = searchParams.get('originalPrice') ? parseFloat(searchParams.get('originalPrice')!) : null;
-  const flashDiscount = searchParams.get('discount') ? parseInt(searchParams.get('discount')!) : null;
-  const flashVariantId = searchParams.get('variantId');
 
   useEffect(() => {
     if (!slug) {
@@ -72,21 +64,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
     navigate('/checkout');
   });
 
-  const displayProduct = useMemo(() => {
-    if (!product || flashSalePrice === null) return product;
-    // Override the specific variant's price, or all if no variantId
-    return {
-      ...product,
-      price: flashSalePrice,
-      variants: product.variants?.map(v => {
-        if (flashVariantId) {
-          return v.id === flashVariantId ? { ...v, price: flashSalePrice } : v;
-        }
-        return { ...v, price: flashSalePrice };
-      }) || [],
-    };
-  }, [product, flashSalePrice, flashVariantId]);
-
   if (isLoading) {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-16 flex justify-center">
@@ -121,27 +98,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ onAddToCart, onBuyNow }) => {
         path={`/product/${product.slug || product.id}`}
       />
       <ProductDetail
-        product={displayProduct!}
+        product={product}
         onBack={handleBack}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
       />
-
-      {/* Flash Sale Price Banner */}
-      {flashSalePrice !== null && flashOriginalPrice !== null && (
-        <div className="mb-6 -mt-4 flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-50 dark:from-orange-950/30 dark:to-orange-950/30 border border-orange-200 dark:border-orange-800/50 rounded-xl">
-          <span className="material-symbols-outlined !text-2xl text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-          <div>
-            <p className="text-sm font-bold text-orange-500">Flash Sale</p>
-            <p className="text-xs text-neutral-500">
-              Giá gốc: <span className="line-through">${flashOriginalPrice.toFixed(2)}</span>
-              {' → '}
-              Giá sale: <span className="font-bold text-orange-500">${flashSalePrice.toFixed(2)}</span>
-              {flashDiscount && <span className="ml-1 font-bold text-orange-500">(-{flashDiscount}%)</span>}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Review Section */}
       <ReviewSection productId={String(product.id)} />

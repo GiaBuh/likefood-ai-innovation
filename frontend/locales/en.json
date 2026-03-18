@@ -4,7 +4,6 @@
     "shop": "Shop",
     "about": "About Us",
     "blog": "Blog",
-    "flashSale": "Flash Sale",
     "cart": "Cart",
     "orders": "Orders",
     "profile": "Account",
@@ -129,7 +128,8 @@
     "title": "Checkout",
     "step1": "Review Cart",
     "step2": "Shipping Information",
-    "step3": "Order Placed",
+    "step3": "Payment Method",
+    "step4": "Complete",
     "shippingInfo": "Shipping Information",
     "receiverName": "Receiver Name",
     "receiverPhone": "Phone Number",
@@ -232,20 +232,5 @@
     "categories": "Categories",
     "allPosts": "All Posts",
     "publishedOn": "Published on"
-  },
-  "flashSalePage": {
-    "title": "FLASH SALE",
-    "subtitle": "Up to 50% off - Today only!",
-    "endsIn": "Ends in",
-    "happeningNow": "Happening Now",
-    "upcoming": "Upcoming",
-    "ended": "Ended",
-    "allCategories": "All",
-    "sold": "Sold",
-    "sellingFast": "Selling Fast",
-    "soldOut": "Sold Out",
-    "noEvents": "No Flash Sale events right now",
-    "noEventsDesc": "Check back later for amazing deals!",
-    "backToShop": "Back to Shop"
   }
 }

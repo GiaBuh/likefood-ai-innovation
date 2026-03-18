@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePermission } from '../../hooks/usePermission';
 
-type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'flashsale' | 'chatting' | 'trends' | 'aicombo' | 'staff';
+type AdminViewType = 'dashboard' | 'orders' | 'products' | 'customers' | 'vouchers' | 'chatting' | 'trends' | 'aicombo' | 'staff';
 
 interface AdminSidebarProps {
   onExit: () => void;
@@ -14,7 +14,6 @@ const viewToPath: Record<AdminViewType, string> = {
   products: '/admin/products',
   customers: '/admin/customers',
   vouchers: '/admin/vouchers',
-  flashsale: '/admin/flash-sale',
   chatting: '/admin/chat',
   trends: '/admin/trends',
   aicombo: '/admin/combo',
@@ -28,7 +27,6 @@ const viewPermissionMap: Record<AdminViewType, string | null> = {
   products: 'PRODUCTS',
   customers: 'CUSTOMERS',
   vouchers: 'VOUCHERS',
-  flashsale: null,  // accessible to all admin
   chatting: 'CHAT',
   trends: null,    // accessible to all admin
   aicombo: null,   // accessible to all admin
@@ -41,7 +39,6 @@ const menuItems: { view: AdminViewType; icon: string; label: string }[] = [
   { view: 'products', icon: 'inventory_2', label: 'Sản phẩm' },
   { view: 'customers', icon: 'group', label: 'Khách hàng' },
   { view: 'vouchers', icon: 'loyalty', label: 'Khuyến mãi' },
-  { view: 'flashsale', icon: 'bolt', label: 'Flash Sale' },
   { view: 'chatting', icon: 'chat', label: 'Chat' },
   { view: 'staff', icon: 'admin_panel_settings', label: 'Nhân viên' },
   { view: 'trends', icon: 'trending_up', label: 'Xu hướng AI' },
@@ -60,7 +57,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onExit }) => {
     if (path.startsWith('/admin/products')) return 'products';
     if (path.startsWith('/admin/customers')) return 'customers';
     if (path.startsWith('/admin/vouchers')) return 'vouchers';
-    if (path.startsWith('/admin/flash-sale')) return 'flashsale';
     if (path.startsWith('/admin/chat')) return 'chatting';
     if (path.startsWith('/admin/trends')) return 'trends';
     if (path.startsWith('/admin/combo')) return 'aicombo';

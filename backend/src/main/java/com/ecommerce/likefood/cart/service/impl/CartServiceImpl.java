@@ -21,15 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ecommerce.likefood.flashsale.domain.FlashSaleEvent;
-import com.ecommerce.likefood.flashsale.domain.FlashSaleItem;
-import com.ecommerce.likefood.flashsale.repository.FlashSaleEventRepository;
-import com.ecommerce.likefood.flashsale.repository.FlashSaleItemRepository;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -42,8 +34,6 @@ public class CartServiceImpl implements CartService {
     private final ComboCampaignRepository comboCampaignRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
-    private final FlashSaleEventRepository flashSaleEventRepository;
-    private final FlashSaleItemRepository flashSaleItemRepository;
 
     @Override
     public CartResponse getMyCart() {
@@ -190,41 +180,24 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new AppException("User not found"));
     }
 
-    private Map<String, FlashSaleItem> buildActiveFlashSaleMap() {
-        Map<String, FlashSaleItem> flashSaleMap = new HashMap<>();
-        List<FlashSaleEvent> activeEvents = flashSaleEventRepository.findActiveEvents(Instant.now());
-        if (!activeEvents.isEmpty()) {
-            List<FlashSaleItem> activeItems = flashSaleItemRepository.findByFlashSaleEventIn(activeEvents);
-            for (FlashSaleItem item : activeItems) {
-                if (item.getVariantId() != null && !item.getVariantId().isBlank()) {
-                    flashSaleMap.put(item.getVariantId(), item);
-                } else {
-                    flashSaleMap.put("product-" + item.getProduct().getId(), item);
-                }
-            }
-        }
-        return flashSaleMap;
-    }
-
     private CartResponse toResponse(Cart cart) {
-        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
-        List<CartItemResponse> items = cart.getItems().stream()
-                .map(item -> toItemResponse(item, flashSaleMap))
-                .toList();
-
-        BigDecimal total = items.stream()
-                .map(CartItemResponse::getLineTotal)
+        BigDecimal total = cart.getItems().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return CartResponse.builder()
                 .id(cart.getId())
                 .userId(cart.getUser().getId())
-                .items(items)
+                .items(
+                        cart.getItems().stream()
+                                .map(this::toItemResponse)
+                                .toList()
+                )
                 .totalAmount(total)
                 .build();
     }
 
-    private CartItemResponse toItemResponse(CartItem item, Map<String, FlashSaleItem> flashSaleMap) {
+    private CartItemResponse toItemResponse(CartItem item) {
         if ("COMBO".equals(item.getItemType()) && item.getComboCampaign() != null) {
             ComboCampaign combo = item.getComboCampaign();
             return CartItemResponse.builder()
@@ -253,19 +226,6 @@ public class CartServiceImpl implements CartService {
                     ? variant.getWeightValue() + " " + variant.getWeightUnit()
                     : "Default";
             
-            BigDecimal currentPrice = variant != null ? variant.getPrice() : item.getPrice();
-            FlashSaleItem productLevelSale = variant != null ? flashSaleMap.get("product-" + variant.getProduct().getId()) : null;
-            FlashSaleItem fsItem = variant != null && flashSaleMap.containsKey(variant.getId()) ? flashSaleMap.get(variant.getId()) : productLevelSale;
-            if (fsItem != null) {
-                currentPrice = fsItem.getSalePrice();
-            }
-
-            // Optional: update the cart item price in the database so checkout uses the latest price
-            if (currentPrice != null && currentPrice.compareTo(item.getPrice()) != 0) {
-                item.setPrice(currentPrice);
-                cartItemRepository.save(item);
-            }
-            
             return CartItemResponse.builder()
                     .id(item.getId())
                     .itemType("PRODUCT")
@@ -276,8 +236,8 @@ public class CartServiceImpl implements CartService {
                     .variantLabel(variantLabel)
                     .quantity(item.getQuantity())
                     .availableQuantity(variant != null && variant.getQuantity() != null ? variant.getQuantity() : 0)
-                    .price(currentPrice)
-                    .lineTotal(currentPrice.multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .price(item.getPrice())
+                    .lineTotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build();
         }
     }
