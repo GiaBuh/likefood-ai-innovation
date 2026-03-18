@@ -120,6 +120,8 @@ export interface User {
   avatar: string;
   address: string;
   role?: 'admin' | 'customer'; // New: Role based access
+  permissions?: string[]; // Permission strings like 'PRODUCTS:VIEW'
+  mustChangePassword?: boolean; // Force password change on first login
 }
 
 export interface KPIStats {

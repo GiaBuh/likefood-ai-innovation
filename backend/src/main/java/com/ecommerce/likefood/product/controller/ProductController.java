@@ -25,21 +25,21 @@ public class ProductController {
     private final ProductImportService productImportService;
 
     @PostMapping("/products")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'PRODUCTS', 'CREATE')")
     @ApiMessage("Create product")
     public ResponseEntity<ProductResponse> create(@RequestBody @Valid ProductCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.create(request));
     }
 
     @PutMapping("/products/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'PRODUCTS', 'EDIT')")
     @ApiMessage("Update product")
     public ResponseEntity<ProductResponse> update(@PathVariable("id") String id, @RequestBody @Valid ProductCreateRequest request) {
         return ResponseEntity.ok(productService.update(id, request));
     }
 
     @DeleteMapping("/products/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'PRODUCTS', 'DELETE')")
     @ApiMessage("Delete product")
     public ResponseEntity<ProductResponse> delete(@PathVariable("id") String id) {
         return ResponseEntity.ok(productService.delete(id));
@@ -67,7 +67,7 @@ public class ProductController {
     }
 
     @PostMapping(value = "/products/import", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'PRODUCTS', 'CREATE')")
     @ApiMessage("Import products from CSV")
     public ResponseEntity<ProductImportResult> importFromCsv(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(productImportService.importFromCsv(file));

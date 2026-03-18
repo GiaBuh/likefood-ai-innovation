@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -25,4 +26,13 @@ public class Role extends BaseEntity {
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<User> users;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "role_permissions",
+        joinColumns = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    @Builder.Default
+    private List<Permission> permissions = new ArrayList<>();
 }

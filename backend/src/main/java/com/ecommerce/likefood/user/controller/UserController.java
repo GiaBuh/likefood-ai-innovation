@@ -2,6 +2,7 @@ package com.ecommerce.likefood.user.controller;
 
 import com.ecommerce.likefood.common.response.PaginationResponse;
 import com.ecommerce.likefood.common.utils.ApiMessage;
+import com.ecommerce.likefood.user.dto.req.StaffCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserCreateRequest;
 import com.ecommerce.likefood.user.dto.req.UserSpecRequest;
 import com.ecommerce.likefood.user.dto.req.ProfileUpdateRequest;
@@ -13,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,6 +29,13 @@ public class UserController {
     @ApiMessage("Create user")
     public ResponseEntity<UserResponse> create(@RequestBody @Valid UserCreateRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.create(req));
+    }
+
+    @PostMapping("/users/staff")
+    @PreAuthorize("hasPermission(null, 'STAFF', 'CREATE')")
+    @ApiMessage("Create staff account")
+    public ResponseEntity<UserResponse> createStaff(@RequestBody @Valid StaffCreateRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.createStaff(req));
     }
 
     @GetMapping("/users/{id}")
@@ -55,5 +66,11 @@ public class UserController {
     @ApiMessage("Update my profile")
     public ResponseEntity<UserResponse> updateMyProfile(@RequestBody @Valid ProfileUpdateRequest request) {
         return ResponseEntity.ok(this.userService.updateMyProfile(request));
+    }
+
+    @GetMapping("/users/me/permissions")
+    @ApiMessage("Get my permissions")
+    public ResponseEntity<List<String>> getMyPermissions() {
+        return ResponseEntity.ok(this.userService.getMyPermissions());
     }
 }

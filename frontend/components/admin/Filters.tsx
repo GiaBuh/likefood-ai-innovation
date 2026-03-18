@@ -1,7 +1,7 @@
 import React from 'react';
 import { Category } from '../../types';
 
-type ViewType = 'orders' | 'products' | 'customers' | 'vouchers';
+type ViewType = 'orders' | 'products' | 'customers' | 'vouchers' | 'staff';
 
 interface FiltersProps {
   view: ViewType;

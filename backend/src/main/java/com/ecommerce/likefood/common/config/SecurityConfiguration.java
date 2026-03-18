@@ -1,8 +1,11 @@
 package com.ecommerce.likefood.common.config;
 
+import com.ecommerce.likefood.common.security.CustomPermissionEvaluator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity(securedEnabled = true)
+@EnableMethodSecurity(securedEnabled = true, prePostEnabled = true)
 public class SecurityConfiguration {
 
     @Value("${likefood.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}")
@@ -31,6 +34,14 @@ public class SecurityConfiguration {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler(
+            CustomPermissionEvaluator permissionEvaluator) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setPermissionEvaluator(permissionEvaluator);
+        return handler;
     }
 
     @Bean
@@ -49,21 +60,33 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**",
                                         "/storage/public-url", "/vouchers/active")
                                 .permitAll()
+                                // Storage
                                 .requestMatchers(HttpMethod.POST, "/storage/upload-avatar").authenticated()
-                                .requestMatchers(HttpMethod.POST, "/products", "/products/import", "/categories",
-                                        "/storage/upload-image")
-                                .hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.PUT, "/products/**", "/categories/**").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.DELETE, "/products/**", "/categories/**",
+                                .requestMatchers(HttpMethod.POST, "/storage/upload-image",
                                         "/storage/delete-image")
-                                .hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/orders").hasRole("ADMIN")
-                                .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasRole("ADMIN")
+                                .authenticated()
+                                // Admin endpoints — method-level @PreAuthorize handles permission checks
+                                .requestMatchers(HttpMethod.POST, "/products", "/products/import",
+                                        "/categories")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.PUT, "/products/**", "/categories/**")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/products/**", "/categories/**")
+                                .authenticated()
+                                .requestMatchers(HttpMethod.GET, "/orders").authenticated()
+                                .requestMatchers(HttpMethod.PATCH, "/orders/*/status").authenticated()
                                 .requestMatchers(HttpMethod.PUT, "/users/me").authenticated()
-                                .requestMatchers("/users/**", "/roles/**").hasRole("ADMIN")
+                                // Permission & Role management (admin only via @PreAuthorize)
+                                .requestMatchers("/permissions/**").authenticated()
+                                .requestMatchers("/users/**", "/roles/**").authenticated()
+                                // Voucher management
+                                .requestMatchers(HttpMethod.POST, "/vouchers").authenticated()
+                                .requestMatchers(HttpMethod.PUT, "/vouchers/**").authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/vouchers/**").authenticated()
+                                // User-specific endpoints
                                 .requestMatchers("/carts/me/**", "/orders/me/**").authenticated()
                                 .requestMatchers("/chat/me/**").authenticated()
-                                .requestMatchers("/chat/admin/**").hasRole("ADMIN")
+                                .requestMatchers("/chat/admin/**").authenticated()
                                 .anyRequest().authenticated())
                 .oauth2ResourceServer((oauth2) -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))

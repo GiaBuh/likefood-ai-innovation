@@ -21,21 +21,21 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/categories")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CATEGORIES', 'CREATE')")
     @ApiMessage("Create category")
     public ResponseEntity<CategoryResponse> create(@RequestBody @Valid CategoryCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.create(request));
     }
 
     @PutMapping("/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CATEGORIES', 'EDIT')")
     @ApiMessage("Update category")
     public ResponseEntity<CategoryResponse> update(@PathVariable String id, @RequestBody @Valid CategoryUpdateRequest request) {
         return ResponseEntity.ok(categoryService.update(id, request));
     }
 
     @DeleteMapping("/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CATEGORIES', 'DELETE')")
     @ApiMessage("Delete category")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         categoryService.delete(id);

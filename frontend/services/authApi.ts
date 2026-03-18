@@ -34,6 +34,8 @@ type LoginResponse = {
     address?: string;
     avatarUrl?: string;
     role?: string;
+    mustChangePassword?: boolean;
+    permissions?: string[];
   };
   accessToken?: string;
 };
@@ -59,11 +61,18 @@ function toUser(authUser: StoredAuthUser): User {
     address: authUser.address,
     avatar: authUser.avatar,
     role: authUser.role,
+    permissions: authUser.permissions,
+    mustChangePassword: authUser.mustChangePassword,
   };
 }
 
 function normalizeRole(role?: string): 'admin' | 'customer' {
-  return (role || '').toUpperCase() === 'ADMIN' ? 'admin' : 'customer';
+  const upper = (role || '').toUpperCase();
+  // ADMIN, SUPER_ADMIN, and any staff role = admin
+  if (upper === 'ADMIN' || upper === 'SUPER_ADMIN' || (upper !== 'USER' && upper.length > 0)) {
+    return 'admin';
+  }
+  return 'customer';
 }
 
 function resolveAvatarUrl(keyOrUrl?: string): string {
@@ -89,6 +98,8 @@ function toStoredAuthUser(payload: LoginResponse): StoredAuthUser {
     address: payload.user?.address || '',
     avatar: resolveAvatarUrl(payload.user?.avatarUrl),
     role: normalizeRole(payload.user?.role),
+    permissions: payload.user?.permissions || [],
+    mustChangePassword: payload.user?.mustChangePassword || false,
   };
 }
 
@@ -246,7 +257,7 @@ export async function updateProfileApi(data: {
     throw new Error(await getErrorMessageFromResponse(response, 'Update profile failed'));
   }
 
-  const payload = (await response.json()) as { data?: UserUpdatePayload } | UserUpdatePayload;
+  const payload = (await response.json()) as { data?: any } | any;
   const dataRes = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload;
   const stored: StoredAuthUser = {
     id: (dataRes as any)?.id || '',
