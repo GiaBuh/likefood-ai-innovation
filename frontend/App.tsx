@@ -94,8 +94,13 @@ const MainContent: React.FC = () => {
 
   const handleOpenProductFromChat = (productId: string) => {
     // Try to find product by ID and navigate by slug
-    const p = products.find(pr => String(pr.id) === productId);
-    navigate(`/product/${p?.slug || productId}`);
+    const p = products.find((pr) => String(pr.id) === productId);
+    if (p) {
+      navigate(`/product/${p.slug || productId}`);
+    } else {
+      // If not in products, it must be a combo
+      navigate(`/combo?id=${productId}`);
+    }
   };
 
   const handleCheckoutStart = () => {
@@ -143,7 +148,26 @@ const MainContent: React.FC = () => {
   };
 
   const handleReorder = (order: Order) => {
-    order.items.forEach((item) => addToCart(item, item.quantity));
+    order.items.forEach((item) => {
+      // Map OrderItem fields to Product-compatible fields
+      const productLike = {
+        ...item,
+        name: item.name || item.productName || 'Sản phẩm',
+        image: item.image || item.productThumbnail || '',
+        images: [],
+        location: 'Viet Nam',
+        category: '',
+        categoryName: '',
+        isUsShip: true,
+        description: '',
+        weight: item.variantLabel || 'Default',
+        packaging: 'Standard Pack',
+        variants: [],
+        thumbnail: item.image || item.productThumbnail || '',
+        status: 'Active' as const,
+      };
+      addToCart(productLike as any, item.quantity);
+    });
     navigate('/checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

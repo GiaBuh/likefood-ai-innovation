@@ -19,5 +19,6 @@ class Product:
     name: str
     description: str
     category: str
+    slug: str = ""
     variants: list[ProductVariant] = field(default_factory=list)
 

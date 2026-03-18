@@ -34,7 +34,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   onOpenProduct,
 }) => {
   const { t } = useTranslation();
-  const { products, addToCart } = useShop();
+  const { products, addToCart, addComboToCart } = useShop();
   const { showError } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState<ChatView>('menu');
@@ -57,6 +57,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const { handleActionClick, sendAiMessage } = useChatAi({
     products,
     addToCart,
+    addComboToCart,
     aiMessages,
     setAiMessages,
     aiStage,
