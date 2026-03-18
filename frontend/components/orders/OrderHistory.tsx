@@ -13,8 +13,8 @@ interface OrderHistoryProps {
   onReorder: (order: Order) => void;
 }
 
-const OrderHistory: React.FC<OrderHistoryProps> = ({ 
-  orders, 
+const OrderHistory: React.FC<OrderHistoryProps> = ({
+  orders,
   onBackToShop,
   onCancelOrder,
   onTrackOrder,
@@ -49,7 +49,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Processing':
         return (
           <>
-            <button 
+            <button
               onClick={() => onCancelOrder(order.id)}
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
@@ -62,7 +62,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Confirm':
         return (
           <>
-            <button 
+            <button
               onClick={() => onCancelOrder(order.id)}
               className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
             >
@@ -75,7 +75,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Shipped':
         return (
           <>
-            <button 
+            <button
               onClick={() => onTrackOrder(order.id)}
               className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
             >
@@ -91,7 +91,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
       case 'Cancelled':
         return (
           <>
-             <button 
+            <button
               onClick={() => onReorder(order)}
               className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 text-sm flex items-center justify-center gap-2"
             >
@@ -99,7 +99,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               {t('orders.reorder')}
             </button>
             {status === 'Complete' && (
-              <button 
+              <button
                 onClick={() => {
                   // Navigate to the first product's detail page for review
                   const firstItem = order.items[0];
@@ -127,7 +127,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           <h1 className="text-3xl font-extrabold text-neutral-900 dark:text-white">{t('orders.title')}</h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1">{t('orders.title')}</p>
         </div>
-        <button 
+        <button
           onClick={onBackToShop}
           className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-sm text-slate-700 dark:text-white hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
         >
@@ -138,41 +138,41 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
 
       {isLoading ? (
         <div className="space-y-6">
-           {[...Array(2)].map((_, i) => (
-             <div key={i} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden">
-                {/* Header Skeleton */}
-                <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex gap-12">
-                   <div>
-                      <Skeleton className="h-3 w-16 mb-2" />
-                      <Skeleton className="h-4 w-24" />
-                   </div>
-                   <div>
-                      <Skeleton className="h-3 w-20 mb-2" />
-                      <Skeleton className="h-4 w-32" />
-                   </div>
-                   <div className="ml-auto">
-                      <Skeleton className="h-6 w-24 rounded-full" />
-                   </div>
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden">
+              {/* Header Skeleton */}
+              <div className="p-6 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/30 flex gap-12">
+                <div>
+                  <Skeleton className="h-3 w-16 mb-2" />
+                  <Skeleton className="h-4 w-24" />
                 </div>
-                {/* Body Skeleton */}
-                <div className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <div className="flex-1 flex gap-4">
-                             <Skeleton className="h-16 w-16 rounded-lg" />
-                             <div className="space-y-2 flex-1">
-                                <Skeleton className="h-4 w-48" />
-                                <Skeleton className="h-3 w-32" />
-                             </div>
-                        </div>
-                        <div className="lg:w-72 pl-6 border-l border-stone-100 dark:border-stone-800 space-y-3">
-                             <Skeleton className="h-3 w-24" />
-                             <Skeleton className="h-4 w-full" />
-                             <Skeleton className="h-10 w-full rounded-xl mt-2" />
-                        </div>
+                <div>
+                  <Skeleton className="h-3 w-20 mb-2" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="ml-auto">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              </div>
+              {/* Body Skeleton */}
+              <div className="p-6">
+                <div className="flex flex-col lg:flex-row gap-6">
+                  <div className="flex-1 flex gap-4">
+                    <Skeleton className="h-16 w-16 rounded-lg" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
                     </div>
+                  </div>
+                  <div className="lg:w-72 pl-6 border-l border-stone-100 dark:border-stone-800 space-y-3">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-10 w-full rounded-xl mt-2" />
+                  </div>
                 </div>
-             </div>
-           ))}
+              </div>
+            </div>
+          ))}
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 border-dashed">
@@ -181,7 +181,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t('orders.empty')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-sm text-center">{t('orders.empty')}</p>
-          <button 
+          <button
             onClick={onBackToShop}
             className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20"
           >
@@ -230,9 +230,9 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                           <p className="text-sm text-stone-500 dark:text-stone-400">Qty: {item.quantity} × ${item.price.toFixed(2)}</p>
                         </div>
                         <div className="text-right">
-                           <p className="font-bold text-slate-900 dark:text-white">
-                             {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">Giá cập nhật</span>}
-                           </p>
+                          <p className="font-bold text-slate-900 dark:text-white">
+                            {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">Giá cập nhật</span>}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -241,14 +241,14 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                   {/* Actions / Address */}
                   <div className="lg:w-72 lg:border-l lg:border-stone-100 lg:dark:border-stone-800 lg:pl-6 flex flex-col justify-center gap-3">
                     <div className="mb-2">
-                       <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Shipping To</p>
-                       <p className="text-sm text-slate-700 dark:text-stone-300 leading-relaxed line-clamp-2">
-                         {order.shippingAddress || "123 Main St, Springfield, USA"}
-                       </p>
+                      <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Shipping To</p>
+                      <p className="text-sm text-slate-700 dark:text-stone-300 leading-relaxed line-clamp-2">
+                        {order.shippingAddress || "123 Main St, Springfield, USA"}
+                      </p>
                     </div>
-                    
+
                     {renderOrderActions(order)}
-                    
+
                   </div>
                 </div>
               </div>

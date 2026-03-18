@@ -165,15 +165,20 @@ class ChatService:
                 combo_actions = []
                 for c in published_combos[:5]:
                     combo_name = c.get("comboName", "Combo")
-                    # Match combo name to product slug
-                    slug = name_to_slug.get(self._normalize(combo_name), "")
-                    if slug:
+                    combo_id = c.get("id", "")
+                    if combo_id:
                         combo_actions.append(
                             AiChatAction(
-                                type="open-product",
+                                type="open_product",
                                 label=f"Xem {combo_name}",
-                                command=f"/open-product:{slug}",
-                                productId=slug,
+                                productId=combo_id,
+                            )
+                        )
+                        combo_actions.append(
+                            AiChatAction(
+                                type="buy_combo",
+                                label=f"Mua {combo_name}",
+                                productId=combo_id,
                             )
                         )
                     else:

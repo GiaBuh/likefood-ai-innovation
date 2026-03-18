@@ -94,8 +94,13 @@ const MainContent: React.FC = () => {
 
   const handleOpenProductFromChat = (productId: string) => {
     // Try to find product by ID and navigate by slug
-    const p = products.find(pr => String(pr.id) === productId);
-    navigate(`/product/${p?.slug || productId}`);
+    const p = products.find((pr) => String(pr.id) === productId);
+    if (p) {
+      navigate(`/product/${p.slug || productId}`);
+    } else {
+      // If not in products, it must be a combo
+      navigate(`/combo?id=${productId}`);
+    }
   };
 
   const handleCheckoutStart = () => {
