@@ -73,4 +73,12 @@ public class UserController {
     public ResponseEntity<List<String>> getMyPermissions() {
         return ResponseEntity.ok(this.userService.getMyPermissions());
     }
+
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasPermission(null, 'STAFF', 'DELETE')")
+    @ApiMessage("Delete staff account")
+    public ResponseEntity<Void> deleteStaff(@PathVariable("id") String id) {
+        this.userService.deleteStaff(id);
+        return ResponseEntity.noContent().build();
+    }
 }

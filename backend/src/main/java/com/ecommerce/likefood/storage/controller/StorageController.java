@@ -35,7 +35,7 @@ public class StorageController {
     }
 
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @ApiMessage("Upload image successfully")
     public ResponseEntity<UploadImageResponse> uploadImage(
             @RequestPart("file") MultipartFile file,
@@ -54,7 +54,7 @@ public class StorageController {
     }
 
     @DeleteMapping("/delete-image")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @ApiMessage("Delete image successfully")
     public ResponseEntity<Void> deleteImage(@RequestParam("key") String key) {
         this.storageService.deleteProductImageByKey(key);

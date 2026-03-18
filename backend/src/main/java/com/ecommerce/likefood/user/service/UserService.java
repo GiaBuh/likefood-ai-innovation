@@ -25,4 +25,6 @@ public interface UserService {
     UserResponse createStaff(StaffCreateRequest request);
 
     List<String> getMyPermissions();
+
+    void deleteStaff(String id);
 }

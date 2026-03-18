@@ -781,7 +781,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       />
       {showChangePassword && (
         <ChangePasswordModal
-          onSuccess={() => setShowChangePassword(false)}
+          onSuccess={() => {
+            setShowChangePassword(false);
+            // Update stored user so refresh/re-login won't show modal again
+            const raw = localStorage.getItem('likefood_auth_user');
+            if (raw) {
+              try {
+                const stored = JSON.parse(raw);
+                stored.mustChangePassword = false;
+                localStorage.setItem('likefood_auth_user', JSON.stringify(stored));
+              } catch { /* ignore */ }
+            }
+          }}
         />
       )}
     </div>

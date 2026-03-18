@@ -33,21 +33,21 @@ public class ChatController {
     }
 
     @GetMapping("/admin/conversations")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CHAT', 'VIEW')")
     @ApiMessage("Get all conversations for admin")
     public ResponseEntity<List<ChatConversationResponse>> getConversations() {
         return ResponseEntity.ok(chatService.getConversationsForAdmin());
     }
 
     @GetMapping("/admin/conversations/{userId}/messages")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CHAT', 'VIEW')")
     @ApiMessage("Get messages for a conversation")
     public ResponseEntity<List<ChatMessageResponse>> getMessages(@PathVariable String userId) {
         return ResponseEntity.ok(chatService.getMessagesForAdmin(userId));
     }
 
     @PostMapping("/admin/conversations/{userId}/messages")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'CHAT', 'VIEW')")
     @ApiMessage("Send message as admin")
     public ResponseEntity<ChatMessageResponse> sendAsAdmin(
             @PathVariable String userId,
