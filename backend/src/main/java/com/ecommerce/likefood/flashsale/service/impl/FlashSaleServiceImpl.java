@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.scheduling.annotation.Scheduled;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -72,9 +74,30 @@ public class FlashSaleServiceImpl implements FlashSaleService {
         return toResponse(event);
     }
 
+    /**
+     * Validate that new event time range doesn't overlap with existing events.
+     */
+    private void validateNoOverlap(Instant startTime, Instant endTime, String excludeEventId) {
+        List<FlashSaleEvent> allEvents = flashSaleEventRepository.findAllByOrderByStartTimeDesc();
+        for (FlashSaleEvent existing : allEvents) {
+            if (excludeEventId != null && existing.getId().equals(excludeEventId)) continue;
+            if (!Boolean.TRUE.equals(existing.getIsActive())) continue;
+            // Check overlap: existingStart < newEnd AND existingEnd > newStart
+            if (existing.getStartTime().isBefore(endTime) && existing.getEndTime().isAfter(startTime)) {
+                throw new RuntimeException(
+                    "Thời gian bị trùng với sự kiện '" + existing.getName() + "' (" +
+                    existing.getStartTime() + " - " + existing.getEndTime() + ")"
+                );
+            }
+        }
+    }
+
     @Override
     @Transactional
     public FlashSaleEventResponse createFlashSale(FlashSaleEventRequest request) {
+        // Validate no overlap
+        validateNoOverlap(request.getStartTime(), request.getEndTime(), null);
+
         FlashSaleEvent event = FlashSaleEvent.builder()
                 .name(request.getName())
                 .bannerUrl(request.getBannerUrl())
@@ -112,6 +135,9 @@ public class FlashSaleServiceImpl implements FlashSaleService {
         FlashSaleEvent event = flashSaleEventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Flash sale event not found: " + id));
 
+        // Validate no overlap (exclude self)
+        validateNoOverlap(request.getStartTime(), request.getEndTime(), id);
+
         event.setName(request.getName());
         event.setBannerUrl(request.getBannerUrl());
         event.setStartTime(request.getStartTime());
@@ -122,6 +148,8 @@ public class FlashSaleServiceImpl implements FlashSaleService {
 
         // Replace items
         event.getItems().clear();
+        flashSaleEventRepository.saveAndFlush(event);  // flush orphan removal first
+
         if (request.getItems() != null) {
             for (FlashSaleItemRequest itemReq : request.getItems()) {
                 Product product = productRepository.findById(itemReq.getProductId())
@@ -139,6 +167,7 @@ public class FlashSaleServiceImpl implements FlashSaleService {
         }
 
         FlashSaleEvent saved = flashSaleEventRepository.save(event);
+        cacheService.invalidateEvent(id);
         return toResponse(saved);
     }
 
@@ -147,8 +176,38 @@ public class FlashSaleServiceImpl implements FlashSaleService {
     public void deleteFlashSale(String id) {
         FlashSaleEvent event = flashSaleEventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Flash sale event not found: " + id));
-        cacheService.invalidateEvent(id);
+
+        // Invalidate Redis cache for all items
+        for (FlashSaleItem item : event.getItems()) {
+            cacheService.invalidateEvent(event.getId());
+        }
+
+        // Clear items first (orphan removal), then flush before deleting event
+        event.getItems().clear();
+        flashSaleEventRepository.saveAndFlush(event);
+
+        // Now delete the event itself
         flashSaleEventRepository.delete(event);
+        log.info("🗑️ Deleted flash sale event: {} ({})", event.getName(), id);
+    }
+
+    // ═══ Auto-cleanup: delete expired events every 5 minutes ═══
+
+    @Scheduled(fixedRate = 300_000) // 5 minutes
+    @Transactional
+    public void cleanupExpiredEvents() {
+        Instant now = Instant.now();
+        List<FlashSaleEvent> allEvents = flashSaleEventRepository.findAllByOrderByStartTimeDesc();
+
+        for (FlashSaleEvent event : allEvents) {
+            if (event.getEndTime().isBefore(now)) {
+                log.info("🧹 Auto-cleaning expired flash sale: {} (ended at {})", event.getName(), event.getEndTime());
+                cacheService.invalidateEvent(event.getId());
+                event.getItems().clear();
+                flashSaleEventRepository.saveAndFlush(event);
+                flashSaleEventRepository.delete(event);
+            }
+        }
     }
 
     // ═══ Level 2+3: Atomic Purchase + WebSocket Broadcast ═══

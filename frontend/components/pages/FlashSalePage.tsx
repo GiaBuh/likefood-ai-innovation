@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -111,7 +111,7 @@ const FlashSaleProductCard: React.FC<{
   const productUrl = `/product/${item.productSlug || item.productId}?salePrice=${item.salePrice}&originalPrice=${item.originalPrice}&discount=${item.discountPercent}${item.variantId ? `&variantId=${item.variantId}` : ''}`;
 
   return (
-    <div className={`group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 ${isSoldOut ? 'opacity-60' : ''}`}>
+    <div className={`group bg-white dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1`}>
       {/* Image + Badge */}
       <Link to={productUrl} className="block">
         <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-700">
@@ -128,8 +128,8 @@ const FlashSaleProductCard: React.FC<{
           )}
           {isSoldOut && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="text-white font-bold text-sm bg-orange-500 px-3 py-1 rounded-full">
-                {t('flashSalePage.soldOut')}
+              <span className="text-white font-bold text-sm bg-neutral-700/90 px-3 py-1 rounded-full">
+                Flash Sale đã bán hết
               </span>
             </div>
           )}
@@ -159,34 +159,43 @@ const FlashSaleProductCard: React.FC<{
         {/* Sold Progress Bar */}
         <div className="relative w-full h-5 sm:h-[22px] bg-orange-100 dark:bg-orange-950/30 rounded-full overflow-hidden mb-2">
           <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-1000"
+            className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${isSoldOut ? 'bg-neutral-400 dark:bg-neutral-600' : 'bg-gradient-to-r from-orange-500 to-orange-400'}`}
             style={{ width: `${Math.min(item.soldPercent, 100)}%` }}
           />
           <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
-            {item.soldPercent > 70
-              ? t('flashSalePage.sellingFast')
-              : `${t('flashSalePage.sold')} ${item.soldCount}`}
+            {isSoldOut
+              ? 'Đã bán hết'
+              : item.soldPercent > 70
+                ? t('flashSalePage.sellingFast')
+                : `${t('flashSalePage.sold')} ${item.soldCount}`}
           </span>
         </div>
 
-        {/* Add to Cart Button */}
-        <button
-          onClick={() => !isSoldOut && !isAdding && onAddToCart(item)}
-          disabled={isSoldOut || isAdding}
-          className={`w-full py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1 ${
-            isSoldOut
-              ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed'
-              : isAdding
+        {/* Add to Cart / Buy at Original Price Button */}
+        {isSoldOut ? (
+          <Link
+            to={`/product/${item.productSlug || item.productId}`}
+            className="w-full py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1 bg-primary-500 hover:bg-primary-600 text-white shadow-sm hover:shadow-md active:scale-95"
+          >
+            <span className="material-symbols-outlined !text-sm">storefront</span>
+            Mua giá gốc
+            <span className="material-symbols-outlined !text-sm">arrow_forward</span>
+          </Link>
+        ) : (
+          <button
+            onClick={() => !isAdding && onAddToCart(item)}
+            disabled={isAdding}
+            className={`w-full py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-1 ${
+              isAdding
                 ? 'bg-orange-400 text-white cursor-wait animate-pulse'
                 : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow-md active:scale-95'
-          }`}
-        >
-          {isSoldOut
-            ? t('flashSalePage.soldOut')
-            : isAdding
+            }`}
+          >
+            {isAdding
               ? '...'
               : <><span className="material-symbols-outlined !text-sm">shopping_cart</span>Thêm giỏ hàng</>}
-        </button>
+          </button>
+        )}
       </div>
     </div>
   );

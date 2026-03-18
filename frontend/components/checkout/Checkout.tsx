@@ -4,6 +4,7 @@ import CheckoutStepper from './CheckoutStepper';
 import CartReview from './CartReview';
 import ShippingForm from './ShippingForm';
 import OrderSuccess from './OrderSuccess';
+import BoxAnimation from './BoxAnimation';
 import { useAuth } from '../../contexts/AuthContext';
 import { useShop } from '../../contexts/ShopContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -36,6 +37,7 @@ const Checkout: React.FC<CheckoutProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'phone' | 'address', string>>>({});
   const [selectedShopVoucher, setSelectedShopVoucher] = useState<UserVoucher | null>(null);
   const [selectedShippingVoucher, setSelectedShippingVoucher] = useState<UserVoucher | null>(null);
+  const [isPacking, setIsPacking] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,19 +78,26 @@ const Checkout: React.FC<CheckoutProps> = ({
     }
 
     try {
-      await onPlaceOrder({
-        name: formData.name,
-        phone: formData.phone,
-        address: formData.address,
-        note: formData.note,
-        shopVoucherId: selectedShopVoucher?.id,
-        shippingVoucherId: selectedShippingVoucher?.id,
-      });
+      setIsPacking(true);
+      // Run the network request and the animation delay concurrently so animation finishes nicely
+      await Promise.all([
+        onPlaceOrder({
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          note: formData.note,
+          shopVoucherId: selectedShopVoucher?.id,
+          shippingVoucherId: selectedShippingVoucher?.id,
+        }),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ]);
       setDirection('forward');
       setStep(3);
     } catch (error) {
       console.error('Cannot place order.', error);
       showError(error instanceof Error ? error.message : 'Không thể đặt hàng. Vui lòng kiểm tra giỏ hàng và thử lại.');
+    } finally {
+      setIsPacking(false);
     }
   };
 
@@ -109,6 +118,8 @@ const Checkout: React.FC<CheckoutProps> = ({
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8" ref={contentRef}>
+      {isPacking && <BoxAnimation />}
+
       {/* Stepper */}
       <CheckoutStepper step={step} onStepClick={(s) => {
         if (s < step && step !== 3) handlePrevStep(s);
