@@ -31,6 +31,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws/chat")
                 .setAllowedOrigins(allowedOrigins.split(","))
                 .withSockJS();
+        // Flash Sale WebSocket — public, no JWT required
+        registry.addEndpoint("/ws/flash-sale")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
     @Override
