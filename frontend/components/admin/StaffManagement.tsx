@@ -83,6 +83,11 @@ async function deleteRoleApi(id: string): Promise<void> {
   if (!res.ok) throw new Error(await getErrorMessageFromResponse(res, 'Xóa role thất bại'));
 }
 
+async function deleteStaffApi(id: string): Promise<void> {
+  const res = await apiFetch(`/users/${id}`, { method: 'DELETE', requireAuth: true });
+  if (!res.ok) throw new Error(await getErrorMessageFromResponse(res, 'Xóa nhân viên thất bại'));
+}
+
 // ======================== StaffFormModal ========================
 const StaffFormModal: React.FC<{
   isOpen: boolean;
@@ -380,6 +385,20 @@ const StaffManagement: React.FC = () => {
     }
   };
 
+  const handleDeleteStaff = async (staff: StaffUser) => {
+    if (staff.role?.name === 'SUPER_ADMIN') {
+      alert('Không thể xóa tài khoản SUPER_ADMIN');
+      return;
+    }
+    if (!window.confirm(`Xóa nhân viên "${staff.username}" (${staff.email})?`)) return;
+    try {
+      await deleteStaffApi(staff.id);
+      await loadData();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Lỗi xóa nhân viên');
+    }
+  };
+
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'staff', label: 'Nhân viên', icon: 'badge' },
     { key: 'roles', label: 'Vai trò & Quyền hạn', icon: 'admin_panel_settings' },
@@ -444,6 +463,7 @@ const StaffManagement: React.FC = () => {
                     <th className="px-6 py-4 font-semibold">Nhân viên</th>
                     <th className="px-6 py-4 font-semibold">Email</th>
                     <th className="px-6 py-4 font-semibold">Vai trò</th>
+                    {hasPermission('STAFF', 'DELETE') && <th className="px-6 py-4 font-semibold text-right">Hành động</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -467,6 +487,16 @@ const StaffManagement: React.FC = () => {
                           {staff.role?.name || 'N/A'}
                         </span>
                       </td>
+                      {hasPermission('STAFF', 'DELETE') && (
+                        <td className="px-6 py-4 text-right">
+                          {staff.role?.name !== 'SUPER_ADMIN' && (
+                            <button onClick={() => handleDeleteStaff(staff)}
+                              className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors" title="Xóa nhân viên">
+                              <span className="material-symbols-outlined !text-xl">delete</span>
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

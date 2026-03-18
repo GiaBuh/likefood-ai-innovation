@@ -93,6 +93,16 @@ public class UserServiceImpl implements UserService {
                 .toList();
     }
 
+    @Override
+    public void deleteStaff(String id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException("User not found"));
+        if (SUPER_ADMIN_ROLE.equals(user.getRole().getName())) {
+            throw new AppException("Cannot delete SUPER_ADMIN account");
+        }
+        userRepository.delete(user);
+    }
+
     private Role findRoleById(String id) {
         return this.roleRepository.findById(id)
                 .orElseThrow(() -> new AppException("Role not found"));

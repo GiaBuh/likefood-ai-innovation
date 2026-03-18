@@ -71,7 +71,7 @@ public class ReviewController {
      * Admin: Reply to a review.
      */
     @PostMapping("/admin/reviews/{reviewId}/reply")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @ApiMessage("Reply to review")
     public ResponseEntity<ReviewResponse> replyToReview(
             @PathVariable String reviewId,
@@ -84,7 +84,7 @@ public class ReviewController {
      * Admin: Get all reviews.
      */
     @GetMapping("/admin/reviews")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @ApiMessage("Get all reviews for admin")
     public ResponseEntity<Page<ReviewResponse>> getAllReviews(Pageable pageable) {
         return ResponseEntity.ok(reviewService.getAllReviewsForAdmin(pageable));
