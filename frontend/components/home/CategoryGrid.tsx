@@ -49,7 +49,7 @@ const CategoryGrid: React.FC = () => {
   }
 
   return (
-    <section className="py-10 bg-white dark:bg-neutral-900">
+    <section className="py-6 sm:py-10 bg-white dark:bg-neutral-900">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -68,8 +68,11 @@ const CategoryGrid: React.FC = () => {
           </Link>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4">
+        {/* Horizontal Scroll */}
+        <div
+          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {categories.map((cat, idx) => {
             const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
             const icon = getIconForCategory(cat.name, cat.icon);
@@ -77,8 +80,8 @@ const CategoryGrid: React.FC = () => {
             return (
               <Link
                 key={cat.id}
-                to={`/shop?category=${encodeURIComponent(cat.name)}`}
-                className={`group flex flex-col items-center gap-2.5 p-4 sm:p-5 rounded-2xl border ${color.bg} ${color.border} ${color.hover} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                to={`/shop?categoryName=${encodeURIComponent(cat.name)}`}
+                className={`group flex-shrink-0 flex flex-col items-center gap-2.5 w-[90px] sm:w-[110px] p-3 sm:p-5 rounded-2xl border ${color.bg} ${color.border} ${color.hover} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
               >
                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${color.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                   <span className={`material-symbols-outlined !text-2xl sm:!text-3xl ${color.text}`} style={{ fontVariationSettings: "'FILL' 1" }}>

@@ -124,7 +124,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           <>
             <button
               onClick={() => onReorder(order)}
-              className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20 text-sm flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/20 text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">shopping_cart</span>
               {t('orders.reorder')}
@@ -214,7 +214,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
           <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-sm text-center">{t('orders.empty')}</p>
           <button
             onClick={onBackToShop}
-            className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20"
+            className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/20"
           >
             {t('common.shop')}
           </button>

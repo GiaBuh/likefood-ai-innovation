@@ -1,28 +1,31 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useShop } from '../../contexts/ShopContext';
-import { Product } from '../../types';
+import {
+  fetchActiveFlashSales,
+  FlashSaleEventResponse,
+  FlashSaleItemResponse,
+} from '../../services/flashSaleApi';
 
-// Seeded random for consistent sold amounts per product
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed * 9301 + 49297) * 49297;
-  return x - Math.floor(x);
+const S3_BASE = (((import.meta as any).env?.VITE_S3_PUBLIC_BASE_URL as string) || '').replace(/\/+$/, '');
+
+function resolveImage(key: string | null | undefined): string {
+  if (!key) return '';
+  if (key.startsWith('http')) return key;
+  return `${S3_BASE}/${key}`;
 }
 
-function useCountdown() {
+function useCountdown(endTime: string | null) {
   const getTimeLeft = useCallback(() => {
-    const now = new Date();
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    const diff = endOfDay.getTime() - now.getTime();
+    if (!endTime) return { hours: 0, minutes: 0, seconds: 0 };
+    const diff = new Date(endTime).getTime() - Date.now();
     if (diff <= 0) return { hours: 0, minutes: 0, seconds: 0 };
     return {
       hours: Math.floor(diff / (1000 * 60 * 60)),
       minutes: Math.floor((diff / (1000 * 60)) % 60),
       seconds: Math.floor((diff / 1000) % 60),
     };
-  }, []);
+  }, [endTime]);
 
   const [timeLeft, setTimeLeft] = useState(getTimeLeft);
 
@@ -34,36 +37,36 @@ function useCountdown() {
   return timeLeft;
 }
 
-function getDiscount(product: Product): number {
-  // Generate a consistent discount (15%-50%) based on product ID
-  const id = typeof product.id === 'number' ? product.id : parseInt(product.id, 10) || 0;
-  return Math.floor(15 + seededRandom(id + 7) * 35);
-}
-
-function getOriginalPrice(product: Product, discount: number): number {
-  return Math.round((product.price / (1 - discount / 100)) * 100) / 100;
-}
-
-function getSoldCount(product: Product): number {
-  const id = typeof product.id === 'number' ? product.id : parseInt(product.id, 10) || 0;
-  return Math.floor(20 + seededRandom(id + 3) * 180);
-}
-
-function getSoldPercent(product: Product): number {
-  const id = typeof product.id === 'number' ? product.id : parseInt(product.id, 10) || 0;
-  return Math.floor(35 + seededRandom(id + 11) * 60);
-}
-
 const FlashSale: React.FC = () => {
   const { t } = useTranslation();
-  const { products } = useShop();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { hours, minutes, seconds } = useCountdown();
+  const [activeEvent, setActiveEvent] = useState<FlashSaleEventResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get active products for flash sale (take up to 12)
-  const flashProducts = products
-    .filter(p => p.status === 'Active')
-    .slice(0, 12);
+  // Fetch active flash sale from real API
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    fetchActiveFlashSales()
+      .then((events) => {
+        if (cancelled) return;
+        // Pick the first active event (currently happening)
+        const now = Date.now();
+        const active = events.find(
+          (e) => e.isActive && now >= new Date(e.startTime).getTime() && now <= new Date(e.endTime).getTime()
+        );
+        setActiveEvent(active || null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveEvent(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const { hours, minutes, seconds } = useCountdown(activeEvent?.endTime || null);
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -74,8 +77,8 @@ const FlashSale: React.FC = () => {
     });
   };
 
-  // Hide if no products
-  if (flashProducts.length === 0) return null;
+  // Hide if loading or no active event
+  if (isLoading || !activeEvent || activeEvent.items.length === 0) return null;
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -111,9 +114,9 @@ const FlashSale: React.FC = () => {
             </div>
           </div>
 
-          {/* View All */}
+          {/* View All → Flash Sale Page */}
           <Link
-            to="/shop"
+            to="/flash-sale"
             className="text-sm font-semibold text-primary-500 hover:text-primary-600 flex items-center gap-1 transition-colors"
           >
             {t('home.flashSaleViewAll')}
@@ -129,30 +132,37 @@ const FlashSale: React.FC = () => {
             className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {flashProducts.map((product) => {
-              const discount = getDiscount(product);
-              const originalPrice = getOriginalPrice(product, discount);
-              const soldCount = getSoldCount(product);
-              const soldPercent = getSoldPercent(product);
+            {activeEvent.items.map((item: FlashSaleItemResponse) => {
+              const isSoldOut = item.stock > 0 && item.soldCount >= item.stock;
+              const productUrl = `/product/${item.productSlug || item.productId}?salePrice=${item.salePrice}&originalPrice=${item.originalPrice}&discount=${item.discountPercent}${item.variantId ? `&variantId=${item.variantId}` : ''}`;
 
               return (
                 <Link
-                  key={product.id}
-                  to={`/product/${product.slug || product.id}`}
+                  key={item.id}
+                  to={productUrl}
                   className="flex-shrink-0 w-[140px] sm:w-[170px] md:w-[190px] lg:w-[200px] bg-white dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group/card"
                 >
                   {/* Image + Badge */}
                   <div className="relative aspect-square overflow-hidden bg-neutral-100 dark:bg-neutral-700">
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={resolveImage(item.productImage)}
+                      alt={item.productName}
                       className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
                       loading="lazy"
                     />
                     {/* Discount Badge */}
-                    <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
-                      -{discount}%
-                    </div>
+                    {item.discountPercent > 0 && (
+                      <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md">
+                        -{item.discountPercent}%
+                      </div>
+                    )}
+                    {isSoldOut && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-white font-bold text-xs bg-neutral-700/90 px-2 py-1 rounded-full">
+                          Đã bán hết
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Info */}
@@ -160,21 +170,27 @@ const FlashSale: React.FC = () => {
                     {/* Price */}
                     <div className="mb-1.5">
                       <p className="text-orange-500 font-extrabold text-base sm:text-lg leading-tight">
-                        ${product.price.toFixed(2)}
+                        ${item.salePrice.toFixed(2)}
                       </p>
-                      <p className="text-neutral-400 dark:text-neutral-500 text-xs line-through">
-                        ${originalPrice.toFixed(2)}
-                      </p>
+                      {item.originalPrice > item.salePrice && (
+                        <p className="text-neutral-400 dark:text-neutral-500 text-xs line-through">
+                          ${item.originalPrice.toFixed(2)}
+                        </p>
+                      )}
                     </div>
 
                     {/* Sold Progress Bar */}
                     <div className="relative w-full h-5 sm:h-[22px] bg-orange-100 dark:bg-orange-950/30 rounded-full overflow-hidden">
                       <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${soldPercent}%` }}
+                        className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${isSoldOut ? 'bg-neutral-400 dark:bg-neutral-600' : 'bg-gradient-to-r from-orange-500 to-orange-400'}`}
+                        style={{ width: `${Math.min(item.soldPercent, 100)}%` }}
                       ></div>
                       <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
-                        {soldPercent > 70 ? t('home.flashSaleHot') : `${t('home.flashSaleSold')} ${soldCount}`}
+                        {isSoldOut
+                          ? 'Đã bán hết'
+                          : item.soldPercent > 70
+                            ? t('home.flashSaleHot')
+                            : `${t('home.flashSaleSold')} ${item.soldCount}`}
                       </span>
                     </div>
                   </div>

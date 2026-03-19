@@ -44,7 +44,7 @@ const TodaySuggestions: React.FC = () => {
 
   if (isLoading) {
     return (
-      <section className="py-10 sm:py-16 lg:py-20 bg-neutral-50 dark:bg-neutral-800/30">
+      <section className="py-6 sm:py-10 lg:py-20 bg-neutral-50 dark:bg-neutral-800/30">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-700 rounded-lg mx-auto animate-pulse"></div>
@@ -69,7 +69,7 @@ const TodaySuggestions: React.FC = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-10 sm:py-16 lg:py-20 bg-neutral-50 dark:bg-neutral-800/30">
+    <section className="py-6 sm:py-10 lg:py-20 bg-neutral-50 dark:bg-neutral-800/30">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-10">
@@ -78,7 +78,7 @@ const TodaySuggestions: React.FC = () => {
             <span className="material-symbols-outlined text-primary-500 !text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
             <div className="h-px w-8 bg-primary-300"></div>
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 dark:text-white">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-neutral-900 dark:text-white">
             {t('landing.todaySuggestions')}
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 mt-2 text-sm sm:text-base">

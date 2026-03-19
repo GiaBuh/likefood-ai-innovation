@@ -137,7 +137,7 @@ const OrderSuccess: React.FC<OrderSuccessProps> = ({
           onClick={onViewOrder}
           className="flex-1 px-6 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white 
             font-bold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 
-            shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30
+            shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30
             flex items-center justify-center gap-2"
         >
           <span className="material-symbols-outlined !text-lg">receipt_long</span>

@@ -78,9 +78,12 @@ const HomePage: React.FC<HomePageProps> = ({ onProductClick, searchQuery }) => {
     // Server-side Pagination
     const [currentPage, setCurrentPage] = useState(0);
 
-    // Sync URL changes to state
+    // Sync URL changes to state & scroll to top when arriving with a category filter
     useEffect(() => {
         setActiveCategory(categoryFromUrl || "all");
+        if (categoryFromUrl) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }, [categoryFromUrl]);
 
     // Ref for scrolling to products top

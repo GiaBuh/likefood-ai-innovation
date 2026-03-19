@@ -186,7 +186,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                   className="w-full flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined !text-xl text-orange-500">local_offer</span>
+                    <span className="material-symbols-outlined !text-xl text-primary-500">local_offer</span>
                     <span className="text-sm text-neutral-700 dark:text-neutral-200">
                       {selectedShopVoucher ? (selectedShopVoucher.voucher.discountType === 'PERCENT' ? `Giảm ${selectedShopVoucher.voucher.discountValue}%` : `Giảm $${selectedShopVoucher.voucher.discountValue}`) : 'Chọn Voucher Shop'}
                     </span>
@@ -228,7 +228,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
                 </span>
               </div>
               {shopDiscount > 0 && (
-                <div className="flex justify-between text-sm text-orange-500 font-semibold">
+                <div className="flex justify-between text-sm text-primary-500 font-semibold">
                   <span>Voucher giảm giá</span>
                   <span className="tabular-nums">-${shopDiscount.toFixed(2)}</span>
                 </div>
@@ -256,7 +256,7 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
           onClick={onPlaceOrder}
           className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl 
             hover:from-primary-600 hover:to-primary-700 transition-all duration-300 
-            shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30
+            shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30
             flex items-center gap-2 hover:gap-3 active:scale-[0.98]"
         >
           {t('checkout.placeOrder')}

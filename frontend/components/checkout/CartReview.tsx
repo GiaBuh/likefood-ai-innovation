@@ -94,7 +94,7 @@ const CartReview: React.FC<CartReviewProps> = ({
           </p>
           <button 
             onClick={onBackToHome} 
-            className="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30"
+            className="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary-500/20 hover:shadow-primary-500/30"
           >
             <span className="flex items-center gap-2">
               <span className="material-symbols-outlined !text-lg">storefront</span>
@@ -213,7 +213,7 @@ const CartReview: React.FC<CartReviewProps> = ({
               onClick={handleCheckoutClick}
               className="px-6 sm:px-8 py-3 sm:py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl 
                 hover:from-primary-600 hover:to-primary-700 transition-all duration-300 
-                shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30
+                shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30
                 flex items-center gap-2 hover:gap-3"
             >
               {t('cart.checkout')}

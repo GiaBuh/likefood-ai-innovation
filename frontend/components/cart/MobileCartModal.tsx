@@ -102,7 +102,7 @@ const MobileCartModal: React.FC<MobileCartModalProps> = ({ isOpen, onClose, cart
              </div>
              <button 
                onClick={onCheckout}
-               className="w-full py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-orange-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
+               className="w-full py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-primary-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
              >
                {t('cart.checkout')}
              </button>

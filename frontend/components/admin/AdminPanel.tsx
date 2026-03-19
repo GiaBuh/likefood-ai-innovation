@@ -458,19 +458,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       { label: 'Tổng doanh thu', value: `$${totalRevenue.toFixed(2)}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
       { label: 'Tổng đơn', value: `${orders.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'shopping_bag', iconColorClass: 'text-blue-500', iconBgClass: 'bg-blue-500/10' },
       { label: 'Khách hàng', value: `${customers.length}`, trend: `${activeCustomers} đang hoạt động`, trendDirection: 'up', icon: 'group_add', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
-      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần xử lý', trendDirection: 'down', icon: 'pending_actions', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' }
+      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần xử lý', trendDirection: 'down', icon: 'pending_actions', iconColorClass: 'text-primary-500', iconBgClass: 'bg-primary-500/10' }
     ];
 
     const orderKpi: KPIStats[] = [
       { label: 'Tổng đơn', value: `${orders.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'shopping_cart', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần chú ý', trendDirection: 'down', icon: 'schedule', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
+      { label: 'Chờ xử lý', value: `${pendingOrders}`, trend: 'Cần chú ý', trendDirection: 'down', icon: 'schedule', iconColorClass: 'text-primary-500', iconBgClass: 'bg-primary-500/10' },
       { label: 'Doanh thu', value: `$${totalRevenue.toFixed(2)}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'payments', iconColorClass: 'text-green-500', iconBgClass: 'bg-green-500/10' },
       { label: 'Đã hủy', value: `${orders.filter((o) => o.fulfillmentStatus === 'Cancelled').length}`, trend: 'Dữ liệu thực', trendDirection: 'down', icon: 'assignment_return', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' }
     ];
 
     const productKpi: KPIStats[] = [
       { label: 'Tổng sản phẩm', value: `${products.length}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'inventory_2', iconColorClass: 'text-primary', iconBgClass: 'bg-primary/10' },
-      { label: 'Tồn kho thấp', value: `${lowStockProducts}`, trend: 'Cần nhập thêm', trendDirection: 'down', icon: 'production_quantity_limits', iconColorClass: 'text-orange-500', iconBgClass: 'bg-orange-500/10' },
+      { label: 'Tồn kho thấp', value: `${lowStockProducts}`, trend: 'Cần nhập thêm', trendDirection: 'down', icon: 'production_quantity_limits', iconColorClass: 'text-primary-500', iconBgClass: 'bg-primary-500/10' },
       { label: 'Hết hàng', value: `${outOfStockProducts}`, trend: 'Khẩn cấp', trendDirection: 'down', icon: 'event_busy', iconColorClass: 'text-red-500', iconBgClass: 'bg-red-500/10' },
       { label: 'Danh mục', value: `${new Set(products.map((p) => p.categoryName || p.category)).size}`, trend: 'Dữ liệu thực', trendDirection: 'up', icon: 'category', iconColorClass: 'text-purple-500', iconBgClass: 'bg-purple-500/10' }
     ];
@@ -627,7 +627,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   )}
                   <button 
                       onClick={handleAddProduct}
-                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20"
+                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary-500/20"
                   >
                       <span className="material-symbols-outlined text-[20px]">add</span>
                       Thêm sản phẩm
@@ -638,7 +638,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   onClick={() => {
                     if (currentView === 'vouchers') handleOpenVoucherModal();
                   }}
-                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-orange-500/20"
+                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 text-sm font-bold text-white hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary-500/20"
                 >
                   <span className="material-symbols-outlined text-[20px]">add</span>
                   {headerInfo.btnText}

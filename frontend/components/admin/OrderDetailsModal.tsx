@@ -169,7 +169,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                 Hủy đơn
               </button>
             )}
-            <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-primary-700 text-sm font-bold shadow-lg shadow-orange-500/20 transition-all">
+            <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-primary-700 text-sm font-bold shadow-lg shadow-primary-500/20 transition-all">
               In hóa đơn
             </button>
           </div>

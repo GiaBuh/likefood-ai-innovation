@@ -37,7 +37,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ step, onStepClick }) 
                     ${isCompleted
                       ? 'bg-gradient-to-br from-green-400 to-emerald-600 border-green-400 text-white shadow-lg shadow-green-500/30 hover:scale-110'
                       : isActive
-                        ? 'bg-gradient-to-br from-primary-400 to-primary-600 border-primary-400 text-white shadow-lg shadow-orange-500/40'
+                        ? 'bg-gradient-to-br from-primary-400 to-primary-600 border-primary-400 text-white shadow-lg shadow-primary-500/40'
                         : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'
                     }
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}

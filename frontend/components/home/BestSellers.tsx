@@ -76,7 +76,7 @@ const BestSellers: React.FC<BestSellersProps> = ({ onProductClick }) => {
               onClick={() => setActiveCategory('all')}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 activeCategory === 'all'
-                  ? 'bg-primary-500 text-white shadow-lg shadow-orange-500/20'
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20'
                   : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
               }`}
             >
@@ -88,7 +88,7 @@ const BestSellers: React.FC<BestSellersProps> = ({ onProductClick }) => {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                   activeCategory === cat
-                    ? 'bg-primary-500 text-white shadow-lg shadow-orange-500/20'
+                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
