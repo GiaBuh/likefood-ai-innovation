@@ -184,25 +184,7 @@ public class ProductServiceImpl implements ProductService {
         }
         Page<Product> page = productRepository.findAll(spec, pageable);
 
-        // Batch load soldCounts for all variants in the page
-        Map<String, Long> soldCountMap = buildSoldCountMap();
-        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
-
-        PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
-                .page(page.getNumber() + 1)
-                .pageSize(page.getSize())
-                .totalPages(page.getTotalPages())
-                .total(page.getTotalElements())
-                .build();
-
-        List<ProductResponse> result = page.getContent().stream()
-                .map(p -> toResponseWithSoldCount(p, soldCountMap, flashSaleMap))
-                .toList();
-
-        return PaginationResponse.builder()
-                .meta(meta)
-                .result(result)
-                .build();
+        return buildPaginationResponse(page);
     }
 
     @Override
@@ -223,24 +205,7 @@ public class ProductServiceImpl implements ProductService {
             page = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
         }
 
-        Map<String, Long> soldCountMap = buildSoldCountMap();
-        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
-
-        PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
-                .page(page.getNumber() + 1)
-                .pageSize(page.getSize())
-                .totalPages(page.getTotalPages())
-                .total(page.getTotalElements())
-                .build();
-
-        List<ProductResponse> result = page.getContent().stream()
-                .map(p -> toResponseWithSoldCount(p, soldCountMap, flashSaleMap))
-                .toList();
-
-        return PaginationResponse.builder()
-                .meta(meta)
-                .result(result)
-                .build();
+        return buildPaginationResponse(page);
     }
 
     @Override
@@ -257,14 +222,55 @@ public class ProductServiceImpl implements ProductService {
         return toResponseWithSoldCount(product);
     }
 
+    // ─── Pagination Helper ────────────────────────────────────────
+
+    /**
+     * Build a PaginationResponse from a Page of Products, with scoped
+     * sold counts, flash sale info, and review stats loaded in batch.
+     */
+    private PaginationResponse buildPaginationResponse(Page<Product> page) {
+        List<Product> content = page.getContent();
+
+        // Collect all variant IDs and product IDs for the current page
+        List<String> variantIds = content.stream()
+                .flatMap(p -> p.getVariants().stream())
+                .map(ProductVariant::getId)
+                .toList();
+        List<String> productIds = content.stream()
+                .map(Product::getId)
+                .toList();
+
+        // Scoped queries — only for this page, not the entire DB
+        Map<String, Long> soldCountMap = buildSoldCountMapScoped(variantIds);
+        Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
+        Map<String, double[]> reviewStatsMap = buildReviewStatsMap(productIds);
+
+        PaginationResponse.Meta meta = PaginationResponse.Meta.builder()
+                .page(page.getNumber() + 1)
+                .pageSize(page.getSize())
+                .totalPages(page.getTotalPages())
+                .total(page.getTotalElements())
+                .build();
+
+        List<ProductResponse> result = content.stream()
+                .map(p -> toResponseWithSoldCount(p, soldCountMap, flashSaleMap, reviewStatsMap))
+                .toList();
+
+        return PaginationResponse.builder()
+                .meta(meta)
+                .result(result)
+                .build();
+    }
+
     // ─── Sold Count Helpers ──────────────────────────────────────
 
     /**
-     * Build a map of variantId → soldCount from all COMPLETED orders.
+     * Build a map of variantId → soldCount, scoped to specific variant IDs.
      */
-    private Map<String, Long> buildSoldCountMap() {
+    private Map<String, Long> buildSoldCountMapScoped(List<String> variantIds) {
         Map<String, Long> map = new HashMap<>();
-        for (Object[] row : orderItemRepository.findSoldCountByVariant()) {
+        if (variantIds.isEmpty()) return map;
+        for (Object[] row : orderItemRepository.findSoldCountByVariantIds(variantIds)) {
             map.put((String) row[0], ((Number) row[1]).longValue());
         }
         return map;
@@ -287,6 +293,22 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
+     * Batch query: get avg rating + review count for a list of product IDs in one query.
+     * Returns map of productId → [avgRating, totalReviews].
+     */
+    private Map<String, double[]> buildReviewStatsMap(List<String> productIds) {
+        Map<String, double[]> map = new HashMap<>();
+        if (productIds.isEmpty()) return map;
+        for (Object[] row : reviewRepository.findReviewStatsByProductIds(productIds)) {
+            String productId = (String) row[0];
+            double avgRating = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
+            long count = ((Number) row[2]).longValue();
+            map.put(productId, new double[]{avgRating, count});
+        }
+        return map;
+    }
+
+    /**
      * Convert Product to ProductResponse with soldCount injected (single product, queries DB).
      */
     private ProductResponse toResponseWithSoldCount(Product product) {
@@ -295,13 +317,14 @@ public class ProductServiceImpl implements ProductService {
             soldCountMap.put((String) row[0], ((Number) row[1]).longValue());
         }
         Map<String, FlashSaleItem> flashSaleMap = buildActiveFlashSaleMap();
-        return toResponseWithSoldCount(product, soldCountMap, flashSaleMap);
+        Map<String, double[]> reviewStatsMap = buildReviewStatsMap(List.of(product.getId()));
+        return toResponseWithSoldCount(product, soldCountMap, flashSaleMap, reviewStatsMap);
     }
 
     /**
-     * Convert Product to ProductResponse with soldCount from pre-built map.
+     * Convert Product to ProductResponse with pre-built maps (batch-optimized).
      */
-    private ProductResponse toResponseWithSoldCount(Product product, Map<String, Long> soldCountMap, Map<String, FlashSaleItem> flashSaleMap) {
+    private ProductResponse toResponseWithSoldCount(Product product, Map<String, Long> soldCountMap, Map<String, FlashSaleItem> flashSaleMap, Map<String, double[]> reviewStatsMap) {
         ProductResponse response = productMapper.toResponse(product);
 
         // Inject soldCount into each variant, and apply flash sale override if any
@@ -326,13 +349,12 @@ public class ProductServiceImpl implements ProductService {
         }
         response.setTotalSoldCount(totalSold);
 
-        // Inject review stats
-        Double avgRating = reviewRepository.getAverageRatingByProductId(product.getId());
-        long totalReviews = reviewRepository.countByProduct_Id(product.getId());
-        if (avgRating != null) {
-            response.setAverageRating(Math.round(avgRating * 10.0) / 10.0);
+        // Inject review stats from batch map
+        double[] stats = reviewStatsMap.get(product.getId());
+        if (stats != null) {
+            response.setAverageRating(Math.round(stats[0] * 10.0) / 10.0);
+            response.setTotalReviews((long) stats[1]);
         }
-        response.setTotalReviews(totalReviews);
 
         return response;
     }

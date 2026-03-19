@@ -85,7 +85,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [orders, setOrders] = useState<Order[]>([]);
   const [productPagination, setProductPagination] = useState<PaginationMeta>({
     page: 1,
-    pageSize: 200,
+    pageSize: 100,
     totalPages: 1,
     total: 0,
   });
@@ -208,7 +208,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loadProducts = async () => {
       try {
         const [productsResult, categoriesResult] = await Promise.allSettled([
-          fetchProductsWithQuery({ page: 1, size: 500 }),
+          fetchProductsWithQuery({ page: 1, size: 100 }),
           fetchCategories(),
         ]);
         if (!isMounted) return;
