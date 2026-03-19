@@ -6,8 +6,9 @@ import unicodedata
 import uuid
 
 from .backend_client import BackendClient, ComboDict, VoucherDict
-from .budget import format_usd, normalize_price_to_usd, parse_budget_value, pick_variants_for_budget
+from .budget import format_usd, parse_budget_value, pick_variants_for_budget
 from .config import settings
+from .seasonal import get_current_seasonal_event, get_seasonal_greeting, filter_seasonal_products
 from .domain import Product, ProductVariant
 from .gemini_client import GeminiClient
 from .schemas import (
@@ -37,6 +38,8 @@ class ChatService:
         context = request.context or AiChatContext()
         products = await self.backend.fetch_products()
         product_map = {p.id: p for p in products}
+        # Convert history for Gemini
+        chat_history = [{"role": h.role, "content": h.content} for h in (request.history or [])][-10:]
 
         # Stateful flow first
         state_response = await self._handle_stateful(message, context, product_map, language)
@@ -46,8 +49,14 @@ class ChatService:
         # Receptionist-style welcome for greeting messages.
         if self._is_greeting(message):
             featured = products[:3]
+            seasonal_greeting = get_seasonal_greeting()
+            base_greeting = "Chào mừng anh/chị đến LikeFood! Em là lễ tân AI, rất vui được hỗ trợ."
+            if seasonal_greeting:
+                base_greeting = f"{base_greeting} {seasonal_greeting}"
+            else:
+                base_greeting = f"{base_greeting} Hôm nay anh/chị muốn em gợi ý món ngon không ạ?"
             return self._attach_debug_meta(AiAssistantResponse(
-                reply="Chào mừng anh/chị đến LikeFood! Em là lễ tân AI, rất vui được hỗ trợ. Hôm nay anh/chị muốn em gợi ý món ngon không ạ?",
+                reply=base_greeting,
                 language=language,
                 actions=[
                     action
@@ -69,9 +78,25 @@ class ChatService:
                 ),
             ), context.awaiting)
 
+        # ── Order tracking intent ──
+        if self._is_order_tracking_intent(message):
+            response = await self._handle_order_tracking(message, language, auth_header)
+            return self._attach_debug_meta(response, context.awaiting)
+
+        # ── Reorder / purchase history intent ──
+        if self._is_reorder_intent(message):
+            response = await self._handle_reorder(message, products, language, auth_header)
+            return self._attach_debug_meta(response, context.awaiting)
+
+        # ── Compare products intent ──
+        if self._is_compare_intent(message):
+            response = await self._handle_compare(message, products, language)
+            if response:
+                return self._attach_debug_meta(response, context.awaiting)
+
         # ── NEW: Support intent (shipping, returns, payment, storage) ──
         if self._is_support_intent(message):
-            support_reply = await self.gemini.support_response(message)
+            support_reply = await self.gemini.support_response(message, history=chat_history)
             return self._attach_debug_meta(AiAssistantResponse(
                 reply=support_reply,
                 language=language,
@@ -85,6 +110,12 @@ class ChatService:
                     formatProfile="simple_cta",
                 ),
             ), context.awaiting)
+
+        # ── Seasonal / holiday intent ──
+        if self._is_seasonal_intent(message):
+            response = await self._handle_seasonal(message, products, language)
+            if response:
+                return self._attach_debug_meta(response, context.awaiting)
 
         # ── NEW: Voucher / discount intent ──
         if self._is_voucher_intent(message):
@@ -227,6 +258,7 @@ class ChatService:
                         context,
                         language,
                         selected_category=requested_category,
+                        chat_history=chat_history,
                     ),
                     context.awaiting,
                 )
@@ -255,22 +287,39 @@ class ChatService:
         if category_from_command:
             filtered = [p for p in products if p.category.lower() == category_from_command.lower()]
             return self._attach_debug_meta(await self._build_recommendation_response(
-                filtered or products, message, context, language, selected_category=category_from_command
+                filtered or products, message, context, language, selected_category=category_from_command, chat_history=chat_history
             ), context.awaiting)
 
         return self._attach_debug_meta(
-            await self._build_recommendation_response(products, message, context, language),
+            await self._build_recommendation_response(products, message, context, language, chat_history=chat_history),
             context.awaiting,
+        )
+
+    def _should_break_state(self, message: str, context: AiChatContext, product_map: dict[str, Product]) -> bool:
+        """Return True if user's message indicates they want to leave the current stateful flow."""
+        if not context.awaiting or context.awaiting == AWAITING_NONE:
+            return False
+        # Never break state for command messages (e.g. /confirm-product:123)
+        if message.startswith("/"):
+            return False
+        return (
+            self._is_support_intent(message)
+            or self._is_voucher_intent(message)
+            or self._is_combo_intent(message)
+            or self._is_broad_query(message)
+            or self._is_greeting(message)
+            or bool(parse_budget_value(message))
         )
 
     async def _handle_stateful(
         self, message: str, context: AiChatContext, product_map: dict[str, Product], language: str
     ) -> AiAssistantResponse | None:
+        # Parse commands FIRST — they must always be handled deterministically
         command_name, command_arg = self._parse_command(message)
         selected_product = product_map.get(context.selectedProductId or "")
         requested_qty = self._parse_quantity(message)
 
-        # Deterministic command routing from frontend action buttons.
+        # Process deterministic commands before break-state check
         if command_name == "buy-product" and command_arg:
             target = product_map.get(command_arg)
             if target:
@@ -279,15 +328,53 @@ class ChatService:
             target = product_map.get(command_arg)
             if target:
                 return await self._build_product_detail_followup(target, language)
+        if command_name == "confirm-product":
+            if selected_product:
+                return self._ask_variant_or_quantity(selected_product, language, context.pendingQuantity)
+            if command_arg:
+                target = product_map.get(command_arg)
+                if target:
+                    return self._ask_variant_or_quantity(target, language, context.pendingQuantity)
+        if command_name == "reject-product":
+            preferred_category = selected_product.category if selected_product else context.pendingCategory
+            return self._build_three_alternatives(
+                list(product_map.values()), language, preferred_category,
+                intro_reply="Dạ vâng, em đổi món ngay cho anh/chị nè. Hiện tại bên em có các món sau, anh/chị xem thử có ưng món nào không ạ:",
+            )
         if command_name == "show-more":
             return self._build_three_alternatives(
-                list(product_map.values()),
-                language,
-                context.pendingCategory,
+                list(product_map.values()), language, context.pendingCategory,
             )
+        if command_name == "choose-variant" and command_arg and selected_product:
+            chosen_variant = next((v for v in selected_product.variants if v.id == command_arg), None)
+            if chosen_variant:
+                quantity = context.pendingQuantity
+                if quantity is None:
+                    return self._ask_quantity_only(selected_product, chosen_variant, language)
+                base_reply = f"Đã thêm {quantity} x {selected_product.name} ({chosen_variant.weight_label}) vào giỏ hàng."
+                cross_sell_text = await self.gemini.cross_sell(
+                    selected_product.name, selected_product.category,
+                    self._build_products_summary([p for p in list(product_map.values()) if p.category != selected_product.category], limit=10),
+                )
+                if cross_sell_text:
+                    base_reply = f"{base_reply} {cross_sell_text}"
+                else:
+                    base_reply = f"{base_reply} Anh/chị muốn thanh toán ngay không ạ?"
+                return AiAssistantResponse(
+                    reply=base_reply, language=language,
+                    actions=[
+                        AiChatAction(type="go_checkout", label="Thanh toán ngay", command="/go-checkout"),
+                        AiChatAction(type="show-more-options", label="Xem thêm món", command="/show-more"),
+                    ],
+                    nextContext=AiChatContext(awaiting=AWAITING_CHECKOUT, selectedProductId=selected_product.id, selectedVariantId=chosen_variant.id),
+                )
 
-        # User explicitly wants to switch item: drop current flow and offer next options.
-        if command_name == "reject-product" or self._is_switch_product_intent(message):
+        # After commands, allow user to break out of stateful flow if they change intent
+        if self._should_break_state(message, context, product_map):
+            return None
+
+        # User explicitly wants to switch item via free text.
+        if self._is_switch_product_intent(message):
             preferred_category = selected_product.category if selected_product else context.pendingCategory
             return self._build_three_alternatives(
                 list(product_map.values()),
@@ -397,19 +484,14 @@ class ChatService:
                 )
             if self._is_negative(message):
                 return AiAssistantResponse(
-                    reply="Dạ anh/chị, em giữ giỏ hàng để mình mua tiếp ạ.",
+                    reply="Dạ anh/chị, em giữ giỏ hàng để mình mua tiếp ạ. Anh/chị muốn xem thêm món nào?",
                     language=language,
+                    actions=[AiChatAction(type="show-more-options", label="Xem thêm món", command="/show-more")],
                     nextContext=AiChatContext(awaiting=AWAITING_NONE),
                 )
-            return AiAssistantResponse(
-                reply="Anh/chị muốn thanh toán ngay hay xem thêm sản phẩm ạ?",
-                language=language,
-                actions=[
-                    AiChatAction(type="go-checkout", label="Thanh toán ngay", command="/go-checkout"),
-                    AiChatAction(type="show-more-options", label="Xem thêm món", command="/show-more"),
-                ],
-                nextContext=context,
-            )
+            # User asked about something else (product, support, etc.) — break out of checkout
+            # and let normal intent processing handle it
+            return None
 
         return None
 
@@ -420,6 +502,7 @@ class ChatService:
         context: AiChatContext,
         language: str,
         selected_category: str | None = None,
+        chat_history: list[dict] | None = None,
     ) -> AiAssistantResponse:
         budget = parse_budget_value(message)
         if budget and budget > 0:
@@ -433,7 +516,7 @@ class ChatService:
                 lines = []
                 actions: list[AiChatAction] = []
                 for product, variant in selected:
-                    lines.append(f"- {product.name} ({variant.weight_label}) - {format_usd(normalize_price_to_usd(variant.price))}")
+                    lines.append(f"- {product.name} ({variant.weight_label}) - {format_usd(variant.price)}")
                     actions.append(
                         AiChatAction(
                             type="buy-product",
@@ -489,7 +572,7 @@ class ChatService:
                         formatProfile="budget_advice",
                     ),
                 )
-            # No strict match and no expanded match: show explicit no-fit and current cheapest options.
+            # No match at all — find the cheapest product to suggest a minimum budget
             cheapest = sorted(
                 [
                     (product, variant)
@@ -497,30 +580,24 @@ class ChatService:
                     for variant in product.variants
                     if variant.quantity > 0
                 ],
-                key=lambda item: normalize_price_to_usd(item[1].price),
-            )[:3]
-            fallback_lines = [
-                f"- {product.name} ({variant.weight_label}) - {format_usd(normalize_price_to_usd(variant.price))}"
-                for product, variant in cheapest
-            ]
+                key=lambda item: item[1].price,
+            )
+            if cheapest:
+                min_price = cheapest[0][1].price
+                min_product = cheapest[0][0]
+                reply_text = (
+                    f"Dạ với ngân sách {format_usd(budget)}, hiện tại em chưa có món nào phù hợp.\n"
+                    f"Sản phẩm rẻ nhất bên em là {min_product.name} giá {format_usd(min_price)}.\n"
+                    f"Anh/chị có muốn nâng ngân sách lên khoảng {format_usd(min_price)} hoặc xem sản phẩm khác không ạ?"
+                )
+            else:
+                reply_text = f"Dạ với ngân sách {format_usd(budget)}, hiện tại em chưa có sản phẩm nào phù hợp. Anh/chị thử mức cao hơn nhé!"
             return AiAssistantResponse(
-                reply=(
-                    "Dạ trong ngân sách "
-                    + f"{format_usd(budget)}"
-                    + " hiện tại em chưa có món phù hợp.\n"
-                    + "Hiện tại em đang có các món giá thấp nhất như sau:\n"
-                    + ("\n".join(fallback_lines) if fallback_lines else "- Tạm thời chưa có sản phẩm khả dụng")
-                ),
+                reply=reply_text,
                 language=language,
-                matchedProductIds=[p.id for p, _ in cheapest],
                 actions=[
-                    action
-                    for p, _ in cheapest
-                    for action in [
-                        AiChatAction(type="open-product", label=f"Xem {p.name}", command=f"/open-product:{p.id}", productId=p.id),
-                        AiChatAction(type="buy-product", label=f"Mua {p.name}", command=f"/buy-product:{p.id}", productId=p.id),
-                    ]
-                ][:6],
+                    AiChatAction(type="show-more-options", label="Xem sản phẩm khác", command="/show-more"),
+                ],
                 nextContext=AiChatContext(
                     awaiting=AWAITING_NONE,
                     pendingCategory=selected_category,
@@ -559,7 +636,7 @@ class ChatService:
         if not matches:
             # ── NEW: Use Gemini smart_recommend instead of generic 3 alternatives ──
             products_summary = self._build_products_summary(products)
-            smart_reply = await self.gemini.smart_recommend(products_summary, message)
+            smart_reply = await self.gemini.smart_recommend(products_summary, message, history=chat_history or [])
             topic_category = selected_category or self._infer_topic_from_message(products, message)
             fallback = self._build_three_alternatives(products, language, topic_category)
             if smart_reply and smart_reply != fallback.reply:
@@ -985,14 +1062,16 @@ class ChatService:
         for p in products[:limit]:
             variant_parts = []
             for v in p.variants[:4]:
-                variant_parts.append(f"{v.weight_label}: {format_usd(normalize_price_to_usd(v.price))}")
+                variant_parts.append(f"{v.weight_label}: {format_usd(v.price)}")
             variants_str = ", ".join(variant_parts) if variant_parts else "liên hệ"
             lines.append(f"• {p.name} [{p.category}] — {variants_str}")
         return "\n".join(lines) if lines else "Không có sản phẩm"
 
+
     # ── NEW helper: build vouchers summary for Gemini ────────────────────────
     def _build_vouchers_summary(self, vouchers: list[VoucherDict]) -> str:
         lines: list[str] = []
+
         for v in vouchers[:10]:
             code = v.get("code", "???")
             discount_type = v.get("discountType", "")
@@ -1046,6 +1125,226 @@ class ChatService:
 
             lines.append(line)
         return "\n".join(lines) if lines else "Không có combo"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # NEW INTENT DETECTION + HANDLERS (Phase 3)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── 1. ORDER TRACKING ─────────────────────────────────────────────────────
+    def _is_order_tracking_intent(self, message: str) -> bool:
+        n = self._normalize(message)
+        return any(kw in n for kw in [
+            "don hang", "don cua toi", "tracking", "giao den dau",
+            "tinh trang don", "trang thai don", "theo doi don",
+            "my order", "order status", "kiem tra don",
+        ])
+
+    async def _handle_order_tracking(
+        self, message: str, language: str, auth_header: str | None
+    ) -> AiAssistantResponse:
+        if not auth_header:
+            return AiAssistantResponse(
+                reply="Dạ anh/chị cần đăng nhập để xem đơn hàng. Bấm nút bên dưới để đăng nhập nhé!",
+                language=language,
+                nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            )
+        orders = await self.backend.fetch_my_orders(auth_header)
+        if not orders:
+            return AiAssistantResponse(
+                reply="Dạ anh/chị chưa có đơn hàng nào. Anh/chị muốn em gợi ý món ngon không ạ?",
+                language=language,
+                actions=[AiChatAction(type="show-more-options", label="Xem sản phẩm", command="/show-more")],
+                nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            )
+        recent = orders[:3]
+        lines = []
+        actions: list[AiChatAction] = []
+        status_map = {
+            "PENDING": "Chờ xác nhận", "CONFIRMED": "Đã xác nhận",
+            "SHIPPING": "Đang giao", "DELIVERED": "Đã giao",
+            "CANCELLED": "Đã hủy", "PROCESSING": "Đang xử lý",
+        }
+        for order in recent:
+            order_id = order.get("id", "")
+            status = order.get("status", "PENDING")
+            status_label = status_map.get(status, status)
+            total = order.get("totalPrice", 0)
+            created = order.get("createdAt", "")[:10]
+            items_count = len(order.get("orderItems", []))
+            lines.append(f"Đơn #{str(order_id)[-6:]} ({created}) — {status_label} — ${total:.2f} ({items_count} món)")
+            actions.append(AiChatAction(
+                type="view-orders", label=f"Xem đơn #{str(order_id)[-6:]}", command="/view-orders",
+            ))
+        reply = "Dạ đây là các đơn hàng gần nhất của anh/chị:\n" + "\n".join(lines)
+        return AiAssistantResponse(
+            reply=reply, language=language, actions=actions,
+            nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            recommendationMeta=AiRecommendationMeta(
+                reason="Theo doi don hang", offerType="primary",
+                fallbackLevel="EXACT", confidenceBand="high",
+                intent="ORDER_TRACKING", formatProfile="simple_cta",
+            ),
+        )
+
+    # ── 2. REORDER (purchase history) ─────────────────────────────────────────
+    def _is_reorder_intent(self, message: str) -> bool:
+        n = self._normalize(message)
+        return any(kw in n for kw in [
+            "mua lai", "dat lai", "lan truoc mua", "hom truoc mua",
+            "lich su mua", "mua gi truoc", "reorder", "buy again",
+            "order lai", "mua tiep",
+        ])
+
+    async def _handle_reorder(
+        self, message: str, products: list[Product], language: str, auth_header: str | None
+    ) -> AiAssistantResponse:
+        if not auth_header:
+            return AiAssistantResponse(
+                reply="Dạ anh/chị cần đăng nhập để em xem lịch sử mua hàng nhé!",
+                language=language,
+                nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            )
+        orders = await self.backend.fetch_my_orders(auth_header)
+        if not orders:
+            return AiAssistantResponse(
+                reply="Dạ anh/chị chưa có lịch sử mua hàng. Để em gợi ý một số món ngon nhé!",
+                language=language,
+                actions=[AiChatAction(type="show-more-options", label="Xem sản phẩm", command="/show-more")],
+                nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            )
+        product_map = {p.id: p for p in products}
+        purchased_items: list[str] = []
+        purchased_product_ids: list[str] = []
+        for order in orders[:10]:
+            for item in order.get("orderItems", []):
+                product_id = str(item.get("productId", "") or item.get("product", {}).get("id", ""))
+                product_name = item.get("productName", "") or item.get("product", {}).get("name", "")
+                if product_name and product_name not in purchased_items:
+                    purchased_items.append(product_name)
+                    if product_id:
+                        purchased_product_ids.append(product_id)
+        if not purchased_items:
+            return AiAssistantResponse(
+                reply="Dạ em chưa tìm thấy sản phẩm cụ thể trong đơn cũ. Anh/chị muốn em gợi ý món nào?",
+                language=language,
+                actions=[AiChatAction(type="show-more-options", label="Xem sản phẩm", command="/show-more")],
+                nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            )
+        history_summary = "Các sản phẩm đã mua: " + ", ".join(purchased_items[:10])
+        reorder_reply = await self.gemini.reorder_suggest(history_summary, message)
+        actions: list[AiChatAction] = []
+        for pid in purchased_product_ids[:4]:
+            p = product_map.get(pid)
+            if p and p.variants:
+                actions.append(AiChatAction(
+                    type="buy-product", label=f"Mua lại {p.name}",
+                    command=f"/buy-product:{p.id}", productId=p.id,
+                ))
+        return AiAssistantResponse(
+            reply=reorder_reply, language=language, actions=actions[:6],
+            matchedProductIds=purchased_product_ids[:6],
+            nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            recommendationMeta=AiRecommendationMeta(
+                reason="Goi y mua lai tu lich su", offerType="reorder",
+                fallbackLevel="EXACT", confidenceBand="high",
+                intent="REORDER", formatProfile="recommendation_list",
+            ),
+        )
+
+    # ── 3. COMPARE PRODUCTS ───────────────────────────────────────────────────
+    def _is_compare_intent(self, message: str) -> bool:
+        n = self._normalize(message)
+        return any(kw in n for kw in [
+            "so sanh", "khac nhau", "nao ngon hon", "compare",
+            "khac gi", "hon gi", "a hay b", "chon cai nao",
+        ])
+
+    async def _handle_compare(
+        self, message: str, products: list[Product], language: str
+    ) -> AiAssistantResponse | None:
+        matched = self._search_products(products, message)
+        if len(matched) < 2:
+            parts = re.split(r'\b(?:hay|va|vs|or|voi)\b', self._normalize(message))
+            if len(parts) >= 2:
+                matched_a = self._search_products(products, parts[0].strip())
+                matched_b = self._search_products(products, parts[1].strip())
+                if matched_a and matched_b:
+                    matched = [matched_a[0], matched_b[0]]
+        if len(matched) < 2:
+            return None
+        product_a, product_b = matched[0], matched[1]
+        summary_a = self._build_single_product_summary(product_a)
+        summary_b = self._build_single_product_summary(product_b)
+        compare_reply = await self.gemini.compare_products(summary_a, summary_b, message)
+        return AiAssistantResponse(
+            reply=compare_reply, language=language,
+            actions=[
+                AiChatAction(type="buy-product", label=f"Mua {product_a.name}", command=f"/buy-product:{product_a.id}", productId=product_a.id),
+                AiChatAction(type="buy-product", label=f"Mua {product_b.name}", command=f"/buy-product:{product_b.id}", productId=product_b.id),
+                AiChatAction(type="open-product", label=f"Xem {product_a.name}", command=f"/open-product:{product_a.id}", productId=product_a.id),
+                AiChatAction(type="open-product", label=f"Xem {product_b.name}", command=f"/open-product:{product_b.id}", productId=product_b.id),
+            ],
+            matchedProductIds=[product_a.id, product_b.id],
+            nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            recommendationMeta=AiRecommendationMeta(
+                reason="So sanh san pham", offerType="comparison",
+                fallbackLevel="EXACT", confidenceBand="high",
+                intent="COMPARE", formatProfile="compact_detail",
+            ),
+        )
+
+    def _build_single_product_summary(self, product: Product) -> str:
+        variant_parts = []
+        for v in product.variants[:4]:
+            variant_parts.append(f"{v.weight_label}: {format_usd(v.price)}")
+        variants_str = ", ".join(variant_parts) if variant_parts else "liên hệ"
+        desc = (product.description or "")[:100]
+        return f"{product.name} [{product.category}] — {variants_str}\n{desc}"
+
+    # ── 4. SEASONAL INTENT ────────────────────────────────────────────────────
+    def _is_seasonal_intent(self, message: str) -> bool:
+        n = self._normalize(message)
+        event = get_current_seasonal_event()
+        if not event:
+            return False
+        return any(kw in n for kw in [
+            "mua nay", "dip nay", "theo mua", "seasonal",
+            "qua tet", "qua noel", "qua giang sinh",
+        ] + [self._normalize(kw) for kw in event.get("keywords", [])])
+
+    async def _handle_seasonal(
+        self, message: str, products: list[Product], language: str
+    ) -> AiAssistantResponse | None:
+        event = get_current_seasonal_event()
+        if not event:
+            return None
+        seasonal_products = filter_seasonal_products(products)
+        if not seasonal_products:
+            return None
+        products_summary = self._build_products_summary(seasonal_products[:10])
+        seasonal_reply = await self.gemini.seasonal_recommend(
+            event["name"], products_summary, message
+        )
+        actions: list[AiChatAction] = []
+        for p in seasonal_products[:4]:
+            actions.append(AiChatAction(
+                type="buy-product", label=f"Mua {p.name}",
+                command=f"/buy-product:{p.id}", productId=p.id,
+            ))
+            actions.append(AiChatAction(
+                type="open-product", label=f"Xem {p.name}",
+                command=f"/open-product:{p.id}", productId=p.id,
+            ))
+        return AiAssistantResponse(
+            reply=seasonal_reply, language=language, actions=actions[:8],
+            matchedProductIds=[p.id for p in seasonal_products[:4]],
+            nextContext=AiChatContext(awaiting=AWAITING_NONE),
+            recommendationMeta=AiRecommendationMeta(
+                reason=f"Goi y theo mua: {event['name']}", offerType="seasonal",
+                fallbackLevel="RELATED", confidenceBand="high",
+                intent="SEASONAL", formatProfile="recommendation_list",
+            ),
+        )
 
     def _normalize(self, text: str) -> str:
         lowered = text.lower().strip()

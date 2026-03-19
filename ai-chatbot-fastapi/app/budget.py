@@ -9,6 +9,9 @@ USD_TO_VND = 25_000.0
 
 def parse_budget_value(message: str) -> float | None:
     text = message.lower()
+    # Skip command-format messages (e.g. /confirm-product:123)
+    if text.startswith("/"):
+        return None
     compact = re.sub(r"\s+", " ", text)
     numbers = re.findall(r"\d+(?:[.,]\d+)?", text)
     if not numbers:
@@ -32,37 +35,28 @@ def parse_budget_value(message: str) -> float | None:
     return value
 
 
-def normalize_price_to_usd(raw_price: float) -> float:
-    # Heuristic: large values are treated as VND and converted to USD.
-    if raw_price >= 1_000:
-        return raw_price / USD_TO_VND
-    return raw_price
-
-
 def format_usd(amount: float) -> str:
     return f"${amount:,.2f}"
 
 
-def pick_variants_for_budget(products: list[Product], budget_limit: float, limit_items: int = 3) -> list[tuple[Product, ProductVariant]]:
+def pick_variants_for_budget(products: list[Product], budget_limit: float, limit_items: int = 6) -> list[tuple[Product, ProductVariant]]:
+    """Return products with their cheapest in-stock variant priced <= budget.
+
+    Each product is an *individual recommendation* (not a bundle).
+    Products are sorted by price descending so the best-value items appear first.
+    """
+    seen_products: set[str] = set()
     candidates: list[tuple[Product, ProductVariant]] = []
     for product in products:
-        for variant in product.variants:
-            if normalize_price_to_usd(variant.price) <= budget_limit and variant.quantity > 0:
-                candidates.append((product, variant))
-    candidates.sort(key=lambda item: normalize_price_to_usd(item[1].price), reverse=True)
-
-    picked: list[tuple[Product, ProductVariant]] = []
-    total = 0.0
-    used_products: set[str] = set()
-    for product, variant in candidates:
-        if len(picked) >= limit_items:
-            break
-        if product.id in used_products:
+        in_stock = [v for v in product.variants if v.quantity > 0 and v.price <= budget_limit]
+        if not in_stock:
             continue
-        variant_usd = normalize_price_to_usd(variant.price)
-        if total + variant_usd <= budget_limit:
-            picked.append((product, variant))
-            used_products.add(product.id)
-            total += variant_usd
-    return picked
+        if product.id in seen_products:
+            continue
+        seen_products.add(product.id)
+        # Pick the cheapest variant that fits the budget
+        best = min(in_stock, key=lambda v: v.price)
+        candidates.append((product, best))
+    candidates.sort(key=lambda item: item[1].price, reverse=True)
+    return candidates[:limit_items]
 

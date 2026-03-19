@@ -2,23 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Product, ProductVariant } from '../../types';
 import type { AiChatContext } from '../../services/shopApi';
 import { askAiAssistant } from '../../services/shopApi';
-import {
-  normalize,
-  parseQuantity,
-  parseBudget,
-  budgetToUsd,
-  formatBudgetDisplay,
-  formatProductPrice,
-  parseVariant,
-  getProductMinPrice,
-  findRelevantProducts,
-  findSuggestionProductsWhenNoMatch,
-  isAffirmative,
-  isNegative,
-  isPaymentIntent,
-  isViewDetailIntent,
-  isCancelIntent,
-} from './chatUtils';
 import type { ChatAction, Message } from './chatTypes';
 
 type UseChatAiParams = {
@@ -70,13 +53,9 @@ export function useChatAi(params: UseChatAiParams) {
     addComboToCart,
     aiMessages,
     setAiMessages,
-    aiStage,
     setAiStage,
-    pendingProduct,
     setPendingProduct,
-    pendingVariant,
     setPendingVariant,
-    pendingQuantity,
     setPendingQuantity,
     aiContext,
     setAiContext,
@@ -128,7 +107,6 @@ export function useChatAi(params: UseChatAiParams) {
       setAiContext(nextContext);
 
       if (!nextContext.awaiting || nextContext.awaiting === 'NONE') {
-        // Backend cleared the flow: make sure local pending state is also cleared.
         resetPendingSelection();
         return;
       }
@@ -154,269 +132,10 @@ export function useChatAi(params: UseChatAiParams) {
     [products, resetPendingSelection, setAiContext, setAiStage, setPendingProduct, setPendingQuantity]
   );
 
-  const addPendingItemToCart = useCallback(
-    (quantity: number, productOverride?: Product | null, variantOverride?: ProductVariant | null) => {
-      const product = productOverride ?? pendingProduct;
-      const variant = variantOverride ?? pendingVariant;
-      if (!product || !variant) return;
-
-      addToCart(
-        {
-          ...product,
-          weight: variant.weight,
-          variantId: variant.id,
-          price: variant.price,
-        },
-        quantity
-      );
-
-      pushAiMessage(
-        `Đã thêm ${quantity} x ${product.name} (${variant.weight}) vào giỏ hàng. Bạn có muốn thanh toán ngay không?`,
-        [
-          { id: 'checkout-yes', label: 'Thanh toán ngay', type: 'confirm_yes' },
-          { id: 'checkout-no', label: 'Để sau', type: 'confirm_no' },
-        ]
-      );
-      setAiStage('awaiting_checkout_confirmation');
-    },
-    [pendingProduct, pendingVariant, addToCart, pushAiMessage, setAiStage]
-  );
-
-  const askForVariantOrQuantity = useCallback(
-    (product: Product) => {
-      const qty = pendingQuantity;
-      if (!product.variants || product.variants.length === 0) {
-        setPendingVariant({
-          id: String(product.variantId || `${product.id}-default`),
-          weight: product.weight || 'Default',
-          price: product.price,
-        });
-        if (qty) {
-          addPendingItemToCart(qty, product, {
-            id: String(product.variantId || `${product.id}-default`),
-            weight: product.weight || 'Default',
-            price: product.price,
-          } as ProductVariant);
-          setPendingQuantity(null);
-        } else {
-          setAiStage('awaiting_quantity');
-          pushAiMessage(
-            `Bạn muốn thêm ${product.name} với số lượng bao nhiêu?`,
-            [
-              { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
-              { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
-              { id: 'qty-3', label: '3', type: 'select_quantity', quantity: 3 },
-            ]
-          );
-        }
-        return;
-      }
-
-      if (product.variants.length === 1) {
-        setPendingVariant(product.variants[0]);
-        if (qty) {
-          addPendingItemToCart(qty, product, product.variants[0]);
-          setPendingQuantity(null);
-        } else {
-          setAiStage('awaiting_quantity');
-          pushAiMessage(
-            `Sản phẩm này có quy cách ${product.variants[0].weight}. Bạn muốn lấy bao nhiêu?`,
-            [
-              { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
-              { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
-              { id: 'qty-3', label: '3', type: 'select_quantity', quantity: 3 },
-            ]
-          );
-        }
-        return;
-      }
-
-      if (qty) setPendingQuantity(qty);
-      setAiStage('awaiting_variant');
-      pushAiMessage(
-        `"${product.name}" có nhiều quy cách. Bạn chọn loại nào?`,
-        product.variants.slice(0, 6).map((variant) => ({
-          id: `variant-${variant.id}`,
-          label: variant.weight,
-          type: 'select_variant',
-          variantId: variant.id,
-          productId: String(product.id),
-          quantity: qty ?? undefined,
-        }))
-      );
-    },
-    [
-      pendingQuantity,
-      setPendingVariant,
-      setPendingQuantity,
-      setAiStage,
-      addPendingItemToCart,
-      pushAiMessage,
-    ]
-  );
-
-  const fallbackLocalAiResponse = useCallback(
-    (trimmed: string) => {
-      const normalizedInput = normalize(trimmed);
-      const addIntent =
-        normalizedInput.includes('them vao gio') ||
-        normalizedInput.includes('mua') ||
-        normalizedInput.includes('dat') ||
-        normalizedInput.includes('lay');
-      const recommendIntent =
-        normalizedInput.includes('goi y') ||
-        normalizedInput.includes('tu van') ||
-        normalizedInput.includes('nen mua') ||
-        normalizedInput.includes('recommend');
-      const greetingIntent =
-        normalizedInput.includes('xin chao') ||
-        normalizedInput === 'chao' ||
-        normalizedInput === 'hello' ||
-        normalizedInput === 'hi' ||
-        normalizedInput.startsWith('chao ');
-      const browseIntent =
-        normalizedInput.includes('co gi') ||
-        normalizedInput.includes('mon gi') ||
-        normalizedInput.includes('menu') ||
-        normalizedInput.includes('danh sach') ||
-        normalizedInput.includes('gi ngon') ||
-        normalizedInput.includes('an gi') ||
-        normalizedInput.includes('hom nay') ||
-        normalizedInput.includes('co mon') ||
-        normalizedInput.includes('san pham gi');
-      const domainIntent =
-        addIntent ||
-        recommendIntent ||
-        greetingIntent ||
-        browseIntent ||
-        normalizedInput.includes('san pham') ||
-        normalizedInput.includes('mon') ||
-        normalizedInput.includes('gia') ||
-        normalizedInput.includes('kg') ||
-        normalizedInput.includes('g') ||
-        normalizedInput.includes('gio hang');
-
-      const budgetIntent =
-        /(\d+)\s*(\$|usd|us|do|dola|dollar|k|ngan|nghin|trieu|vnd)/i.test(trimmed) ||
-        normalizedInput.includes('co khoang') ||
-        normalizedInput.includes('dang co') ||
-        ((normalizedInput.includes('toi co') || normalizedInput.includes('minh co')) && /\d/.test(trimmed)) ||
-        normalizedInput.includes('gia phu hop') ||
-        normalizedInput.includes('trong tam') ||
-        normalizedInput.includes('within budget') ||
-        normalizedInput.includes('afford');
-
-      const budget = parseBudget(trimmed);
-      if (budgetIntent && budget != null && budget.amount > 0 && products.length > 0) {
-        const budgetUsd = budgetToUsd(budget);
-        const inBudget = products
-          .filter((p) => {
-            const minPrice = getProductMinPrice(p);
-            return minPrice > 0 && minPrice <= budgetUsd;
-          })
-          .sort((a, b) => getProductMinPrice(b) - getProductMinPrice(a))
-          .slice(0, 6);
-        if (inBudget.length > 0) {
-          const budgetLabel = formatBudgetDisplay(budget);
-          const productList = inBudget.map((p) => `${p.name} (từ ${formatProductPrice(getProductMinPrice(p))})`).join(', ');
-          pushAiMessage(
-            `Với ngân sách khoảng ${budgetLabel}, em gợi ý các món phù hợp: ${productList}. Bạn muốn xem món nào?`,
-            inBudget.flatMap((product) => [
-              { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
-              { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
-            ])
-          );
-          return;
-        }
-        const budgetLabel = formatBudgetDisplay(budget);
-        pushAiMessage(
-          `Hiện em chưa có món nào trong tầm ${budgetLabel}. Bạn thử tăng ngân sách hoặc hỏi món khác nhé.`
-        );
-        return;
-      }
-
-      const matches = findRelevantProducts(trimmed, products);
-
-      if (matches.length > 0) {
-        const topMatches = matches.slice(0, 4);
-        const best = topMatches[0];
-        if (addIntent && best) {
-          const qty = parseQuantity(trimmed);
-          setPendingProduct(best);
-          setPendingQuantity(qty);
-          setAiStage('awaiting_add_confirmation');
-          const qtyText = qty ? ` (số lượng ${qty})` : '';
-          pushAiMessage(
-            `Tôi tìm thấy "${best.name}"${qtyText}. Bạn có muốn thêm món này vào giỏ hàng không?`,
-            [
-              { id: 'add-yes', label: 'Có, thêm vào giỏ', type: 'confirm_yes' },
-              { id: 'add-no', label: 'Không', type: 'confirm_no' },
-            ]
-          );
-          return;
-        }
-
-        const actions: ChatAction[] = topMatches.flatMap((product) => [
-          { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
-          { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
-        ]);
-
-        pushAiMessage(
-          `Tôi tìm thấy ${topMatches.length} sản phẩm phù hợp: ${topMatches.map((item) => item.name).join(', ')}.`,
-          actions
-        );
-        return;
-      }
-
-      if (greetingIntent && !browseIntent && !recommendIntent && products.length > 0) {
-        pushAiMessage(
-          'Chào bạn! Em là trợ lý bán hàng của LikeFood. Hôm nay anh/chị muốn tìm món gì ạ?'
-        );
-        return;
-      }
-
-      if ((browseIntent || recommendIntent) && products.length > 0) {
-        const featured = products.slice(0, 4);
-        pushAiMessage(
-          `${greetingIntent ? 'Chào bạn! ' : ''}Hiện tại shop có các món nổi bật: ${featured.map((item) => item.name).join(', ')}. Bạn muốn xem món nào?`,
-          featured.flatMap((product) => [
-            { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
-            { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
-          ])
-        );
-        return;
-      }
-
-      if (domainIntent && products.length > 0) {
-        const suggestions = findSuggestionProductsWhenNoMatch(trimmed, products, 4);
-        const productList = suggestions.map((p) => p.name).join(', ');
-        pushAiMessage(
-          `Hiện tại bên em không có món tương tự vậy, nhưng có các món sau: ${productList}. Anh/chị muốn xem món nào ạ?`,
-          suggestions.flatMap((product) => [
-            { id: `view-${product.id}`, label: `Xem ${product.name}`, type: 'open_product', productId: String(product.id) },
-            { id: `buy-${product.id}`, label: `Mua ${product.name}`, type: 'select_product', productId: String(product.id) },
-          ])
-        );
-        return;
-      }
-
-      pushAiMessage(
-        'Xin lỗi, tôi chỉ hỗ trợ tư vấn sản phẩm và đặt hàng trên hệ thống LikeFood. Bạn hãy hỏi về tên món, quy cách (500g/1kg), giá hoặc yêu cầu thêm vào giỏ hàng nhé.'
-      );
-    },
-    [products, pushAiMessage, setPendingProduct, setPendingQuantity, setAiStage]
-  );
-
   const handleAiConversation = useCallback(
     async (input: string, contextMessages: Message[]) => {
       const trimmed = input.trim();
       if (!trimmed) return;
-
-      const useLocalOnly = false;
-      if (useLocalOnly) {
-        fallbackLocalAiResponse(trimmed);
-        return;
-      }
 
       try {
         const aiResponse = await askAiAssistant(trimmed, toAiHistory(contextMessages), 'vi', aiContextRef.current);
@@ -486,7 +205,6 @@ export function useChatAi(params: UseChatAiParams) {
         for (const productId of orderedProductIds) {
           const grouped = groupedActions.get(productId);
           if (!grouped) continue;
-          // User-preferred quick action order: Xem 1 -> Mua 1 -> Xem 2 -> Mua 2.
           if (grouped.open) orderedActions.push(grouped.open);
           if (grouped.buy) orderedActions.push(grouped.buy);
           orderedActions.push(...grouped.others);
@@ -504,17 +222,15 @@ export function useChatAi(params: UseChatAiParams) {
           }
         );
       } catch (error) {
-        console.error('Cannot get Gemini response from backend.', error);
-        fallbackLocalAiResponse(trimmed);
+        console.error('Cannot get AI response from backend.', error);
+        pushAiMessage(
+          'Xin lỗi, em đang gặp sự cố kỹ thuật. Anh/chị thử lại sau giây lát hoặc liên hệ hotline nhé!'
+        );
       }
     },
     [
-      aiStage,
-      pendingProduct,
-      fallbackLocalAiResponse,
       pushAiMessage,
       products,
-      aiContext,
       addToCart,
       syncStateFromContext,
     ]
@@ -535,15 +251,10 @@ export function useChatAi(params: UseChatAiParams) {
 
   const handleActionClick = useCallback(
     (action: ChatAction) => {
+      // ── Navigation actions: handled locally ──
       if (action.type === 'go-checkout' || action.type === 'go_checkout') {
         onGoToCheckout();
         return;
-      }
-      if (action.type === 'buy-product') {
-        if (!action.command || !action.productId) {
-          pushAiMessage('Nút mua nhanh đang thiếu dữ liệu. Anh/chị chọn lại món giúp em nhé.');
-          return;
-        }
       }
       if (action.type === 'view-orders' || action.type === 'go_orders') {
         onGoToOrders();
@@ -553,7 +264,6 @@ export function useChatAi(params: UseChatAiParams) {
         onOpenProduct(action.productId);
         return;
       }
-
       if (action.type === 'buy_combo' || action.type === 'buy-combo') {
         if (!action.productId) {
           pushAiMessage('Nút mua combo đang bị lỗi. Anh/chị thông cảm.');
@@ -567,32 +277,100 @@ export function useChatAi(params: UseChatAiParams) {
         return;
       }
 
-      if ((action.type === 'confirm-product' || action.type === 'reject-product') && action.command) {
-        const userActionMessage: Message = {
-          id: `${Date.now()}-action`,
-          text: action.label,
-          sender: 'user',
-          timestamp: new Date(),
-        };
-        setAiMessages((prev) => [...prev, userActionMessage]);
-        setIsTyping(true);
-        sendAiMessage(action.command, [...aiMessages, userActionMessage]);
+      // ── Buy product: handled locally (variant + quantity) ──
+      if (action.type === 'buy-product' || action.type === 'buy_product') {
+        if (!action.productId) {
+          pushAiMessage('Nút mua đang bị lỗi. Anh/chị thông cảm.');
+          return;
+        }
+        const product = products.find((p) => String(p.id) === String(action.productId));
+        if (!product) {
+          pushAiMessage('Sản phẩm không tồn tại. Anh/chị thử tìm sản phẩm khác nhé!');
+          return;
+        }
+
+        const inStockVariants = (product.variants || []).filter(
+          (v) => v.quantity > 0
+        );
+
+        if (inStockVariants.length === 0) {
+          pushAiMessage(`Dạ ${product.name} hiện đang tạm hết hàng. Anh/chị xem món khác nhé!`, [
+            { id: 'show-more', label: 'Xem sản phẩm khác', type: 'show-more-options', command: '/show-more' },
+          ]);
+          return;
+        }
+
+        if (inStockVariants.length === 1) {
+          // Single variant → add to cart directly with qty 1
+          const variant = inStockVariants[0];
+          addToCart(
+            { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
+            1
+          );
+          setPendingProduct(null);
+          setPendingVariant(null);
+          setPendingQuantity(null);
+          setAiStage('idle');
+          pushAiMessage(
+            `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán hay xem thêm?`,
+            [
+              { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
+              { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
+            ]
+          );
+          return;
+        }
+
+        // Multiple variants → show variant picker
+        setPendingProduct(product);
+        setAiStage('awaiting_variant');
+        const variantActions: ChatAction[] = inStockVariants.map((v, idx) => ({
+          id: `variant-${v.id}-${idx}`,
+          label: `${v.weightLabel || v.weight} - $${v.price}`,
+          type: 'choose-variant' as ChatAction['type'],
+          productId: String(product.id),
+          variantId: v.id,
+        }));
+        pushAiMessage(
+          `Dạ ${product.name} có các loại sau, anh/chị chọn giúp em nhé:`,
+          variantActions
+        );
         return;
       }
 
-      if (action.command) {
-        const userActionMessage: Message = {
-          id: `${Date.now()}-action`,
-          text: action.label,
-          sender: 'user',
-          timestamp: new Date(),
-        };
-        setAiMessages((prev) => [...prev, userActionMessage]);
-        setIsTyping(true);
-        sendAiMessage(action.command, [...aiMessages, userActionMessage]);
+      // ── Choose variant: handled locally ──
+      if (action.type === 'choose-variant') {
+        const product = action.productId
+          ? products.find((p) => String(p.id) === String(action.productId))
+          : null;
+        if (!product || !action.variantId) {
+          pushAiMessage('Không tìm thấy sản phẩm. Anh/chị thử lại nhé!');
+          return;
+        }
+        const variant = product.variants?.find((v) => v.id === action.variantId);
+        if (!variant) {
+          pushAiMessage('Phân loại không tồn tại. Anh/chị chọn lại nhé!');
+          return;
+        }
+        addToCart(
+          { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
+          1
+        );
+        setPendingProduct(null);
+        setPendingVariant(null);
+        setPendingQuantity(null);
+        setAiStage('idle');
+        pushAiMessage(
+          `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán ngay không?`,
+          [
+            { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
+            { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
+          ]
+        );
         return;
       }
 
+      // ── ALL other actions: forward to backend API ──
       const userActionMessage: Message = {
         id: `${Date.now()}-action`,
         text: action.label,
@@ -601,120 +379,21 @@ export function useChatAi(params: UseChatAiParams) {
       };
       setAiMessages((prev) => [...prev, userActionMessage]);
       setIsTyping(true);
-
-      setTimeout(() => {
-        if (action.type === 'select_product') {
-          const product = products.find((item) => String(item.id) === action.productId);
-          if (!product) {
-            pushAiMessage('Sản phẩm vừa chọn không còn tồn tại trong hệ thống. Bạn thử chọn món khác nhé.');
-            setIsTyping(false);
-            return;
-          }
-          setPendingProduct(product);
-          setAiStage('awaiting_add_confirmation');
-          pushAiMessage(`Bạn muốn thêm "${product.name}" vào giỏ hàng không?`, [
-            { id: 'add-yes', label: 'Có, thêm vào giỏ', type: 'confirm_yes' },
-            { id: 'add-no', label: 'Không', type: 'confirm_no' },
-          ]);
-          setIsTyping(false);
-          return;
-        }
-
-        if (action.type === 'confirm_yes') {
-          if (aiStage === 'awaiting_add_confirmation' && pendingProduct) {
-            askForVariantOrQuantity(pendingProduct);
-            setIsTyping(false);
-            return;
-          }
-          if (aiStage === 'awaiting_checkout_confirmation') {
-            pushAiMessage('Bạn bấm nút bên dưới để chuyển đến trang thanh toán.', [
-              { id: 'go-checkout', label: 'Đi đến thanh toán', type: 'go_checkout' },
-              { id: 'go-orders', label: 'Xem đơn hàng', type: 'go_orders' },
-            ]);
-            resetPendingSelection();
-            setIsTyping(false);
-            return;
-          }
-        }
-
-        if (action.type === 'confirm_no') {
-          if (aiStage === 'awaiting_add_confirmation') {
-            pushAiMessage('Ok bạn nhé. Bạn có thể hỏi tên món khác để tôi tư vấn tiếp.');
-            resetPendingSelection();
-          } else if (aiStage === 'awaiting_checkout_confirmation') {
-            pushAiMessage('Ok, tôi sẽ giữ giỏ hàng để bạn tiếp tục mua sắm.');
-            resetPendingSelection();
-          }
-          setIsTyping(false);
-          return;
-        }
-
-        if (action.type === 'select_variant') {
-          const product = action.productId ? products.find((p) => String(p.id) === String(action.productId)) : pendingProduct;
-          if (!product) {
-            pushAiMessage('Sản phẩm không còn tồn tại. Bạn thử chọn lại nhé.');
-            setIsTyping(false);
-            return;
-          }
-          const variant = product.variants?.find((item) => item.id === action.variantId);
-          if (!variant) {
-            pushAiMessage('Quy cách vừa chọn không hợp lệ. Bạn thử chọn lại nhé.');
-            setIsTyping(false);
-            return;
-          }
-          setPendingProduct(product);
-          setPendingVariant(variant);
-          const qtyToUse = action.quantity ?? pendingQuantity;
-          if (qtyToUse) {
-            addPendingItemToCart(qtyToUse, product, variant);
-            setPendingQuantity(null);
-          } else {
-            setAiStage('awaiting_quantity');
-            pushAiMessage(
-              `Bạn muốn thêm ${product.name} (${variant.weight}) với số lượng bao nhiêu?`,
-              [
-                { id: 'qty-1', label: '1', type: 'select_quantity', quantity: 1 },
-                { id: 'qty-2', label: '2', type: 'select_quantity', quantity: 2 },
-                { id: 'qty-3', label: '3', type: 'select_quantity', quantity: 3 },
-              ]
-            );
-          }
-          setIsTyping(false);
-          return;
-        }
-
-        if (action.type === 'select_quantity') {
-          addPendingItemToCart(action.quantity!);
-          setIsTyping(false);
-          return;
-        }
-
-        setIsTyping(false);
-      }, 400);
+      sendAiMessage(action.command || action.label, [...aiMessages, userActionMessage]);
     },
     [
-      products,
-      pendingProduct,
-      pendingVariant,
-      pendingQuantity,
-      aiStage,
-      aiContext,
       onOpenProduct,
       onGoToCheckout,
       onGoToOrders,
       setAiMessages,
-      setPendingProduct,
-      setPendingVariant,
-      setPendingQuantity,
-      setAiStage,
       pushAiMessage,
-      askForVariantOrQuantity,
-      addPendingItemToCart,
-      resetPendingSelection,
+      addComboToCart,
       sendAiMessage,
       aiMessages,
+      setIsTyping,
     ]
   );
 
   return { handleAiConversation, handleActionClick, sendAiMessage };
 }
+

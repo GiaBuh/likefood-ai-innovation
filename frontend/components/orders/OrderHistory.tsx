@@ -46,6 +46,17 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
     }
   };
 
+  const getTranslatedStatus = (status: OrderStatus | string) => {
+    switch (status) {
+      case 'Processing': return t('orders.statusProcessing');
+      case 'Confirm': return t('orders.statusConfirm');
+      case 'Shipped': return t('orders.statusShipped');
+      case 'Complete': return t('orders.statusComplete');
+      case 'Cancelled': return t('orders.statusCancelled');
+      default: return status;
+    }
+  };
+
   const renderOrderActions = (order: Order) => {
     const status = (order.fulfillmentStatus || order.status) as OrderStatus;
     switch (status) {
@@ -66,7 +77,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg shadow-blue-500/20 text-sm flex items-center justify-center gap-2 disabled:opacity-60 mb-2"
               >
                 <span className="material-symbols-outlined !text-lg">payments</span>
-                {retryingOrderId === order.id ? 'Đang mở VNPay...' : 'Thanh toán lại VNPay'}
+                {retryingOrderId === order.id ? t('orders.retryingVnpay') : t('orders.retryVnpay')}
               </button>
             )}
             <button
@@ -76,7 +87,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               <span className="material-symbols-outlined !text-lg">cancel</span>
               {t('orders.cancelOrder')}
             </button>
-            <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
+            <p className="text-xs text-center text-stone-400">{t('orders.cancelHint')}</p>
           </>
         );
       case 'Confirm':
@@ -89,7 +100,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               <span className="material-symbols-outlined !text-lg">cancel</span>
               {t('orders.cancelOrder')}
             </button>
-            <p className="text-xs text-center text-stone-400">Có thể hủy đơn trước khi giao hàng.</p>
+            <p className="text-xs text-center text-stone-400">{t('orders.cancelHint')}</p>
           </>
         );
       case 'Shipped':
@@ -100,10 +111,10 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
               className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined !text-lg">local_shipping</span>
-              Theo dõi đơn
+              {t('orders.trackOrder')}
             </button>
             <button className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm">
-              Liên hệ hỗ trợ
+              {t('orders.contactSupport')}
             </button>
           </>
         );
@@ -130,7 +141,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                 }}
                 className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-slate-700 dark:text-stone-300 font-bold hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-sm"
               >
-                Viết đánh giá
+                {t('orders.writeReview')}
               </button>
             )}
           </>
@@ -228,10 +239,19 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                     <p className="font-bold text-slate-900 dark:text-white">${(order.totalAmount ?? order.total ?? 0).toFixed(2)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor((order.fulfillmentStatus || order.status) as OrderStatus)}`}>
-                    {order.fulfillmentStatus || order.status}
+                    {getTranslatedStatus((order.fulfillmentStatus || order.status) as OrderStatus)}
                   </span>
+                  {order.paymentMethod === 'BANK_TRANSFER' && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                      order.paymentStatusRaw === 'PAID'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                    }`}>
+                      {order.paymentStatusRaw === 'PAID' ? t('orders.paymentPaid') : t('orders.paymentUnpaid')}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -251,7 +271,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-slate-900 dark:text-white">
-                            {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">Giá cập nhật</span>}
+                            {item.price > 0 ? `$${(item.price * item.quantity).toFixed(2)}` : <span className="text-xs text-neutral-400 italic">{t('orders.priceUpdating')}</span>}
                           </p>
                         </div>
                       </div>
@@ -261,7 +281,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({
                   {/* Actions / Address */}
                   <div className="lg:w-72 lg:border-l lg:border-stone-100 lg:dark:border-stone-800 lg:pl-6 flex flex-col justify-center gap-3">
                     <div className="mb-2">
-                      <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">Shipping To</p>
+                      <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">{t('orders.shippingTo')}</p>
                       <p className="text-sm text-slate-700 dark:text-stone-300 leading-relaxed line-clamp-2">
                         {order.shippingAddress || "123 Main St, Springfield, USA"}
                       </p>

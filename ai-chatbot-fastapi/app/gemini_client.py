@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import random
 
 import httpx
 
 from .config import settings
+from .exceptions import GeminiRateLimitError, GeminiTimeoutError
+
+logger = logging.getLogger(__name__)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MASTER SYSTEM PROMPT — personality & rules injected via systemInstruction
@@ -57,8 +62,20 @@ class GeminiClient:
         self.enabled = settings.gemini_enabled and bool(settings.gemini_api_key.strip())
 
     # ── shared low-level caller ──────────────────────────────────────────────
-    async def _call_gemini(self, system_prompt: str, user_input: str, *, fallback: str) -> str:
-        """Call Gemini with systemInstruction + user message. Returns *fallback* on any error."""
+    async def _call_gemini(
+        self,
+        system_prompt: str,
+        user_input: str,
+        *,
+        fallback: str,
+        history: list[dict] | None = None,
+    ) -> str:
+        """Call Gemini with systemInstruction + optional conversation history + user message.
+
+        *history* is a list of {"role": "user"|"model", "content": str} dicts representing
+        previous conversation turns so that Gemini can maintain contextual awareness.
+        Returns *fallback* on any error except rate limit (which raises GeminiRateLimitError).
+        """
         if not self.enabled:
             return fallback
 
@@ -66,6 +83,14 @@ class GeminiClient:
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{settings.gemini_model}:generateContent?key={settings.gemini_api_key}"
         )
+
+        # Build contents: optional history + current user message
+        contents: list[dict] = []
+        for h in (history or []):
+            role = "model" if h.get("role") == "assistant" else h.get("role", "user")
+            contents.append({"role": role, "parts": [{"text": h["content"]}]})
+        contents.append({"role": "user", "parts": [{"text": user_input}]})
+
         body = {
             "systemInstruction": {
                 "parts": [{"text": system_prompt}],
@@ -75,20 +100,33 @@ class GeminiClient:
                 "maxOutputTokens": 256,
                 "responseMimeType": "text/plain",
             },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_input}],
-                }
-            ],
+            "contents": contents,
         }
 
         retries = max(1, settings.gemini_max_retries)
-        delay = 0.4
+        delay = 1.0  # Start at 1s for exponential backoff
+        last_error: Exception | None = None
+
         for attempt in range(retries):
             try:
                 async with httpx.AsyncClient(timeout=settings.gemini_timeout_seconds) as client:
                     response = await client.post(endpoint, json=body)
+
+                    # ── Rate Limit (429) ──
+                    if response.status_code == 429:
+                        logger.warning(
+                            "Gemini API rate limit (429), attempt %d/%d", attempt + 1, retries
+                        )
+                        if attempt == retries - 1:
+                            raise GeminiRateLimitError(
+                                "Gemini API quota exceeded. Please wait and try again."
+                            )
+                        # Exponential backoff with jitter before retry
+                        jitter = random.uniform(0, delay * 0.5)
+                        await asyncio.sleep(delay + jitter)
+                        delay *= 2
+                        continue
+
                     response.raise_for_status()
                     data = response.json()
                     text = (
@@ -99,11 +137,46 @@ class GeminiClient:
                         .strip()
                     )
                     return text or fallback
-            except Exception:
-                if attempt == retries - 1:
-                    return fallback
-                await asyncio.sleep(delay)
-                delay *= 2
+
+            except GeminiRateLimitError:
+                raise  # Let 429 propagate — do NOT swallow it
+
+            except httpx.TimeoutException:
+                logger.warning(
+                    "Gemini API timeout (%ss), attempt %d/%d",
+                    settings.gemini_timeout_seconds, attempt + 1, retries,
+                )
+                last_error = GeminiTimeoutError(
+                    f"Gemini API did not respond within {settings.gemini_timeout_seconds}s"
+                )
+                if attempt < retries - 1:
+                    jitter = random.uniform(0, delay * 0.3)
+                    await asyncio.sleep(delay + jitter)
+                    delay *= 2
+                    continue
+
+            except httpx.HTTPStatusError as exc:
+                logger.error(
+                    "Gemini API HTTP %s, attempt %d/%d: %s",
+                    exc.response.status_code, attempt + 1, retries,
+                    exc.response.text[:200],
+                )
+                last_error = exc
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay)
+                    delay *= 2
+                    continue
+
+            except Exception as exc:
+                logger.error("Gemini API unexpected error: %s", exc)
+                last_error = exc
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay)
+                    delay *= 2
+                    continue
+
+        # All retries exhausted — return fallback (don't crash the server)
+        logger.error("Gemini API all %d retries failed. Last error: %s", retries, last_error)
         return fallback
 
     # ── 1. PERSUASIVE rewrite (enhanced) ─────────────────────────────────────
@@ -120,7 +193,9 @@ class GeminiClient:
         return await self._call_gemini(prompt, f"NỘI DUNG GỐC:\n{fallback_text}", fallback=fallback_text)
 
     # ── 2. SMART RECOMMEND ──────────────────────────────────────────────────
-    async def smart_recommend(self, products_summary: str, user_message: str) -> str:
+    async def smart_recommend(
+        self, products_summary: str, user_message: str, *, history: list[dict] | None = None
+    ) -> str:
         prompt = (
             "Bạn là trợ lý bán hàng LikeFood — cửa hàng đặc sản Việt Nam.\n\n"
             f"DANH SÁCH SẢN PHẨM HIỆN CÓ:\n{products_summary}\n\n"
@@ -130,7 +205,7 @@ class GeminiClient:
             "Xưng em-anh/chị. KHÔNG markdown. Dưới 100 từ. Kết thúc bằng câu hỏi mở."
         )
         fallback = "Dạ em chưa tìm được món phù hợp, anh/chị cho em biết thêm sở thích nhé!"
-        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback, history=history)
 
     # ── 3. CROSS-SELL ────────────────────────────────────────────────────────
     async def cross_sell(self, product_name: str, category: str, other_products: str) -> str:
@@ -144,7 +219,7 @@ class GeminiClient:
         return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback="")
 
     # ── 4. SUPPORT (customer service) ────────────────────────────────────────
-    async def support_response(self, user_message: str) -> str:
+    async def support_response(self, user_message: str, *, history: list[dict] | None = None) -> str:
         prompt = (
             "Bạn là trợ lý CSKH LikeFood — cửa hàng đặc sản Việt Nam.\n\n"
             "CHÍNH SÁCH:\n"
@@ -160,7 +235,7 @@ class GeminiClient:
             "Dạ anh/chị, bên em giao hàng 2-5 ngày toàn quốc, freeship đơn từ $10. "
             "Đổi trả trong 7 ngày nếu sản phẩm lỗi. Anh/chị cần hỗ trợ thêm gì ạ?"
         )
-        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback, history=history)
 
     # ── 5. COMBO / GIFT SUGGEST ──────────────────────────────────────────────
     async def combo_suggest(self, products_summary: str, budget: str, user_message: str) -> str:
@@ -188,3 +263,47 @@ class GeminiClient:
         )
         fallback = "Dạ hiện bên em chưa có mã giảm giá nào đang hoạt động. Anh/chị ghé lại sau nhé!"
         return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+
+    # ── 7. COMPARE PRODUCTS ──────────────────────────────────────────────────
+    async def compare_products(self, product_a: str, product_b: str, user_message: str) -> str:
+        prompt = (
+            "Bạn là trợ lý bán hàng LikeFood — cửa hàng đặc sản Việt Nam.\n\n"
+            f"SẢN PHẨM A:\n{product_a}\n\n"
+            f"SẢN PHẨM B:\n{product_b}\n\n"
+            f"KHÁCH HỎI: \"{user_message}\"\n\n"
+            "So sánh 2 sản phẩm trên: giá, trọng lượng, đặc điểm nổi bật. "
+            "Đưa ra khuyến nghị nên chọn loại nào dựa trên nhu cầu. "
+            "Xưng em-anh/chị. KHÔNG markdown. Dưới 120 từ."
+        )
+        fallback = "Dạ em chưa so sánh được, anh/chị cho em biết tên 2 món cụ thể nhé!"
+        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+
+    # ── 8. REORDER SUGGEST (from purchase history) ───────────────────────────
+    async def reorder_suggest(self, order_history_summary: str, user_message: str) -> str:
+        prompt = (
+            "Bạn là trợ lý bán hàng LikeFood — cửa hàng đặc sản Việt Nam.\n\n"
+            f"LỊCH SỬ MUA CỦA KHÁCH:\n{order_history_summary}\n\n"
+            f"KHÁCH NÓI: \"{user_message}\"\n\n"
+            "Dựa vào lịch sử mua, gợi ý 2-3 sản phẩm khách nên mua lại hoặc sản phẩm tương tự. "
+            "Nêu lý do vì sao (ví dụ: đã mua trước, hết hàng cần bổ sung). "
+            "Xưng em-anh/chị. KHÔNG markdown. Dưới 100 từ."
+        )
+        fallback = "Dạ anh/chị muốn mua lại món nào trước đây ạ? Em sẽ kiểm tra giúp!"
+        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+
+    # ── 9. SEASONAL RECOMMEND ────────────────────────────────────────────────
+    async def seasonal_recommend(
+        self, season_name: str, products_summary: str, user_message: str
+    ) -> str:
+        prompt = (
+            "Bạn là trợ lý bán hàng LikeFood — cửa hàng đặc sản Việt Nam.\n\n"
+            f"HIỆN TẠI ĐANG LÀ MÙA/DỊP: {season_name}\n"
+            f"SẢN PHẨM PHÙ HỢP MÙA NÀY:\n{products_summary}\n\n"
+            f"KHÁCH NÓI: \"{user_message}\"\n\n"
+            "Gợi ý 2-3 sản phẩm phù hợp dịp này. Giải thích tại sao phù hợp. "
+            "Nếu là dịp tặng quà → gợi ý combo. "
+            "Xưng em-anh/chị. KHÔNG markdown. Dưới 100 từ."
+        )
+        fallback = f"Dạ nhân dịp {season_name}, em gợi ý anh/chị xem các sản phẩm phù hợp mùa nhé!"
+        return await self._call_gemini(MASTER_SYSTEM_PROMPT, prompt, fallback=fallback)
+

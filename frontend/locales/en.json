@@ -155,7 +155,17 @@
     "statusConfirm": "Confirmed",
     "statusShipped": "Shipped",
     "statusComplete": "Complete",
-    "statusCancelled": "Cancelled"
+    "statusCancelled": "Cancelled",
+    "paymentPaid": "Paid",
+    "paymentUnpaid": "Unpaid",
+    "shippingTo": "Shipping To",
+    "cancelHint": "You can cancel before shipping.",
+    "trackOrder": "Track Order",
+    "contactSupport": "Contact Support",
+    "writeReview": "Write Review",
+    "retryVnpay": "Retry VNPay Payment",
+    "retryingVnpay": "Opening VNPay...",
+    "priceUpdating": "Price updating"
   },
   "auth": {
     "loginTitle": "Login",
