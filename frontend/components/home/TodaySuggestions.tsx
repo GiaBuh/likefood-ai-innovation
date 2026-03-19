@@ -162,4 +162,4 @@ const TodaySuggestions: React.FC = () => {
   );
 };
 
-export default TodaySuggestions;
+export default React.memo(TodaySuggestions);

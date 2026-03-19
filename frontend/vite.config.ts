@@ -27,6 +27,16 @@ export default defineConfig(({ mode }) => {
         },
       },
       plugins: [react()],
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom', 'react-router-dom'],
+              i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+            },
+          },
+        },
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

@@ -217,3 +217,19 @@
     border-radius: 20px;
   }
 }
+
+/* ========== Page Transitions ========== */
+.page-transition {
+  transition: opacity 150ms ease, transform 150ms ease;
+  will-change: opacity, transform;
+}
+
+.page-transition.fadeIn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition.fadeOut {
+  opacity: 0;
+  transform: translateY(6px);
+}

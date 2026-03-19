@@ -222,4 +222,4 @@ const FlashSale: React.FC = () => {
   );
 };
 
-export default FlashSale;
+export default React.memo(FlashSale);
