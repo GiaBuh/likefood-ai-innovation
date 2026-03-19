@@ -277,6 +277,99 @@ export function useChatAi(params: UseChatAiParams) {
         return;
       }
 
+      // ── Buy product: handled locally (variant + quantity) ──
+      if (action.type === 'buy-product' || action.type === 'buy_product') {
+        if (!action.productId) {
+          pushAiMessage('Nút mua đang bị lỗi. Anh/chị thông cảm.');
+          return;
+        }
+        const product = products.find((p) => String(p.id) === String(action.productId));
+        if (!product) {
+          pushAiMessage('Sản phẩm không tồn tại. Anh/chị thử tìm sản phẩm khác nhé!');
+          return;
+        }
+
+        const inStockVariants = (product.variants || []).filter(
+          (v) => v.quantity > 0
+        );
+
+        if (inStockVariants.length === 0) {
+          pushAiMessage(`Dạ ${product.name} hiện đang tạm hết hàng. Anh/chị xem món khác nhé!`, [
+            { id: 'show-more', label: 'Xem sản phẩm khác', type: 'show-more-options', command: '/show-more' },
+          ]);
+          return;
+        }
+
+        if (inStockVariants.length === 1) {
+          // Single variant → add to cart directly with qty 1
+          const variant = inStockVariants[0];
+          addToCart(
+            { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
+            1
+          );
+          setPendingProduct(null);
+          setPendingVariant(null);
+          setPendingQuantity(null);
+          setAiStage('idle');
+          pushAiMessage(
+            `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán hay xem thêm?`,
+            [
+              { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
+              { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
+            ]
+          );
+          return;
+        }
+
+        // Multiple variants → show variant picker
+        setPendingProduct(product);
+        setAiStage('awaiting_variant');
+        const variantActions: ChatAction[] = inStockVariants.map((v, idx) => ({
+          id: `variant-${v.id}-${idx}`,
+          label: `${v.weightLabel || v.weight} - $${v.price}`,
+          type: 'choose-variant' as ChatAction['type'],
+          productId: String(product.id),
+          variantId: v.id,
+        }));
+        pushAiMessage(
+          `Dạ ${product.name} có các loại sau, anh/chị chọn giúp em nhé:`,
+          variantActions
+        );
+        return;
+      }
+
+      // ── Choose variant: handled locally ──
+      if (action.type === 'choose-variant') {
+        const product = action.productId
+          ? products.find((p) => String(p.id) === String(action.productId))
+          : null;
+        if (!product || !action.variantId) {
+          pushAiMessage('Không tìm thấy sản phẩm. Anh/chị thử lại nhé!');
+          return;
+        }
+        const variant = product.variants?.find((v) => v.id === action.variantId);
+        if (!variant) {
+          pushAiMessage('Phân loại không tồn tại. Anh/chị chọn lại nhé!');
+          return;
+        }
+        addToCart(
+          { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
+          1
+        );
+        setPendingProduct(null);
+        setPendingVariant(null);
+        setPendingQuantity(null);
+        setAiStage('idle');
+        pushAiMessage(
+          `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán ngay không?`,
+          [
+            { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
+            { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
+          ]
+        );
+        return;
+      }
+
       // ── ALL other actions: forward to backend API ──
       const userActionMessage: Message = {
         id: `${Date.now()}-action`,
