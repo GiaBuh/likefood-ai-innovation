@@ -2,33 +2,33 @@
 // Inspired by Vietnamese cuisine aesthetics & Phúc Long premium warmth
 
 export const colors = {
-  // Primary - Warm Terracotta / Burnt Orange
+  // Primary - Forest Green
   primary: {
-    50: '#fef3ec',
-    100: '#fde4d0',
-    200: '#fbc5a0',
-    300: '#f8a06b',
-    400: '#f57a3a',
-    500: '#D4631D', // Main brand color
-    600: '#b8521a',
-    700: '#924118',
-    800: '#6d3116',
-    900: '#4a2212',
-    950: '#2d1409',
-  },
-  // Secondary - Forest Green
-  secondary: {
     50: '#edfaf2',
     100: '#d1f2df',
     200: '#a7e4c1',
     300: '#6fd09e',
     400: '#3fb87c',
-    500: '#2D6A4F', // Main secondary
+    500: '#2D6A4F', // Main primary
     600: '#245a42',
     700: '#1d4836',
     800: '#16372a',
     900: '#0f261e',
     950: '#081712',
+  },
+  // Secondary - Warm Terracotta / Burnt Orange
+  secondary: {
+    50: '#fef3ec',
+    100: '#fde4d0',
+    200: '#fbc5a0',
+    300: '#f8a06b',
+    400: '#f57a3a',
+    500: '#D4631D', // Main secondary
+    600: '#b8521a',
+    700: '#924118',
+    800: '#6d3116',
+    900: '#4a2212',
+    950: '#2d1409',
   },
   // Accent - Golden
   accent: {
@@ -99,7 +99,7 @@ export const shadows = {
   'modal': '0 16px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08)',
   'dropdown': '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
   'button': '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-  'glow': '0 0 20px rgba(212, 99, 29, 0.3)',
+  'glow': '0 0 20px rgba(45, 106, 79, 0.3)',
 } as const;
 
 export const borderRadius = {

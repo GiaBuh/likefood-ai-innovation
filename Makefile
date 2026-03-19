@@ -43,7 +43,7 @@ logs: ## Follow logs for all services
 	docker compose logs -f
 
 clean: ## Stop all services and remove volumes
-	docker compose down -v
+	 	
 
 # ============================================
 # Individual Services - Start

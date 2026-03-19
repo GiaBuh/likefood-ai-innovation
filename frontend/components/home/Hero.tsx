@@ -8,7 +8,7 @@ const Hero: React.FC = () => {
 
   return (
     <div className="relative w-full px-4 pt-6 pb-6 sm:px-6 lg:px-8 max-w-[1440px] mx-auto">
-      <div className="relative overflow-hidden rounded-2xl bg-neutral-900 min-h-[450px] md:min-h-0 md:aspect-[21/9] flex items-center shadow-card-hover">
+      <div className="relative overflow-hidden rounded-2xl bg-neutral-900 min-h-[320px] sm:min-h-[450px] md:min-h-0 md:aspect-[21/9] flex items-center shadow-card-hover">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('${HERO_IMAGE_URL}')` }}
@@ -20,7 +20,7 @@ const Hero: React.FC = () => {
             <span className="material-symbols-outlined !text-sm mr-1">verified</span>
             {t('landing.valueAuthentic')}
           </span>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white leading-tight tracking-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold text-white leading-tight tracking-tight">
             {t('home.heroTitle')} <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-300">
               {t('home.heroHighlight')}

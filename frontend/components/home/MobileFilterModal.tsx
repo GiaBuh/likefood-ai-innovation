@@ -211,7 +211,7 @@ const MobileFilterModal: React.FC<MobileFilterModalProps> = ({
             </button>
             <button 
               onClick={onClose}
-              className="flex-[2] py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-orange-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
+              className="flex-[2] py-4 rounded-2xl font-bold text-white bg-primary hover:bg-primary-dark shadow-xl shadow-primary-500/20 active:scale-95 transform transition-all flex items-center justify-center gap-2"
             >
               Hiển thị {resultCount} kết quả
             </button>

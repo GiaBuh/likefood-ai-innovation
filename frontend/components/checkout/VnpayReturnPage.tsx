@@ -81,7 +81,7 @@ const VnpayReturnPage: React.FC = () => {
       )}
       <button
         onClick={() => navigate('/orders')}
-        className="mt-4 px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-orange-500/20"
+        className="mt-4 px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-primary-500/20"
       >
         Xem đơn hàng
       </button>

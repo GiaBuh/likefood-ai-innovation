@@ -86,7 +86,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
           <button
             onClick={onConfirm}
             disabled={isSubmitting}
-            className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 flex items-center gap-2 disabled:opacity-60"
+            className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 flex items-center gap-2 disabled:opacity-60"
           >
             {isSubmitting ? 'Đang xử lý...' : 'Xác nhận & thanh toán'}
             <span className="material-symbols-outlined !text-lg">payments</span>

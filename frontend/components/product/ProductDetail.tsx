@@ -228,7 +228,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
               </div>
               <button 
                 onClick={(e) => handleAddToCart(e)}
-                className="flex-1 bg-primary hover:bg-primary-dark text-white font-bold text-lg py-3 px-8 rounded-xl shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-primary hover:bg-primary-dark text-white font-bold text-lg py-3 px-8 rounded-xl shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
                 {t('product.addToCart')} - ${(selectedVariant.price * quantity).toFixed(2)}

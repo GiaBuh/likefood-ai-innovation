@@ -340,7 +340,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary-dark shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all mt-6 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
+                className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary-dark shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all mt-6 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
               >
                 {isLoading ? (
                   <span className="inline-block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

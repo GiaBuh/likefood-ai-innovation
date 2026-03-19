@@ -34,7 +34,7 @@ const SkeletonPulse: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const LoadingSkeleton: React.FC = () => (
-    <section className="py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
+    <section className="py-8 sm:py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header skeleton */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -222,7 +222,7 @@ const TrendSection: React.FC = () => {
     /* ── IDLE STATE: chưa phân tích ── */
     if (!data && !loading) {
         return (
-            <section className="py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
+            <section className="py-8 sm:py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
                 <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -280,7 +280,7 @@ const TrendSection: React.FC = () => {
     }
 
     return (
-        <section className="py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
+        <section className="py-8 sm:py-16 from-indigo-50/50 via-white to-purple-50/50 dark:from-stone-950 dark:to-stone-900 border-y border-indigo-100 dark:border-stone-800">
             <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">

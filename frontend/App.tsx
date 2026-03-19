@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ShopProvider, useShop } from './contexts/ShopContext';
@@ -7,22 +7,35 @@ import { FlyToCartProvider } from './contexts/FlyToCartContext';
 import Layout from './components/layout/Layout';
 import HomePage from './components/home/HomePage';
 import ProductPage from './components/product/ProductPage';
-import Checkout from './components/checkout/Checkout';
 import VnpayReturnPage from './components/checkout/VnpayReturnPage';
-import OrderHistory from './components/orders/OrderHistory';
 import UserProfileModal from './components/auth/UserProfileModal';
 import AuthModal from './components/auth/AuthModal';
 import GoogleAuthCallbackPage from './components/auth/GoogleAuthCallbackPage';
-import AdminPanel from './components/admin/AdminPanel';
 import NotFound from './components/admin/NotFound';
 import LandingPage from './components/pages/LandingPage';
-import ComboPage from './components/pages/ComboPage';
-import FlashSalePage from './components/pages/FlashSalePage';
 import VouchersPage from './components/pages/VouchersPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import ScrollToTop from './components/ui/ScrollToTop';
 import { HelmetProvider } from 'react-helmet-async';
+
+// Lazy-loaded pages for code splitting (reduces initial bundle size)
+const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
+const FlashSalePage = React.lazy(() => import('./components/pages/FlashSalePage'));
+const ComboPage = React.lazy(() => import('./components/pages/ComboPage'));
+const Checkout = React.lazy(() => import('./components/checkout/Checkout'));
+const OrderHistory = React.lazy(() => import('./components/orders/OrderHistory'));
+
+// Loading fallback for lazy-loaded pages
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <span className="text-sm text-neutral-500 dark:text-neutral-400">Đang tải...</span>
+    </div>
+  </div>
+);
 
 // Wrapper that uses routing and auth
 const MainContent: React.FC = () => {
@@ -237,6 +250,8 @@ const MainContent: React.FC = () => {
       searchQuery={searchQuery}
       onSearchQueryChange={setSearchQuery}
     >
+      <ScrollToTop />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
         <Route
@@ -328,6 +343,7 @@ const MainContent: React.FC = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
 
       {user && (
         <UserProfileModal

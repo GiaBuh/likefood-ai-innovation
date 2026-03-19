@@ -243,8 +243,10 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Language Switcher */}
-              <LanguageSwitcher />
+              {/* Language Switcher - Hidden on mobile */}
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
 
               {/* Dark Mode Toggle */}
               <button
@@ -262,7 +264,7 @@ const Header: React.FC<HeaderProps> = ({
                   localStorage.setItem('theme', nowDark ? 'dark' : 'light');
                   setTimeout(() => overlay.remove(), 350);
                 }}
-                className="relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors overflow-hidden"
+                className="hidden sm:block relative p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors overflow-hidden"
                 title={t('common.darkMode')}
               >
                 <span className={`material-symbols-outlined !text-lg transition-transform duration-500 ${isDark ? 'rotate-[360deg]' : ''}`}>
@@ -279,7 +281,7 @@ const Header: React.FC<HeaderProps> = ({
               </button>
 
               {!user ? (
-                <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                   <button
                     onClick={onOpenLogin}
                     className="px-3 py-2 rounded-lg text-sm font-bold text-neutral-700 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors whitespace-nowrap"
@@ -499,7 +501,7 @@ const Header: React.FC<HeaderProps> = ({
                     <Link
                       to={link.to}
                       className={`
-                        relative px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
+                        relative inline-flex items-center px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
                         ${active
                           ? 'text-primary-500'
                           : 'text-neutral-600 dark:text-neutral-300 hover:text-primary-500'
@@ -566,7 +568,7 @@ const Header: React.FC<HeaderProps> = ({
                   key={link.key}
                   to={link.to}
                   className={`
-                    relative px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
+                    relative inline-flex items-center px-6 py-3 text-[13px] font-bold uppercase tracking-wider transition-colors
                     ${active
                       ? 'text-primary-500'
                       : 'text-neutral-600 dark:text-neutral-300 hover:text-primary-500'
