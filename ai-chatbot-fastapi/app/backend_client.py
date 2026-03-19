@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
@@ -10,12 +11,21 @@ from .domain import Product, ProductVariant
 VoucherDict = dict[str, Any]
 ComboDict = dict[str, Any]
 
+_PRODUCT_CACHE_TTL = 300  # 5 minutes
+
 
 class BackendClient:
     def __init__(self) -> None:
         self.base_url = settings.backend_base_url.rstrip("/")
+        self._products_cache: list[Product] | None = None
+        self._products_cache_time: float = 0.0
+
 
     async def fetch_products(self) -> list[Product]:
+        now = time.monotonic()
+        if self._products_cache is not None and (now - self._products_cache_time) < _PRODUCT_CACHE_TTL:
+            return self._products_cache
+
         async with httpx.AsyncClient(timeout=8.0) as client:
             response = await client.get(
                 f"{self.base_url}/products",
@@ -58,7 +68,10 @@ class BackendClient:
                     variants=[v for v in variants if v.id and v.price > 0 and v.quantity > 0],
                 )
             )
-        return [p for p in products if p.id and p.name and p.variants]
+        result = [p for p in products if p.id and p.name and p.variants]
+        self._products_cache = result
+        self._products_cache_time = now
+        return result
 
     async def add_item_to_cart(self, variant_id: str, quantity: int, auth_header: str | None) -> dict[str, Any] | None:
         if not auth_header:
@@ -90,6 +103,24 @@ class BackendClient:
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.get(f"{self.base_url}/ai/combos/published")
+                response.raise_for_status()
+                payload = response.json()
+            data = payload.get("data", payload)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    async def fetch_my_orders(self, auth_header: str | None) -> list[dict[str, Any]]:
+        """Fetch user's orders for order tracking and purchase history."""
+        if not auth_header:
+            return []
+        try:
+            headers = {"Authorization": auth_header}
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/orders/me",
+                    headers=headers,
+                )
                 response.raise_for_status()
                 payload = response.json()
             data = payload.get("data", payload)
