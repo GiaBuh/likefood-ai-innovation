@@ -5,7 +5,9 @@ import com.ecommerce.likefood.ai.domain.ComboItem;
 import com.ecommerce.likefood.ai.dto.req.ComboGenerateRequestDto;
 import com.ecommerce.likefood.ai.dto.req.ComboItemInput;
 import com.ecommerce.likefood.ai.dto.req.ManualComboRequestDto;
+import com.ecommerce.likefood.ai.dto.res.ComboCampaignResponseDto;
 import com.ecommerce.likefood.ai.dto.res.ComboGenerateResponseDto;
+import com.ecommerce.likefood.ai.dto.res.ComboItemResponseDto;
 import com.ecommerce.likefood.ai.repository.ComboCampaignRepository;
 import com.ecommerce.likefood.storage.service.StorageService;
 import com.ecommerce.likefood.storage.enums.StorageObjectType;
@@ -59,7 +61,7 @@ public class ComboCampaignService {
     // ─── AI Combo Generation ──────────────────────────────────────────
 
     @Transactional
-    public ComboCampaign generateComboCampaign(ComboGenerateRequestDto request) {
+    public ComboCampaignResponseDto generateComboCampaign(ComboGenerateRequestDto request) {
         log.info("Generating combo campaign for hashtag: {}", request.getHashtag());
         
         try {
@@ -106,7 +108,8 @@ public class ComboCampaignService {
             // 8. Save ComboItems with product/variant relations
             saveComboItems(campaign, request.getItems());
 
-            return comboCampaignRepository.findById(campaign.getId()).orElse(campaign);
+            ComboCampaign saved = comboCampaignRepository.findById(campaign.getId()).orElse(campaign);
+            return toResponseDto(saved);
 
         } catch (Exception e) {
             log.error("Failed to generate combo campaign", e);
@@ -117,7 +120,7 @@ public class ComboCampaignService {
     // ─── Manual Combo Creation ────────────────────────────────────────
 
     @Transactional
-    public ComboCampaign createManualCombo(ManualComboRequestDto request) {
+    public ComboCampaignResponseDto createManualCombo(ManualComboRequestDto request) {
         log.info("Creating manual combo: {}", request.getComboName());
 
         try {
@@ -151,7 +154,8 @@ public class ComboCampaignService {
             // 5. Save ComboItems
             saveComboItems(campaign, request.getItems());
 
-            return comboCampaignRepository.findById(campaign.getId()).orElse(campaign);
+            ComboCampaign saved = comboCampaignRepository.findById(campaign.getId()).orElse(campaign);
+            return toResponseDto(saved);
 
         } catch (Exception e) {
             log.error("Failed to create manual combo", e);
@@ -174,7 +178,7 @@ public class ComboCampaignService {
     // ─── Publish Combo ────────────────────────────────────────────────
 
     @Transactional
-    public ComboCampaign publishCombo(String comboId) {
+    public ComboCampaignResponseDto publishCombo(String comboId) {
         ComboCampaign combo = comboCampaignRepository.findById(comboId)
                 .orElseThrow(() -> new RuntimeException("Combo not found"));
 
@@ -189,22 +193,25 @@ public class ComboCampaignService {
         }
 
         combo.setStatus("PUBLISHED");
-        return comboCampaignRepository.save(combo);
+        return toResponseDto(comboCampaignRepository.save(combo));
     }
 
     // ─── Query Methods ────────────────────────────────────────────────
 
-    public List<ComboCampaign> getPublishedCombos() {
-        return comboCampaignRepository.findByStatusOrderByCreatedAtDesc("PUBLISHED");
+    public List<ComboCampaignResponseDto> getPublishedCombos() {
+        return comboCampaignRepository.findByStatusOrderByCreatedAtDesc("PUBLISHED")
+                .stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
-    public List<ComboCampaign> getAllCombos() {
-        return comboCampaignRepository.findAllByOrderByCreatedAtDesc();
+    public List<ComboCampaignResponseDto> getAllCombos() {
+        return comboCampaignRepository.findAllByOrderByCreatedAtDesc()
+                .stream().map(this::toResponseDto).collect(Collectors.toList());
     }
 
-    public ComboCampaign getComboById(String id) {
-        return comboCampaignRepository.findById(id)
+    public ComboCampaignResponseDto getComboById(String id) {
+        ComboCampaign combo = comboCampaignRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Combo not found"));
+        return toResponseDto(combo);
     }
 
     // ─── Internal Helpers ─────────────────────────────────────────────
@@ -389,5 +396,58 @@ public class ComboCampaignService {
               "image_prompt": "..."
             }
             """.formatted(hashtag, itemsJoined);
+    }
+
+    // ─── Entity → DTO Mapping ─────────────────────────────────────────
+
+    private ComboCampaignResponseDto toResponseDto(ComboCampaign campaign) {
+        List<ComboItemResponseDto> itemDtos = campaign.getComboItems() != null
+                ? campaign.getComboItems().stream().map(this::toComboItemDto).collect(Collectors.toList())
+                : List.of();
+
+        return ComboCampaignResponseDto.builder()
+                .id(campaign.getId())
+                .hashtag(campaign.getHashtag())
+                .comboName(campaign.getComboName())
+                .slogan(campaign.getSlogan())
+                .description(campaign.getDescription())
+                .discountPercentage(campaign.getDiscountPercentage())
+                .imagePrompt(campaign.getImagePrompt())
+                .imageUrl(campaign.getImageUrl())
+                .items(campaign.getItems())
+                .status(campaign.getStatus())
+                .source(campaign.getSource())
+                .comboPrice(campaign.getComboPrice())
+                .createdAt(campaign.getCreatedAt())
+                .comboItems(itemDtos)
+                .build();
+    }
+
+    private ComboItemResponseDto toComboItemDto(ComboItem item) {
+        ComboItemResponseDto.ProductSummary productSummary = null;
+        if (item.getProduct() != null) {
+            productSummary = ComboItemResponseDto.ProductSummary.builder()
+                    .id(item.getProduct().getId())
+                    .name(item.getProduct().getName())
+                    .thumbnailKey(item.getProduct().getThumbnailKey())
+                    .build();
+        }
+
+        ComboItemResponseDto.VariantSummary variantSummary = null;
+        if (item.getVariant() != null) {
+            variantSummary = ComboItemResponseDto.VariantSummary.builder()
+                    .id(item.getVariant().getId())
+                    .weightValue(item.getVariant().getWeightValue())
+                    .weightUnit(item.getVariant().getWeightUnit())
+                    .price(item.getVariant().getPrice())
+                    .build();
+        }
+
+        return ComboItemResponseDto.builder()
+                .id(item.getId())
+                .quantity(item.getQuantity())
+                .product(productSummary)
+                .variant(variantSummary)
+                .build();
     }
 }

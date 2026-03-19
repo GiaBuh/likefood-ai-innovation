@@ -1,6 +1,7 @@
 package com.ecommerce.likefood.product.domain;
 
 import com.ecommerce.likefood.common.utils.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -43,5 +44,6 @@ public class ProductVariant extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonIgnore
     private Product product;
 }
