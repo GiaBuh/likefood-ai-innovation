@@ -136,7 +136,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 800); // 0.8s delay to simulate fast API response
+    }, 150); // fast transition, no artificial lag
     return () => clearTimeout(timer);
   }, [currentView]);
 

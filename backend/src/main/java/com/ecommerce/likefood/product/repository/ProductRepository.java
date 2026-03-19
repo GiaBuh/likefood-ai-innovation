@@ -8,10 +8,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, String>, JpaSpecificationExecutor<Product> {
+
+    @Override
+    @EntityGraph(attributePaths = {"variants", "category"})
+    Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
     boolean existsByCategory_Id(String categoryId);
 
