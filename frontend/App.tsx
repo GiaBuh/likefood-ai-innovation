@@ -1,19 +1,15 @@
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ShopProvider, useShop } from './contexts/ShopContext';
 import { FlyToCartProvider } from './contexts/FlyToCartContext';
 import Layout from './components/layout/Layout';
-import HomePage from './components/home/HomePage';
-import ProductPage from './components/product/ProductPage';
 import VnpayReturnPage from './components/checkout/VnpayReturnPage';
 import UserProfileModal from './components/auth/UserProfileModal';
 import AuthModal from './components/auth/AuthModal';
 import GoogleAuthCallbackPage from './components/auth/GoogleAuthCallbackPage';
 import NotFound from './components/admin/NotFound';
-import LandingPage from './components/pages/LandingPage';
-import VouchersPage from './components/pages/VouchersPage';
 import { Product, Order } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
@@ -26,6 +22,41 @@ const FlashSalePage = React.lazy(() => import('./components/pages/FlashSalePage'
 const ComboPage = React.lazy(() => import('./components/pages/ComboPage'));
 const Checkout = React.lazy(() => import('./components/checkout/Checkout'));
 const OrderHistory = React.lazy(() => import('./components/orders/OrderHistory'));
+const HomePage = React.lazy(() => import('./components/home/HomePage'));
+const LandingPage = React.lazy(() => import('./components/pages/LandingPage'));
+const ProductPage = React.lazy(() => import('./components/product/ProductPage'));
+const VouchersPage = React.lazy(() => import('./components/pages/VouchersPage'));
+
+// Page transition wrapper for smooth fade between routes
+const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  const [displayChildren, setDisplayChildren] = useState(children);
+  const [transitionStage, setTransitionStage] = useState('fadeIn');
+  const prevKey = useRef(location.key);
+
+  useEffect(() => {
+    if (location.key !== prevKey.current) {
+      prevKey.current = location.key;
+      setTransitionStage('fadeOut');
+    }
+  }, [location.key]);
+
+  const handleTransitionEnd = () => {
+    if (transitionStage === 'fadeOut') {
+      setDisplayChildren(children);
+      setTransitionStage('fadeIn');
+    }
+  };
+
+  return (
+    <div
+      className={`page-transition ${transitionStage}`}
+      onTransitionEnd={handleTransitionEnd}
+    >
+      {transitionStage === 'fadeOut' ? displayChildren : children}
+    </div>
+  );
+};
 
 // Loading fallback for lazy-loaded pages
 const PageLoader = () => (
@@ -252,6 +283,7 @@ const MainContent: React.FC = () => {
     >
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>
+      <PageTransition>
       <Routes>
         <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
         <Route
@@ -343,6 +375,7 @@ const MainContent: React.FC = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </PageTransition>
       </Suspense>
 
       {user && (
