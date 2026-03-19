@@ -155,7 +155,17 @@
     "statusConfirm": "Đã xác nhận",
     "statusShipped": "Đang giao",
     "statusComplete": "Hoàn thành",
-    "statusCancelled": "Đã hủy"
+    "statusCancelled": "Đã hủy",
+    "paymentPaid": "Đã thanh toán",
+    "paymentUnpaid": "Chưa thanh toán",
+    "shippingTo": "Giao đến",
+    "cancelHint": "Có thể hủy đơn trước khi giao hàng.",
+    "trackOrder": "Theo dõi đơn",
+    "contactSupport": "Liên hệ hỗ trợ",
+    "writeReview": "Viết đánh giá",
+    "retryVnpay": "Thanh toán lại VNPay",
+    "retryingVnpay": "Đang mở VNPay...",
+    "priceUpdating": "Giá cập nhật"
   },
   "auth": {
     "loginTitle": "Đăng Nhập",
