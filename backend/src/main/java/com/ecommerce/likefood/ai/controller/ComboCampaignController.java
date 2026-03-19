@@ -1,8 +1,8 @@
 package com.ecommerce.likefood.ai.controller;
 
-import com.ecommerce.likefood.ai.domain.ComboCampaign;
 import com.ecommerce.likefood.ai.dto.req.ComboGenerateRequestDto;
 import com.ecommerce.likefood.ai.dto.req.ManualComboRequestDto;
+import com.ecommerce.likefood.ai.dto.res.ComboCampaignResponseDto;
 import com.ecommerce.likefood.ai.service.ComboCampaignService;
 import com.ecommerce.likefood.common.utils.ApiMessage;
 import lombok.RequiredArgsConstructor;
@@ -25,17 +25,17 @@ public class ComboCampaignController {
 
     @PostMapping("/generate")
     @ApiMessage("Generate new trend combo campaign")
-    public ResponseEntity<ComboCampaign> generateCombo(@RequestBody ComboGenerateRequestDto request) {
+    public ResponseEntity<ComboCampaignResponseDto> generateCombo(@RequestBody ComboGenerateRequestDto request) {
         log.info("Received request to generate combo for hashtag: {}", request.getHashtag());
-        ComboCampaign result = comboCampaignService.generateComboCampaign(request);
+        ComboCampaignResponseDto result = comboCampaignService.generateComboCampaign(request);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/manual")
     @ApiMessage("Create manual combo campaign")
-    public ResponseEntity<ComboCampaign> createManualCombo(@RequestBody ManualComboRequestDto request) {
+    public ResponseEntity<ComboCampaignResponseDto> createManualCombo(@RequestBody ManualComboRequestDto request) {
         log.info("Received request to create manual combo: {}", request.getComboName());
-        ComboCampaign result = comboCampaignService.createManualCombo(request);
+        ComboCampaignResponseDto result = comboCampaignService.createManualCombo(request);
         return ResponseEntity.ok(result);
     }
 
@@ -49,23 +49,23 @@ public class ComboCampaignController {
 
     @PostMapping("/{id}/publish")
     @ApiMessage("Publish combo to store")
-    public ResponseEntity<ComboCampaign> publishCombo(@PathVariable String id) {
+    public ResponseEntity<ComboCampaignResponseDto> publishCombo(@PathVariable String id) {
         log.info("Received request to publish combo ID: {}", id);
-        ComboCampaign published = comboCampaignService.publishCombo(id);
+        ComboCampaignResponseDto published = comboCampaignService.publishCombo(id);
         return ResponseEntity.ok(published);
     }
 
     @GetMapping("/published")
     @ApiMessage("Get all published combo campaigns")
-    public ResponseEntity<List<ComboCampaign>> getPublishedCombos() {
-        List<ComboCampaign> combos = comboCampaignService.getPublishedCombos();
+    public ResponseEntity<List<ComboCampaignResponseDto>> getPublishedCombos() {
+        List<ComboCampaignResponseDto> combos = comboCampaignService.getPublishedCombos();
         return ResponseEntity.ok(combos);
     }
 
     @GetMapping("/{id}")
     @ApiMessage("Get combo campaign by ID")
-    public ResponseEntity<ComboCampaign> getComboById(@PathVariable String id) {
-        ComboCampaign combo = comboCampaignService.getComboById(id);
+    public ResponseEntity<ComboCampaignResponseDto> getComboById(@PathVariable String id) {
+        ComboCampaignResponseDto combo = comboCampaignService.getComboById(id);
         return ResponseEntity.ok(combo);
     }
 }
