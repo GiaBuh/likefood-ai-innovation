@@ -53,8 +53,11 @@ export function useChatAi(params: UseChatAiParams) {
     addComboToCart,
     aiMessages,
     setAiMessages,
+    aiStage,
     setAiStage,
+    pendingProduct,
     setPendingProduct,
+    pendingVariant,
     setPendingVariant,
     setPendingQuantity,
     aiContext,
@@ -236,8 +239,50 @@ export function useChatAi(params: UseChatAiParams) {
     ]
   );
 
+  const pendingProductRef = useRef<typeof pendingProduct>(pendingProduct);
+  const pendingVariantRef = useRef<typeof pendingVariant>(pendingVariant);
+  const aiStageRef = useRef<string>(aiStage);
+
+  useEffect(() => { pendingProductRef.current = pendingProduct; }, [pendingProduct]);
+  useEffect(() => { pendingVariantRef.current = pendingVariant; }, [pendingVariant]);
+  useEffect(() => { aiStageRef.current = aiStage; }, [aiStage]);
+
   const sendAiMessage = useCallback(
     (input: string, contextMessages: Message[]) => {
+      // ── If awaiting quantity: try to parse number from text input ──
+      if (aiStageRef.current === 'awaiting_quantity' && pendingProductRef.current && pendingVariantRef.current) {
+        const textQtyMap: Record<string, number> = {
+          'một': 1, 'mot': 1, 'one': 1,
+          'hai': 2, 'two': 2,
+          'ba': 3, 'three': 3,
+          'bốn': 4, 'bon': 4, 'four': 4,
+          'năm': 5, 'nam': 5, 'five': 5,
+        };
+        const trimmedInput = input.trim().toLowerCase();
+        const parsedQty = parseInt(trimmedInput, 10) || textQtyMap[trimmedInput];
+        if (parsedQty && parsedQty > 0 && parsedQty <= 99) {
+          const product = pendingProductRef.current;
+          const variant = pendingVariantRef.current;
+          addToCart(
+            { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
+            parsedQty
+          );
+          setPendingProduct(null);
+          setPendingVariant(null);
+          setPendingQuantity(null);
+          setAiStage('idle');
+          setIsTyping(false);
+          pushAiMessage(
+            `Đã thêm ${parsedQty} x ${product.name} (${(variant as any).weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán hay xem thêm?`,
+            [
+              { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
+              { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
+            ]
+          );
+          return;
+        }
+      }
+
       setTimeout(async () => {
         try {
           await handleAiConversation(input, contextMessages);
@@ -246,7 +291,7 @@ export function useChatAi(params: UseChatAiParams) {
         }
       }, 700);
     },
-    [handleAiConversation, setIsTyping]
+    [handleAiConversation, setIsTyping, addToCart, setPendingProduct, setPendingVariant, setPendingQuantity, setAiStage, pushAiMessage]
   );
 
   const handleActionClick = useCallback(
@@ -301,22 +346,19 @@ export function useChatAi(params: UseChatAiParams) {
         }
 
         if (inStockVariants.length === 1) {
-          // Single variant → add to cart directly with qty 1
+          // Single variant → ask for quantity first
           const variant = inStockVariants[0];
-          addToCart(
-            { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
-            1
-          );
-          setPendingProduct(null);
-          setPendingVariant(null);
-          setPendingQuantity(null);
-          setAiStage('idle');
+          setPendingProduct(product);
+          setPendingVariant(variant);
+          setAiStage('awaiting_quantity');
+          const qtyActions: ChatAction[] = [
+            { id: 'qty-1', label: '1', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 1 },
+            { id: 'qty-2', label: '2', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 2 },
+            { id: 'qty-3', label: '3', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 3 },
+          ];
           pushAiMessage(
-            `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán hay xem thêm?`,
-            [
-              { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
-              { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
-            ]
+            `Anh/chị muốn mua bao nhiêu ${product.name} (${variant.weightLabel || variant.weight})?`,
+            qtyActions
           );
           return;
         }
@@ -338,7 +380,7 @@ export function useChatAi(params: UseChatAiParams) {
         return;
       }
 
-      // ── Choose variant: handled locally ──
+      // ── Choose variant: ask for quantity next ──
       if (action.type === 'choose-variant') {
         const product = action.productId
           ? products.find((p) => String(p.id) === String(action.productId))
@@ -352,16 +394,45 @@ export function useChatAi(params: UseChatAiParams) {
           pushAiMessage('Phân loại không tồn tại. Anh/chị chọn lại nhé!');
           return;
         }
+        setPendingProduct(product);
+        setPendingVariant(variant);
+        setAiStage('awaiting_quantity');
+        const qtyActions: ChatAction[] = [
+          { id: 'qty-1', label: '1', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 1 },
+          { id: 'qty-2', label: '2', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 2 },
+          { id: 'qty-3', label: '3', type: 'choose-quantity' as ChatAction['type'], productId: String(product.id), variantId: variant.id, quantity: 3 },
+        ];
+        pushAiMessage(
+          `Anh/chị muốn mua bao nhiêu ${product.name} (${variant.weightLabel || variant.weight})?`,
+          qtyActions
+        );
+        return;
+      }
+
+      // ── Choose quantity: add to cart with selected quantity ──
+      if (action.type === 'choose-quantity') {
+        const product = action.productId
+          ? products.find((p) => String(p.id) === String(action.productId))
+          : null;
+        if (!product || !action.variantId || !action.quantity) {
+          pushAiMessage('Có lỗi xảy ra. Anh/chị thử lại nhé!');
+          return;
+        }
+        const variant = product.variants?.find((v) => v.id === action.variantId);
+        if (!variant) {
+          pushAiMessage('Phân loại không tồn tại. Anh/chị chọn lại nhé!');
+          return;
+        }
         addToCart(
           { ...product, weight: variant.weight, variantId: variant.id, price: variant.price },
-          1
+          action.quantity
         );
         setPendingProduct(null);
         setPendingVariant(null);
         setPendingQuantity(null);
         setAiStage('idle');
         pushAiMessage(
-          `Đã thêm 1 x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán ngay không?`,
+          `Đã thêm ${action.quantity} x ${product.name} (${variant.weightLabel || variant.weight}) vào giỏ hàng! Anh/chị muốn thanh toán hay xem thêm?`,
           [
             { id: 'go-checkout', label: 'Thanh toán ngay', type: 'go_checkout' },
             { id: 'show-more', label: 'Xem thêm món', type: 'show-more-options', command: '/show-more' },
